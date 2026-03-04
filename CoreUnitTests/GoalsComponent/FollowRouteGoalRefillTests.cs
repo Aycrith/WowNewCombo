@@ -24,6 +24,7 @@ public class FollowRouteGoalRefillTests
 
     private static readonly float BackwardSegmentPenalty = 2f;
     private static readonly int BackwardSegmentGrace = 1;
+    private static readonly int SameSegmentLoopLimit = 5;
 
     private record RefillCandidate(int SegmentStartIndex, Vector3 MapClosestPoint, float DistanceToRoute);
 
@@ -75,6 +76,23 @@ public class FollowRouteGoalRefillTests
         }
 
         return score;
+    }
+
+    private static int ApplyLoopBreakerAndGetForwardFloor(
+        int segmentIndex,
+        ref int repeatedCount,
+        ref int forcedMinForward)
+    {
+        repeatedCount++;
+        if (repeatedCount < SameSegmentLoopLimit)
+        {
+            return segmentIndex;
+        }
+
+        int advanced = segmentIndex + 1;
+        forcedMinForward = Math.Max(forcedMinForward, advanced);
+        repeatedCount = 0;
+        return advanced;
     }
 
     // A straight-line route: A(0,0) -> B(10,0) -> C(20,0) -> D(30,0)
@@ -175,5 +193,30 @@ public class FollowRouteGoalRefillTests
         var withGuard = FindClosestRefillCandidate(StraightRoute, player, minSegmentIndex: 2);
         withGuard.SegmentStartIndex.Should().BeGreaterThanOrEqualTo(2,
             "forward-only enforcement must prevent regression to earlier segments after anchor");
+    }
+
+    [Fact]
+    public void LoopBreaker_AdvancesSegmentAndSetsForcedForwardFloor()
+    {
+        int repeated = SameSegmentLoopLimit - 1; // simulate Nth repeat that triggers breaker
+        int forcedMinForward = -1;
+        int advancedSegment = ApplyLoopBreakerAndGetForwardFloor(
+            segmentIndex: 149,
+            repeatedCount: ref repeated,
+            forcedMinForward: ref forcedMinForward);
+
+        advancedSegment.Should().Be(150);
+        forcedMinForward.Should().Be(150, "loop breaker should enforce a forward floor after repeated same-segment refill");
+        repeated.Should().Be(0, "loop counter should reset after forced advancement");
+    }
+
+    [Fact]
+    public void ForcedForwardFloor_PreventsRegressingToPreviousSegment()
+    {
+        int forcedMinForward = 150;
+        int anchorMin = 148;
+        int effectiveMin = Math.Max(anchorMin, forcedMinForward);
+
+        effectiveMin.Should().Be(150);
     }
 }

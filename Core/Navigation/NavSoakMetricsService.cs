@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using System.Threading;
@@ -23,6 +24,7 @@ public sealed record NavSoakMetricsSnapshot(
     int CurrentWindowStuckEvents,
     int CurrentWindowRepeatStuckCount,
     double CurrentWindowRepeatStuckRate,
+    float CurrentRouteDeviation,
     float CurrentWindowMaxRouteDeviation,
     float CurrentWindowAvgRouteDeviation);
 
@@ -55,6 +57,7 @@ public sealed class NavSoakMetricsService : IDisposable
     private float maxDeviation;
     private float deviationSum;
     private int deviationSampleCount;
+    private float currentDeviation;
 
     public int CurrentWindowFrontBypassActivations => frontBypassActivations;
     public int CurrentWindowSuccessfulReconnects => successfulReconnects;
@@ -65,6 +68,7 @@ public sealed class NavSoakMetricsService : IDisposable
     public float CurrentWindowMaxRouteDeviation => maxDeviation;
     public float CurrentWindowAvgRouteDeviation =>
         deviationSampleCount == 0 ? 0f : deviationSum / deviationSampleCount;
+    public float CurrentRouteDeviation => currentDeviation;
 
     public NavSoakMetricsService(
         ILogger<NavSoakMetricsService> logger,
@@ -119,8 +123,19 @@ public sealed class NavSoakMetricsService : IDisposable
                 CurrentWindowStuckEvents: stuckEvents,
                 CurrentWindowRepeatStuckCount: repeatStuckCount,
                 CurrentWindowRepeatStuckRate: stuckEvents == 0 ? 0.0 : Math.Round((double)repeatStuckCount / stuckEvents, 4),
+                CurrentRouteDeviation: currentDeviation,
                 CurrentWindowMaxRouteDeviation: maxDeviation,
                 CurrentWindowAvgRouteDeviation: deviationSampleCount == 0 ? 0f : deviationSum / deviationSampleCount);
+        }
+    }
+
+    public bool TryGetRuntimeSources(out StuckDetector? currentStuckDetector, out Goals.Navigation? currentNavigation)
+    {
+        lock (sync)
+        {
+            currentStuckDetector = stuckDetector;
+            currentNavigation = attachedNavigations.Count > 0 ? attachedNavigations.First() : null;
+            return currentStuckDetector != null && currentNavigation != null;
         }
     }
 
@@ -203,6 +218,8 @@ public sealed class NavSoakMetricsService : IDisposable
     {
         lock (sync)
         {
+            currentDeviation = deviation;
+
             if (deviation > maxDeviation)
             {
                 maxDeviation = deviation;
@@ -266,6 +283,7 @@ public sealed class NavSoakMetricsService : IDisposable
             maxDeviation = 0f;
             deviationSum = 0f;
             deviationSampleCount = 0;
+            currentDeviation = 0f;
             windowStart = DateTime.UtcNow;
         }
 
@@ -325,6 +343,7 @@ public sealed class NavSoakMetricsService : IDisposable
         maxDeviation = 0f;
         deviationSum = 0f;
         deviationSampleCount = 0;
+        currentDeviation = 0f;
     }
 
     private static string ResolveOutputDir(string configuredOutputDir)

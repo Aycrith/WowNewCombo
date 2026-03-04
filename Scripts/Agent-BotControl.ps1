@@ -15,7 +15,7 @@
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action Api -ApiMethod GET -ApiPath /api/launch/status
 #>
 param(
-    [ValidateSet("Start", "StartAndValidate", "Validate", "Status", "Stop", "Restart", "Monitor", "Api", "CollectEvidence", "Soak", "LiveSession")]
+    [ValidateSet("Start", "StartAndValidate", "Validate", "Status", "Stop", "Restart", "Monitor", "Api", "CollectEvidence", "Soak", "LiveSession", "Doctor", "GameCmd", "FlagsProfile", "WatchNav", "NavTriage")]
     [string]$Action = "StartAndValidate",
 
     [string]$Profile = "BloodElf_Rogue_8-60_TBC.json",
@@ -33,8 +33,22 @@ param(
     [string]$ArtifactTag = "",
     [int]$EvidenceIntervalSeconds = 150,
     [int]$ShortValidationSeconds = 240,
+    [ValidateSet("current", "stable-live", "triage-baseline", "triage-hazard", "triage-predictive")]
+    [string]$NavProfile = "stable-live",
+    [switch]$NoAutoNavProfile,
+    [switch]$RestoreFlagsOnExit = $true,
+    [string]$Command = "",
+    [ValidateSet("reload", "bindings", "actions", "actionbar", "dcflush", "dcnumberkeys", "none")]
+    [string]$Verify = "none",
+    [int]$MaxCommandRetries = 3,
+    [int]$WatchSeconds = 120,
+    [int]$WatchCadenceMs = 1000,
+    [int]$TriageMinutesPerProfile = 3,
+    [string]$TriageProfiles = "triage-baseline,triage-hazard,triage-predictive,current",
+    [switch]$AutoRepairReadiness = $true,
 
     [switch]$AllowStartWithWarnings,
+    [switch]$BypassKeyBindings,
     [switch]$BypassActionBar,
     [switch]$SkipCharacterGate,
     [switch]$StartMonitor,
@@ -66,6 +80,9 @@ $script:RunTag = "agentctl-$script:RunStamp"
 $script:SessionTag = if ([string]::IsNullOrWhiteSpace($ArtifactTag)) { "live-session-$script:RunStamp" } else { $ArtifactTag }
 $script:SessionArtifactDir = Join-Path $script:LogsDir $script:SessionTag
 $script:DtcReloadRecoveryAttempted = $false
+$script:FeatureFlagSnapshotPath = $null
+$script:FeatureFlagSnapshotActive = $false
+$script:FeatureFlagProfileApplied = $null
 
 function Write-Info([string]$Message)
 {
@@ -345,6 +362,666 @@ function Invoke-AgentApi
 
         throw "API $Method $Path failed: $err"
     }
+}
+
+function Get-FeatureFlagsFilePath
+{
+    $runtimeCandidates = @(
+        (Join-Path $BotRoot "BlazorServer\bin\Release\net10.0\runtime_feature_flags.json"),
+        (Join-Path $BotRoot "BlazorServer\bin\Debug\net10.0\runtime_feature_flags.json"),
+        (Join-Path $BotRoot "BlazorServer\runtime_feature_flags.json")
+    )
+
+    foreach ($candidate in $runtimeCandidates)
+    {
+        if (Test-Path -LiteralPath $candidate)
+        {
+            return $candidate
+        }
+    }
+
+    return $runtimeCandidates[$runtimeCandidates.Count - 1]
+}
+
+function Get-FeatureFlagProfilePatch
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$ProfileName
+    )
+
+    switch ($ProfileName)
+    {
+        "current"
+        {
+            return @{}
+        }
+        "stable-live"
+        {
+            return [ordered]@{
+                "Features.HazardAvoidance.Enabled" = $false
+                "Features.StuckSensitivity.Enabled" = $true
+                "Features.StuckSensitivity.MinDistance" = 0.08
+                "Features.StuckSensitivity.UnstuckAfterMs" = 3200
+                "Features.StuckSensitivity.EnablePredictiveDetection" = $false
+                "Features.StuckSensitivity.PredictiveRiskThreshold" = 80
+                "Features.StuckSensitivity.ApproachTimeoutMultiplier" = 1.5
+            }
+        }
+        "triage-baseline"
+        {
+            return (Get-FeatureFlagProfilePatch -ProfileName "stable-live")
+        }
+        "triage-hazard"
+        {
+            $patch = [ordered]@{}
+            foreach ($k in (Get-FeatureFlagProfilePatch -ProfileName "stable-live").Keys)
+            {
+                $patch[$k] = (Get-FeatureFlagProfilePatch -ProfileName "stable-live")[$k]
+            }
+            $patch["Features.HazardAvoidance.Enabled"] = $true
+            return $patch
+        }
+        "triage-predictive"
+        {
+            return [ordered]@{
+                "Features.HazardAvoidance.Enabled" = $false
+                "Features.StuckSensitivity.Enabled" = $true
+                "Features.StuckSensitivity.MinDistance" = 0.08
+                "Features.StuckSensitivity.UnstuckAfterMs" = 2800
+                "Features.StuckSensitivity.EnablePredictiveDetection" = $true
+                "Features.StuckSensitivity.PredictiveRiskThreshold" = 75
+                "Features.StuckSensitivity.ApproachTimeoutMultiplier" = 1.4
+            }
+        }
+        default
+        {
+            throw "Unknown nav profile '$ProfileName'"
+        }
+    }
+}
+
+function Set-ObjectPathValue
+{
+    param(
+        [Parameter(Mandatory = $true)][object]$Root,
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)]$Value
+    )
+
+    $parts = $Path.Split('.')
+    $node = $Root
+    for ($i = 0; $i -lt ($parts.Length - 1); $i++)
+    {
+        $part = $parts[$i]
+        $prop = $node.PSObject.Properties[$part]
+        if ($null -eq $prop)
+        {
+            $child = [pscustomobject]@{}
+            $node | Add-Member -NotePropertyName $part -NotePropertyValue $child
+            $node = $child
+            continue
+        }
+
+        $node = $prop.Value
+        if ($null -eq $node)
+        {
+            $child = [pscustomobject]@{}
+            $prop.Value = $child
+            $node = $child
+        }
+    }
+
+    $leaf = $parts[$parts.Length - 1]
+    $leafProp = $node.PSObject.Properties[$leaf]
+    if ($null -eq $leafProp)
+    {
+        $node | Add-Member -NotePropertyName $leaf -NotePropertyValue $Value
+    }
+    else
+    {
+        $leafProp.Value = $Value
+    }
+}
+
+function Save-FeatureFlagSnapshot
+{
+    $flagsPath = Get-FeatureFlagsFilePath
+    if (-not (Test-Path -LiteralPath $flagsPath))
+    {
+        throw "Feature flags file not found: $flagsPath"
+    }
+
+    Ensure-SessionArtifactDir | Out-Null
+    $raw = Get-Content -LiteralPath $flagsPath -Raw -Encoding UTF8
+    $snapshotPath = Join-Path $script:SessionArtifactDir ("{0}-runtime_feature_flags.snapshot.json" -f $script:RunTag)
+    Set-Content -LiteralPath $snapshotPath -Value $raw -Encoding UTF8
+
+    $script:FeatureFlagSnapshotPath = $snapshotPath
+    $script:FeatureFlagSnapshotActive = $true
+    Write-Ok "Feature flag snapshot saved -> $snapshotPath"
+    return $snapshotPath
+}
+
+function Wait-ForFeatureFlagsApplied
+{
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$ExpectedPatch,
+        [int]$TimeoutSec = 10,
+        [switch]$SkipIfApiUnavailable
+    )
+
+    if ($ExpectedPatch.Count -eq 0)
+    {
+        return $true
+    }
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $apiEverReachable = $false
+
+    while ((Get-Date) -lt $deadline)
+    {
+        $resp = Invoke-AgentApiSafe -Method GET -Path "/api/features" -TimeoutSec 5
+        if (-not $resp.Success -or $null -eq $resp.Result)
+        {
+            Start-Sleep -Milliseconds 500
+            continue
+        }
+
+        $apiEverReachable = $true
+        $featuresRoot = $resp.Result.Features
+        if ($null -eq $featuresRoot)
+        {
+            Start-Sleep -Milliseconds 500
+            continue
+        }
+
+        $allMatched = $true
+        foreach ($entry in $ExpectedPatch.GetEnumerator())
+        {
+            $parts = $entry.Key.Split('.')
+            if ($parts.Length -lt 2)
+            {
+                continue
+            }
+
+            $node = $resp.Result
+            foreach ($part in $parts)
+            {
+                if ($null -eq $node)
+                {
+                    break
+                }
+
+                $prop = $node.PSObject.Properties[$part]
+                if ($null -eq $prop)
+                {
+                    $node = $null
+                    break
+                }
+
+                $node = $prop.Value
+            }
+
+            if ($null -eq $node)
+            {
+                $allMatched = $false
+                break
+            }
+
+            $expected = $entry.Value
+            if ($expected -is [double] -or $expected -is [single] -or $node -is [double] -or $node -is [single] -or $node -is [decimal])
+            {
+                if ([Math]::Abs(([double]$node) - ([double]$expected)) -gt 0.0001)
+                {
+                    $allMatched = $false
+                    break
+                }
+            }
+            elseif ("$node" -ne "$expected")
+            {
+                $allMatched = $false
+                break
+            }
+        }
+
+        if ($allMatched)
+        {
+            Write-Ok "Feature flags hot-reload applied"
+            return $true
+        }
+
+        Start-Sleep -Milliseconds 500
+    }
+
+    if (-not $apiEverReachable -and $SkipIfApiUnavailable)
+    {
+        Write-WarnLine "Feature flag API unavailable; skipping hot-reload verification"
+        return $false
+    }
+
+    throw "Timed out waiting for feature flags hot-reload verification."
+}
+
+function Apply-FeatureFlagProfile
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$ProfileName,
+        [switch]$VerifyViaApi
+    )
+
+    if ($ProfileName -eq "current")
+    {
+        Write-Info "Nav profile 'current' selected; no runtime flag changes applied"
+        $script:FeatureFlagProfileApplied = "current"
+        return
+    }
+
+    if (-not $script:FeatureFlagSnapshotActive)
+    {
+        Save-FeatureFlagSnapshot | Out-Null
+    }
+
+    $flagsPath = Get-FeatureFlagsFilePath
+    $json = Get-Content -LiteralPath $flagsPath -Raw -Encoding UTF8 | ConvertFrom-Json -Depth 64
+    $patch = Get-FeatureFlagProfilePatch -ProfileName $ProfileName
+
+    foreach ($entry in $patch.GetEnumerator())
+    {
+        Set-ObjectPathValue -Root $json -Path $entry.Key -Value $entry.Value
+    }
+
+    $json.LastModified = (Get-Date).ToUniversalTime().ToString("o")
+    ($json | ConvertTo-Json -Depth 64) | Set-Content -LiteralPath $flagsPath -Encoding UTF8
+    $script:FeatureFlagProfileApplied = $ProfileName
+
+    [void](Write-ArtifactJson -Name ("{0}-flags-profile-{1}.json" -f $script:RunTag, $ProfileName) -Object ([ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Profile = $ProfileName
+            Patch = $patch
+        }))
+
+    Write-Ok "Applied nav feature-flag profile '$ProfileName'"
+
+    if ($VerifyViaApi)
+    {
+        [void](Wait-ForFeatureFlagsApplied -ExpectedPatch $patch -TimeoutSec 12 -SkipIfApiUnavailable)
+    }
+}
+
+function Restore-FeatureFlagSnapshot
+{
+    if (-not $script:FeatureFlagSnapshotActive -or [string]::IsNullOrWhiteSpace($script:FeatureFlagSnapshotPath))
+    {
+        return
+    }
+
+    $flagsPath = Get-FeatureFlagsFilePath
+    if (-not (Test-Path -LiteralPath $script:FeatureFlagSnapshotPath))
+    {
+        Write-WarnLine "Feature flag snapshot missing; cannot restore: $script:FeatureFlagSnapshotPath"
+        return
+    }
+
+    $raw = Get-Content -LiteralPath $script:FeatureFlagSnapshotPath -Raw -Encoding UTF8
+    Set-Content -LiteralPath $flagsPath -Value $raw -Encoding UTF8
+    Write-Ok "Restored runtime feature flags from snapshot"
+    $script:FeatureFlagSnapshotActive = $false
+    $script:FeatureFlagProfileApplied = $null
+
+    try
+    {
+        $currentProfile = $script:FeatureFlagProfileApplied
+        if ($null -ne $currentProfile)
+        {
+            # no-op placeholder
+        }
+    }
+    catch { }
+}
+
+function Get-KeybindingDiagnosticsSafe
+{
+    return (Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/keybindings" -TimeoutSec 8)
+}
+
+function Get-ActionBarDiagnosticsSafe
+{
+    return (Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/actionbar" -TimeoutSec 8)
+}
+
+function Test-LaunchHandshakeRecovered
+{
+    $launchResp = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+    if (-not $launchResp.Success -or $null -eq $launchResp.Result)
+    {
+        return $false
+    }
+
+    $handshakeCheck = Get-LaunchCheck -Launch $launchResp.Result -Title "Addon Handshake"
+    if ($null -eq $handshakeCheck)
+    {
+        return $false
+    }
+
+    $message = "$($handshakeCheck.Message)"
+    return ($message -notlike "*GlobalTime=0*")
+}
+
+function Get-VerifiedCommandState
+{
+    param([Parameter(Mandatory = $true)][string]$VerifyKind)
+
+    switch ($VerifyKind)
+    {
+        "bindings"
+        {
+            $resp = Get-KeybindingDiagnosticsSafe
+            return [ordered]@{ Kind = $VerifyKind; Response = $resp }
+        }
+        "actions"
+        {
+            $resp = Get-ActionBarDiagnosticsSafe
+            return [ordered]@{ Kind = $VerifyKind; Response = $resp }
+        }
+        "actionbar"
+        {
+            $resp = Get-ActionBarDiagnosticsSafe
+            return [ordered]@{ Kind = $VerifyKind; Response = $resp }
+        }
+        "reload"
+        {
+            $frames = Invoke-AgentApiSafe -Method GET -Path "/api/test/frames" -TimeoutSec 10
+            $snap = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 10
+            return [ordered]@{ Kind = $VerifyKind; Frames = $frames; Snapshot = $snap }
+        }
+        "dcflush"
+        {
+            $launch = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+            return [ordered]@{ Kind = $VerifyKind; Launch = $launch }
+        }
+        "dcnumberkeys"
+        {
+            $resp = Get-KeybindingDiagnosticsSafe
+            return [ordered]@{ Kind = $VerifyKind; Response = $resp }
+        }
+        default
+        {
+            return [ordered]@{ Kind = $VerifyKind }
+        }
+    }
+}
+
+function Test-VerifiedCommandState
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$VerifyKind,
+        [AllowNull()][object]$State,
+        [AllowNull()][object]$BeforeState = $null
+    )
+
+    switch ($VerifyKind)
+    {
+        "none" { return $true }
+        "reload"
+        {
+            $marker = $null
+            if ($null -ne $State -and $null -ne $State.Frames -and $State.Frames.Success)
+            {
+                $marker = Get-TestFramesValidationMarker -FramesResponse $State.Frames.Result
+            }
+
+            $uiMapId = $null
+            $level = $null
+            if ($null -ne $State -and $null -ne $State.Snapshot -and $State.Snapshot.Success)
+            {
+                try
+                {
+                    $snap = $State.Snapshot.Result.Data.snapshot
+                    if ($null -ne $snap)
+                    {
+                        $uiMapId = [int]$snap.UIMapId
+                        $level = [int]$snap.Level
+                    }
+                }
+                catch { }
+            }
+
+            return ($marker -eq 2000001) -or (($null -ne $uiMapId) -and ($null -ne $level) -and ($uiMapId -gt 0) -and ($level -gt 0))
+        }
+        "bindings"
+        {
+            if ($null -eq $State -or $null -eq $State.Response -or -not $State.Response.Success -or $null -eq $State.Response.Result)
+            {
+                return $false
+            }
+
+            $result = $State.Response.Result
+            return [bool]$result.IsInitialized -and ([int]$result.TotalBindings -gt 0)
+        }
+        "dcnumberkeys"
+        {
+            if ($null -eq $State -or $null -eq $State.Response -or -not $State.Response.Success -or $null -eq $State.Response.Result)
+            {
+                return $false
+            }
+
+            $result = $State.Response.Result
+            if ([bool]$result.IsInitialized -and ([int]$result.TotalBindings -gt 0))
+            {
+                return $true
+            }
+
+            if ($null -ne $BeforeState -and $null -ne $BeforeState.Response -and $BeforeState.Response.Success)
+            {
+                try
+                {
+                    return ([int]$result.MismatchCount -lt [int]$BeforeState.Response.Result.MismatchCount)
+                }
+                catch { }
+            }
+
+            return $false
+        }
+        "actions"
+        {
+            if ($null -eq $State -or $null -eq $State.Response -or -not $State.Response.Success -or $null -eq $State.Response.Result)
+            {
+                return $false
+            }
+
+            return [bool]$State.Response.Result.IsTextureInitialized
+        }
+        "actionbar"
+        {
+            if ($null -eq $State -or $null -eq $State.Response -or -not $State.Response.Success -or $null -eq $State.Response.Result)
+            {
+                return $false
+            }
+
+            return ([int]$State.Response.Result.IssueCount -eq 0)
+        }
+        "dcflush"
+        {
+            if ($null -eq $State -or $null -eq $State.Launch -or -not $State.Launch.Success -or $null -eq $State.Launch.Result)
+            {
+                return $false
+            }
+
+            $handshakeCheck = Get-LaunchCheck -Launch $State.Launch.Result -Title "Addon Handshake"
+            if ($null -eq $handshakeCheck) { return $false }
+            return ("$($handshakeCheck.Message)" -notlike "*GlobalTime=0*")
+        }
+        default
+        {
+            return $true
+        }
+    }
+}
+
+function Wait-ForVerifiedCommandEffect
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$VerifyKind,
+        [AllowNull()][object]$BeforeState = $null,
+        [int]$TimeoutSec = 8,
+        [int]$PollMs = 1000
+    )
+
+    if ($VerifyKind -eq "none")
+    {
+        return [pscustomobject]@{ Success = $true; State = $null }
+    }
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $lastState = $null
+    while ((Get-Date) -lt $deadline)
+    {
+        $state = Get-VerifiedCommandState -VerifyKind $VerifyKind
+        $lastState = $state
+        if (Test-VerifiedCommandState -VerifyKind $VerifyKind -State $state -BeforeState $BeforeState)
+        {
+            return [pscustomobject]@{ Success = $true; State = $state }
+        }
+
+        Start-Sleep -Milliseconds $PollMs
+    }
+
+    return [pscustomobject]@{ Success = $false; State = $lastState }
+}
+
+function Invoke-LocalWowCommandFallback
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$SlashCommand
+    )
+
+    $scriptPath = Join-Path $BotRoot "send-wowcmd.ps1"
+    if (-not (Test-Path -LiteralPath $scriptPath))
+    {
+        throw "Missing fallback sender script: $scriptPath"
+    }
+
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File $scriptPath $SlashCommand
+}
+
+function Invoke-VerifiedSlashCommand
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$SlashCommand,
+        [ValidateSet("reload", "bindings", "actions", "actionbar", "dcflush", "dcnumberkeys", "none")]
+        [string]$VerifyKind = "none",
+        [int]$Retries = 3,
+        [switch]$BestEffort
+    )
+
+    if ($Retries -lt 1)
+    {
+        $Retries = 1
+    }
+
+    $beforeState = Get-VerifiedCommandState -VerifyKind $VerifyKind
+    $attemptArtifacts = New-Object System.Collections.Generic.List[object]
+
+    $dispatchPlans = @(
+        [ordered]@{ Path = "api"; Body = @{ command = $SlashCommand; useBackgroundCompatibleInput = $false; preDelayMs = 200; postDelayMs = 500 } },
+        [ordered]@{ Path = "api-bg"; Body = @{ command = $SlashCommand; useBackgroundCompatibleInput = $true; preDelayMs = 200; postDelayMs = 700 } },
+        [ordered]@{ Path = "local"; Body = $null }
+    )
+
+    $planIndex = 0
+    foreach ($plan in $dispatchPlans)
+    {
+        $planIndex++
+        for ($retry = 1; $retry -le $Retries; $retry++)
+        {
+            $dispatchSuccess = $false
+            $dispatchError = $null
+            $dispatchResult = $null
+
+            try
+            {
+                if ($plan.Path -eq "local")
+                {
+                    Invoke-LocalWowCommandFallback -SlashCommand $SlashCommand | Out-Null
+                    $dispatchSuccess = $true
+                    $dispatchResult = [ordered]@{ success = $true; dispatchPath = "send-wowcmd.ps1" }
+                }
+                else
+                {
+                    $resp = Invoke-AgentApiSafe -Method POST -Path "/api/diagnostics/fix/slash" -Body $plan.Body -TimeoutSec 20
+                    $dispatchSuccess = [bool]$resp.Success -and ($null -ne $resp.Result) -and [bool]$resp.Result.Success
+                    $dispatchResult = $resp
+                    if (-not $dispatchSuccess)
+                    {
+                        $dispatchError = if ($resp.Success) { "$($resp.Result.Error)" } else { $resp.Error }
+                    }
+                }
+            }
+            catch
+            {
+                $dispatchError = $_.Exception.Message
+                $dispatchSuccess = $false
+            }
+
+            $verifyOutcome = Wait-ForVerifiedCommandEffect -VerifyKind $VerifyKind -BeforeState $beforeState -TimeoutSec 8 -PollMs 1000
+            $verified = [bool]$verifyOutcome.Success
+
+            $attemptRecord = [ordered]@{
+                TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                SlashCommand = $SlashCommand
+                VerifyKind = $VerifyKind
+                DispatchPlan = $plan.Path
+                Retry = $retry
+                DispatchSuccess = $dispatchSuccess
+                DispatchError = $dispatchError
+                Verified = $verified
+                VerifyState = $verifyOutcome.State
+                DispatchResult = $dispatchResult
+            }
+            [void]$attemptArtifacts.Add($attemptRecord)
+
+            [void](Write-ArtifactJson -Name ("{0}-cmd-{1}-{2}-{3}.json" -f $script:RunTag, (Get-SafeArtifactName -Name $SlashCommand), $plan.Path, $retry) -Object $attemptRecord)
+
+            if ($verified)
+            {
+                Write-Ok "Verified slash command $SlashCommand via $($plan.Path) (retry $retry)"
+                return [pscustomobject]@{
+                    Success = $true
+                    Verified = $true
+                    Attempts = $attemptArtifacts
+                    DispatchPath = $plan.Path
+                    VerifyKind = $VerifyKind
+                }
+            }
+
+            if ($dispatchSuccess -and $VerifyKind -eq "none")
+            {
+                return [pscustomobject]@{
+                    Success = $true
+                    Verified = $true
+                    Attempts = $attemptArtifacts
+                    DispatchPath = $plan.Path
+                    VerifyKind = $VerifyKind
+                }
+            }
+        }
+    }
+
+    $message = "Slash command $SlashCommand did not verify (verify=$VerifyKind) after all dispatch paths"
+    if ($BestEffort)
+    {
+        Write-WarnLine $message
+        return [pscustomobject]@{
+            Success = $false
+            Verified = $false
+            Attempts = $attemptArtifacts
+            DispatchPath = $null
+            VerifyKind = $VerifyKind
+            Error = $message
+        }
+    }
+
+    throw $message
 }
 
 function Wait-Until
@@ -1226,6 +1903,180 @@ function Get-LaunchStatusCode([object]$Check)
     }
 }
 
+function Get-OptionalPropertyValue
+{
+    param(
+        [AllowNull()][object]$Object,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    if ($null -eq $Object)
+    {
+        return $null
+    }
+
+    try
+    {
+        $prop = $Object.PSObject.Properties[$Name]
+        if ($null -eq $prop)
+        {
+            return $null
+        }
+
+        return $prop.Value
+    }
+    catch
+    {
+        return $null
+    }
+}
+
+function Get-LaunchActionBarBypassOverrideInfo
+{
+    param([AllowNull()][object]$Launch)
+
+    $result = [ordered]@{
+        Enabled = $false
+        Reason = $null
+        Source = $null
+    }
+
+    $overrides = Get-OptionalPropertyValue -Object $Launch -Name "Overrides"
+    if ($null -eq $overrides)
+    {
+        return [pscustomobject]$result
+    }
+
+    $bypassContainer = Get-OptionalPropertyValue -Object $overrides -Name "Bypass"
+    if ($null -eq $bypassContainer)
+    {
+        $bypassContainer = Get-OptionalPropertyValue -Object $overrides -Name "Bypasses"
+    }
+
+    if ($null -eq $bypassContainer)
+    {
+        return [pscustomobject]$result
+    }
+
+    $actionBarNode = Get-OptionalPropertyValue -Object $bypassContainer -Name "ActionBar"
+    if ($null -eq $actionBarNode)
+    {
+        return [pscustomobject]$result
+    }
+
+    if ($actionBarNode -is [bool] -or ($actionBarNode -is [System.IConvertible] -and $actionBarNode -isnot [string]))
+    {
+        $result.Enabled = [bool]$actionBarNode
+        $result.Reason = [string](Get-OptionalPropertyValue -Object $overrides -Name "Reason")
+        $result.Source = [string](Get-OptionalPropertyValue -Object $overrides -Name "Source")
+        return [pscustomobject]$result
+    }
+
+    $enabledValue = Get-OptionalPropertyValue -Object $actionBarNode -Name "Enabled"
+    if ($null -eq $enabledValue)
+    {
+        $enabledValue = Get-OptionalPropertyValue -Object $actionBarNode -Name "IsEnabled"
+    }
+
+    if ($null -ne $enabledValue)
+    {
+        $result.Enabled = [bool]$enabledValue
+    }
+    else
+    {
+        try { $result.Enabled = [bool]$actionBarNode } catch { $result.Enabled = $false }
+    }
+
+    $reason = Get-OptionalPropertyValue -Object $actionBarNode -Name "Reason"
+    if ($null -eq $reason)
+    {
+        $reason = Get-OptionalPropertyValue -Object $overrides -Name "Reason"
+    }
+
+    $source = Get-OptionalPropertyValue -Object $actionBarNode -Name "Source"
+    if ($null -eq $source)
+    {
+        $source = Get-OptionalPropertyValue -Object $overrides -Name "Source"
+    }
+
+    $result.Reason = if ($null -ne $reason) { "$reason" } else { $null }
+    $result.Source = if ($null -ne $source) { "$source" } else { $null }
+    return [pscustomobject]$result
+}
+
+function Get-LaunchKeyBindingsBypassOverrideInfo
+{
+    param([AllowNull()][object]$Launch)
+
+    $result = [ordered]@{
+        Enabled = $false
+        Reason = $null
+        Source = $null
+    }
+
+    $overrides = Get-OptionalPropertyValue -Object $Launch -Name "Overrides"
+    if ($null -eq $overrides)
+    {
+        return [pscustomobject]$result
+    }
+
+    $bypassContainer = Get-OptionalPropertyValue -Object $overrides -Name "Bypass"
+    if ($null -eq $bypassContainer)
+    {
+        $bypassContainer = Get-OptionalPropertyValue -Object $overrides -Name "Bypasses"
+    }
+
+    if ($null -eq $bypassContainer)
+    {
+        return [pscustomobject]$result
+    }
+
+    $node = Get-OptionalPropertyValue -Object $bypassContainer -Name "KeyBindings"
+    if ($null -eq $node)
+    {
+        return [pscustomobject]$result
+    }
+
+    if ($node -is [bool] -or ($node -is [System.IConvertible] -and $node -isnot [string]))
+    {
+        $result.Enabled = [bool]$node
+        $result.Reason = [string](Get-OptionalPropertyValue -Object $overrides -Name "Reason")
+        $result.Source = [string](Get-OptionalPropertyValue -Object $overrides -Name "Source")
+        return [pscustomobject]$result
+    }
+
+    $enabledValue = Get-OptionalPropertyValue -Object $node -Name "Enabled"
+    if ($null -eq $enabledValue)
+    {
+        $enabledValue = Get-OptionalPropertyValue -Object $node -Name "IsEnabled"
+    }
+
+    if ($null -ne $enabledValue)
+    {
+        $result.Enabled = [bool]$enabledValue
+    }
+    else
+    {
+        try { $result.Enabled = [bool]$node } catch { $result.Enabled = $false }
+    }
+
+    $reason = Get-OptionalPropertyValue -Object $node -Name "Reason"
+    if ($null -eq $reason)
+    {
+        $reason = Get-OptionalPropertyValue -Object $overrides -Name "Reason"
+    }
+
+    $source = Get-OptionalPropertyValue -Object $node -Name "Source"
+    if ($null -eq $source)
+    {
+        $source = Get-OptionalPropertyValue -Object $overrides -Name "Source"
+    }
+
+    $result.Reason = if ($null -ne $reason) { "$reason" } else { $null }
+    $result.Source = if ($null -ne $source) { "$source" } else { $null }
+    return [pscustomobject]$result
+}
+
 function Set-LaunchOverrides
 {
     Write-Info "Applying launch overrides"
@@ -1236,7 +2087,7 @@ function Set-LaunchOverrides
         Bypass = @{
             Route = $false
             ActionBar = [bool]$BypassActionBar
-            KeyBindings = $false
+            KeyBindings = [bool]$BypassKeyBindings
         }
         Reason = "agent-cli-startup"
         Source = "Agent-BotControl"
@@ -1253,19 +2104,206 @@ function Set-ActionBarBypassOverride
         [string]$Reason = "agent-cli-dynamic-actionbar"
     )
 
+    $existingKeyBypass = [bool]$BypassKeyBindings
+    try
+    {
+        $launchResp = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+        if ($launchResp.Success -and $null -ne $launchResp.Result)
+        {
+            $keyBypassInfo = Get-LaunchKeyBindingsBypassOverrideInfo -Launch $launchResp.Result
+            $existingKeyBypass = [bool]$keyBypassInfo.Enabled
+        }
+    }
+    catch { }
+
     $body = @{
         AllowStartWithWarnings = [bool]$AllowStartWithWarnings
         EmergencyBypassAll = $false
         Bypass = @{
             Route = $false
             ActionBar = $Enabled
-            KeyBindings = $false
+            KeyBindings = $existingKeyBypass
         }
         Reason = $Reason
         Source = "Agent-BotControl"
     }
 
     $null = Invoke-AgentApi -Method POST -Path "/api/launch/overrides" -Body $body
+}
+
+function Set-KeyBindingsBypassOverride
+{
+    param(
+        [Parameter(Mandatory = $true)][bool]$Enabled,
+        [string]$Reason = "agent-cli-dynamic-keybindings"
+    )
+
+    $existingActionBarBypass = [bool]$BypassActionBar
+    try
+    {
+        $launchResp = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+        if ($launchResp.Success -and $null -ne $launchResp.Result)
+        {
+            $actionBarBypassInfo = Get-LaunchActionBarBypassOverrideInfo -Launch $launchResp.Result
+            $existingActionBarBypass = [bool]$actionBarBypassInfo.Enabled
+        }
+    }
+    catch { }
+
+    $body = @{
+        AllowStartWithWarnings = [bool]$AllowStartWithWarnings
+        EmergencyBypassAll = $false
+        Bypass = @{
+            Route = $false
+            ActionBar = $existingActionBarBypass
+            KeyBindings = $Enabled
+        }
+        Reason = $Reason
+        Source = "Agent-BotControl"
+    }
+
+    $null = Invoke-AgentApi -Method POST -Path "/api/launch/overrides" -Body $body
+}
+
+function Clear-TransientActionBarBypassIfHealthy
+{
+    param(
+        [AllowNull()][object]$Launch = $null
+    )
+
+    if ($BypassActionBar)
+    {
+        return $false
+    }
+
+    if ($null -eq $Launch)
+    {
+        $launchResp = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+        if (-not $launchResp.Success -or $null -eq $launchResp.Result)
+        {
+            return $false
+        }
+
+        $Launch = $launchResp.Result
+    }
+
+    $abBypassInfo = Get-LaunchActionBarBypassOverrideInfo -Launch $Launch
+    if ($null -eq $abBypassInfo -or -not [bool]$abBypassInfo.Enabled)
+    {
+        return $false
+    }
+
+    if ("$($abBypassInfo.Reason)" -notlike "agent-cli-*")
+    {
+        return $false
+    }
+
+    $actionCheck = Get-LaunchCheck -Launch $Launch -Title "Action Bar"
+    $actionStatus = Get-LaunchStatusCode -Check $actionCheck
+    if ($actionStatus -ne 2)
+    {
+        return $false
+    }
+
+    Set-ActionBarBypassOverride -Enabled $false -Reason "agent-cli-clear-actionbar-bypass"
+    Write-Info "Cleared transient Action Bar bypass override after launch checks recovered"
+    return $true
+}
+
+function Clear-TransientKeyBindingsBypassIfHealthy
+{
+    param(
+        [AllowNull()][object]$Launch = $null
+    )
+
+    if ($BypassKeyBindings)
+    {
+        return $false
+    }
+
+    if ($null -eq $Launch)
+    {
+        $launchResp = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+        if (-not $launchResp.Success -or $null -eq $launchResp.Result)
+        {
+            return $false
+        }
+
+        $Launch = $launchResp.Result
+    }
+
+    $kbBypassInfo = Get-LaunchKeyBindingsBypassOverrideInfo -Launch $Launch
+    if ($null -eq $kbBypassInfo -or -not [bool]$kbBypassInfo.Enabled)
+    {
+        return $false
+    }
+
+    if ("$($kbBypassInfo.Reason)" -notlike "agent-cli-*")
+    {
+        return $false
+    }
+
+    $keyCheck = Get-LaunchCheck -Launch $Launch -Title "Key Bindings"
+    $keyStatus = Get-LaunchStatusCode -Check $keyCheck
+    if ($keyStatus -ne 2)
+    {
+        return $false
+    }
+
+    Set-KeyBindingsBypassOverride -Enabled $false -Reason "agent-cli-clear-keybindings-bypass"
+    Write-Info "Cleared transient Key Bindings bypass override after launch checks recovered"
+    return $true
+}
+
+function Try-CloseChatInputFromAutomation
+{
+    param(
+        [string]$Context = "readiness",
+        [int]$Attempts = 2
+    )
+
+    if ($Attempts -lt 1)
+    {
+        $Attempts = 1
+    }
+
+    for ($i = 1; $i -le $Attempts; $i++)
+    {
+        $snapshot = Get-CurrentSnapshot
+        if ($null -eq $snapshot -or -not [bool]$snapshot.ChatInputVisible)
+        {
+            return $true
+        }
+
+        Write-WarnLine "Chat input is visible during $Context; attempting automated close (attempt $i/$Attempts)"
+
+        try
+        {
+            $null = Invoke-AgentApiSafe -Method POST -Path "/api/diagnostics/fix/initstate" -Body @{} -TimeoutSec 15
+        }
+        catch { }
+
+        Start-Sleep -Milliseconds 500
+
+        $snapshot = Get-CurrentSnapshot
+        if ($null -ne $snapshot -and -not [bool]$snapshot.ChatInputVisible)
+        {
+            Write-Ok "Closed chat input automatically during $Context"
+            return $true
+        }
+
+        [void](Invoke-VerifiedSlashCommand -SlashCommand "/dcflush" -VerifyKind "none" -Retries 1 -BestEffort)
+        Start-Sleep -Milliseconds 500
+
+        $snapshot = Get-CurrentSnapshot
+        if ($null -ne $snapshot -and -not [bool]$snapshot.ChatInputVisible)
+        {
+            Write-Ok "Closed chat input automatically during $Context (slash fallback)"
+            return $true
+        }
+    }
+
+    return $false
 }
 
 function Try-ResolveBenignActionBarBlocker
@@ -1322,6 +2360,118 @@ function Try-ResolveBenignActionBarBlocker
     }
 }
 
+function Try-ResolveStaleKeyBindingsBlocker
+{
+    try
+    {
+        $diag = Invoke-AgentApi -Method GET -Path "/api/diagnostics/keybindings" -TimeoutSec 8
+        if ($null -eq $diag)
+        {
+            return $false
+        }
+
+        $total = [int]$diag.TotalBindings
+        $mismatch = [int]$diag.MismatchCount
+        $initialized = [bool]$diag.IsInitialized
+
+        if ($initialized -and $total -gt 0 -and $mismatch -eq 0)
+        {
+            Write-WarnLine "Launch check reports stale Key Bindings timeout, but diagnostics are healthy; applying transient Key Bindings bypass override"
+            Set-KeyBindingsBypassOverride -Enabled $true -Reason "agent-cli-keybindings-stale-timeout-bypass"
+            return $true
+        }
+    }
+    catch
+    {
+        Write-WarnLine "Key Bindings stale-blocker analysis failed: $($_.Exception.Message)"
+    }
+
+    return $false
+}
+
+function Invoke-ResolvableActionBarPlacements
+{
+    try
+    {
+        $diag = Invoke-AgentApi -Method GET -Path "/api/diagnostics/actionbar" -TimeoutSec 8
+        if ($null -eq $diag -or $null -eq $diag.Issues)
+        {
+            return 0
+        }
+
+        $changes = 0
+        foreach ($issue in @($diag.Issues))
+        {
+            try
+            {
+                if (-not [bool]$issue.CanResolve)
+                {
+                    continue
+                }
+
+                $slot = [int]$issue.Slot
+                $spellName = "$($issue.SpellName)"
+                if ([string]::IsNullOrWhiteSpace($spellName))
+                {
+                    continue
+                }
+
+                Write-Info "Attempting fix/place for action bar issue: slot=$slot spell=$spellName"
+                $null = Invoke-AgentApi -Method POST -Path "/api/diagnostics/fix/place" -TimeoutSec 15 -Body @{
+                    slot = $slot
+                    name = $spellName
+                }
+                $changes++
+                Start-Sleep -Milliseconds 250
+            }
+            catch
+            {
+                Write-WarnLine "fix/place failed for slot $($issue.Slot) '$($issue.SpellName)': $($_.Exception.Message)"
+            }
+        }
+
+        return $changes
+    }
+    catch
+    {
+        Write-WarnLine "Could not enumerate action bar issues for fix/place: $($_.Exception.Message)"
+        return 0
+    }
+}
+
+function Test-KeybindingsReady
+{
+    $resp = Get-KeybindingDiagnosticsSafe
+    if (-not $resp.Success -or $null -eq $resp.Result)
+    {
+        return $false
+    }
+
+    return [bool]$resp.Result.IsInitialized -and ([int]$resp.Result.TotalBindings -gt 0)
+}
+
+function Test-ActionBarTexturesReady
+{
+    $resp = Get-ActionBarDiagnosticsSafe
+    if (-not $resp.Success -or $null -eq $resp.Result)
+    {
+        return $false
+    }
+
+    return [bool]$resp.Result.IsTextureInitialized
+}
+
+function Test-ActionBarIssuesClear
+{
+    $resp = Get-ActionBarDiagnosticsSafe
+    if (-not $resp.Success -or $null -eq $resp.Result)
+    {
+        return $false
+    }
+
+    return ([int]$resp.Result.IssueCount -eq 0)
+}
+
 function Load-BotProfile
 {
     Write-Info "Loading profile '$Profile'"
@@ -1339,10 +2489,13 @@ function Invoke-ReadinessFixes
     $snapshot = Get-CurrentSnapshot
     if ($null -ne $snapshot -and $snapshot.ChatInputVisible)
     {
-        throw "Chat input is currently open in WoW. Close chat (Escape) before startup fixes to prevent in-game text spam."
+        if (-not (Try-CloseChatInputFromAutomation -Context "startup fixes"))
+        {
+            throw "Chat input is currently open in WoW and could not be closed automatically. Close chat (Escape) and retry."
+        }
     }
 
-    Write-Info "Applying startup fixes (initstate + bindings/actions sync)"
+    Write-Info "Applying startup fixes (effect-verified readiness repair)"
     try
     {
         $null = Invoke-AgentApi -Method POST -Path "/api/diagnostics/fix/initstate" -Body @{} -TimeoutSec 30
@@ -1352,18 +2505,122 @@ function Invoke-ReadinessFixes
         Write-WarnLine "fix/initstate did not complete: $($_.Exception.Message)"
     }
 
-    Start-Sleep -Seconds 1
+    Start-Sleep -Milliseconds 800
+
+    [void](Invoke-VerifiedSlashCommand -SlashCommand "/dcflush" -VerifyKind "dcflush" -Retries $MaxCommandRetries -BestEffort)
+
+    $launch = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+    $keyBlocked = $false
+    $actionBlocked = $false
+    $handshakeGlobalTimeZero = $false
+    if ($launch.Success -and $null -ne $launch.Result)
+    {
+        $keyCheck = Get-LaunchCheck -Launch $launch.Result -Title "Key Bindings"
+        $actionCheck = Get-LaunchCheck -Launch $launch.Result -Title "Action Bar"
+        $handshakeCheck = Get-LaunchCheck -Launch $launch.Result -Title "Addon Handshake"
+        $keyBlocked = ($null -ne $keyCheck) -and [bool]$keyCheck.IsBlocking
+        $actionBlocked = ($null -ne $actionCheck) -and [bool]$actionCheck.IsBlocking
+        if ($null -ne $handshakeCheck)
+        {
+            $handshakeGlobalTimeZero = "$($handshakeCheck.Message)" -like "*GlobalTime=0*"
+        }
+    }
+
+    if ($keyBlocked -or -not (Test-KeybindingsReady))
+    {
+        try
+        {
+            [void](Invoke-VerifiedSlashCommand -SlashCommand "/dcbindings" -VerifyKind "bindings" -Retries $MaxCommandRetries)
+            [void](Invoke-VerifiedSlashCommand -SlashCommand "/dcnumberkeys" -VerifyKind "dcnumberkeys" -Retries $MaxCommandRetries -BestEffort)
+        }
+        catch
+        {
+            Write-WarnLine "Keybinding repair did not verify on primary pass: $($_.Exception.Message)"
+            [void](Invoke-VerifiedSlashCommand -SlashCommand "/dc" -VerifyKind "none" -Retries 1 -BestEffort)
+            if ($handshakeGlobalTimeZero)
+            {
+                Write-WarnLine "Addon handshake is stale (GlobalTime=0); running keybinding fixes as best-effort pending handshake recovery"
+            }
+            [void](Invoke-VerifiedSlashCommand -SlashCommand "/dcbindings" -VerifyKind "bindings" -Retries 1 -BestEffort)
+            [void](Invoke-VerifiedSlashCommand -SlashCommand "/dcnumberkeys" -VerifyKind "dcnumberkeys" -Retries 1 -BestEffort)
+        }
+    }
+
+    if ($actionBlocked -or -not (Test-ActionBarTexturesReady))
+    {
+        try
+        {
+            [void](Invoke-VerifiedSlashCommand -SlashCommand "/dcactions" -VerifyKind "actions" -Retries $MaxCommandRetries)
+        }
+        catch
+        {
+            Write-WarnLine "Action bar texture repair did not verify on primary pass: $($_.Exception.Message)"
+            [void](Invoke-VerifiedSlashCommand -SlashCommand "/dc" -VerifyKind "none" -Retries 1 -BestEffort)
+            if ($handshakeGlobalTimeZero)
+            {
+                Write-WarnLine "Addon handshake is stale (GlobalTime=0); running action bar fixes as best-effort pending handshake recovery"
+            }
+            [void](Invoke-VerifiedSlashCommand -SlashCommand "/dcactions" -VerifyKind "actions" -Retries 1 -BestEffort)
+        }
+    }
+
+    try
+    {
+        $null = Invoke-AgentApi -Method POST -Path "/api/diagnostics/fix/syncbar" -Body @{} -TimeoutSec 30
+        Write-Info "Applied fix/syncbar"
+    }
+    catch
+    {
+        Write-WarnLine "fix/syncbar failed: $($_.Exception.Message)"
+    }
+
+    $placed = Invoke-ResolvableActionBarPlacements
+    if ($placed -gt 0)
+    {
+        Write-Info "Applied $placed targeted action bar placement fix(es)"
+    }
+
+    if (-not (Test-ActionBarIssuesClear))
+    {
+        [void](Try-ResolveBenignActionBarBlocker)
+    }
 
     try
     {
         $null = Invoke-AgentApi -Method POST -Path "/api/diagnostics/fix/all" -Body @{} -TimeoutSec 60
+        Write-Info "Executed fix/all as final catch-all"
     }
     catch
     {
         Write-WarnLine "fix/all did not complete: $($_.Exception.Message)"
     }
 
-    Write-Ok "Startup fixes triggered"
+    $keyReady = Test-KeybindingsReady
+    $actionTexturesReady = Test-ActionBarTexturesReady
+    $actionIssuesClear = Test-ActionBarIssuesClear
+
+    if (-not $BypassActionBar -and $actionIssuesClear)
+    {
+        try
+        {
+            $launchPostFix = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+            if ($launchPostFix.Success -and $null -ne $launchPostFix.Result)
+            {
+                $abBypassInfo = Get-LaunchActionBarBypassOverrideInfo -Launch $launchPostFix.Result
+                if ($null -ne $abBypassInfo -and [bool]$abBypassInfo.Enabled -and "$($abBypassInfo.Reason)" -like "agent-cli-*")
+                {
+                    Set-ActionBarBypassOverride -Enabled $false -Reason "agent-cli-clear-actionbar-bypass"
+                    Write-Info "Cleared transient Action Bar bypass override after successful repair"
+                }
+            }
+        }
+        catch
+        {
+            Write-WarnLine "Could not clear transient Action Bar bypass override: $($_.Exception.Message)"
+        }
+    }
+
+    Write-Ok "Readiness repair sequence complete (Bindings=$keyReady, ActionTextures=$actionTexturesReady, ActionIssuesClear=$actionIssuesClear)"
 }
 
 function Wait-ForReadiness
@@ -1374,17 +2631,20 @@ function Wait-ForReadiness
     $attempt = 0
     $lastBlocking = @()
     $actionBarBypassApplied = $false
+    $keyBindingsBypassApplied = $false
     $dtcHandshakeReloadAttempted = $false
 
     while ((Get-Date) -lt $deadline)
     {
         $attempt++
         $launch = Invoke-AgentApi -Method GET -Path "/api/launch/status" -TimeoutSec 8
-        if ($launch.CanStartBot)
-        {
-            Write-Ok "Launch readiness satisfied"
-            return $launch
-        }
+    if ($launch.CanStartBot)
+    {
+        [void](Clear-TransientKeyBindingsBypassIfHealthy -Launch $launch)
+        [void](Clear-TransientActionBarBypassIfHealthy -Launch $launch)
+        Write-Ok "Launch readiness satisfied"
+        return $launch
+    }
 
         $blocking = @($launch.Checks | Where-Object { $_.IsBlocking })
         $lastBlocking = @($blocking | ForEach-Object { "$($_.Title): $($_.Message)" })
@@ -1412,7 +2672,13 @@ function Wait-ForReadiness
             $snapshot = Get-CurrentSnapshot
             if ($null -ne $snapshot -and $snapshot.ChatInputVisible)
             {
-                throw "Chat input became visible while waiting for readiness. Close chat (Escape) and rerun StartAndValidate."
+                if (-not (Try-CloseChatInputFromAutomation -Context "readiness wait"))
+                {
+                    throw "Chat input became visible while waiting for readiness and could not be closed automatically. Close chat (Escape) and rerun StartAndValidate."
+                }
+
+                Start-Sleep -Milliseconds 500
+                continue
             }
 
             Write-WarnLine "Readiness not complete (attempt $attempt); reapplying startup fixes"
@@ -1423,6 +2689,14 @@ function Wait-ForReadiness
                 if (Try-ResolveBenignActionBarBlocker)
                 {
                     $actionBarBypassApplied = $true
+                }
+            }
+
+            if ($keyStatus -eq 4 -and -not $keyBindingsBypassApplied)
+            {
+                if (Try-ResolveStaleKeyBindingsBlocker)
+                {
+                    $keyBindingsBypassApplied = $true
                 }
             }
 
@@ -1493,10 +2767,7 @@ function Assert-CharacterAlignment
     {
         [void]$issues.Add("Chat input is open (press Escape first to avoid typing automation keys into chat).")
     }
-    if ($snap.Dead)
-    {
-        [void]$issues.Add("Character is dead (resurrect at spirit healer before bot start).")
-    }
+    $isDead = [bool]$snap.Dead
     if ($snap.Swimming)
     {
         [void]$issues.Add("Character is swimming (likely ocean/off-route position).")
@@ -1509,6 +2780,11 @@ function Assert-CharacterAlignment
     if ($issues.Count -gt 0)
     {
         throw ($issues -join " ")
+    }
+
+    if ($isDead)
+    {
+        Write-WarnLine "Character is dead; allowing startup so corpse-recovery GOAP can run autonomously."
     }
 
     Write-Ok "Character alignment checks passed (MapX=$([math]::Round($snap.MapX, 2)), MapY=$([math]::Round($snap.MapY, 2)), UIMapId=$($snap.UIMapId))"
@@ -1834,6 +3110,571 @@ function Show-Status
     }
 }
 
+function Invoke-GameCommandAction
+{
+    if ([string]::IsNullOrWhiteSpace($Command))
+    {
+        throw "-Command is required when -Action GameCmd is used."
+    }
+
+    $result = Invoke-VerifiedSlashCommand -SlashCommand $Command -VerifyKind $Verify -Retries $MaxCommandRetries
+    $result | ConvertTo-Json -Depth 10
+}
+
+function Invoke-FlagsProfileAction
+{
+    Ensure-SessionArtifactDir | Out-Null
+    Apply-FeatureFlagProfile -ProfileName $NavProfile -VerifyViaApi
+
+    $resp = Invoke-AgentApiSafe -Method GET -Path "/api/features" -TimeoutSec 8
+    if ($resp.Success)
+    {
+        [void](Write-ArtifactJson -Name ("{0}-flags-profile-verify.json" -f $script:RunTag) -Object $resp.Result)
+        $resp.Result | ConvertTo-Json -Depth 16
+        return
+    }
+
+    [void](Write-ArtifactJson -Name ("{0}-flags-profile-verify-error.json" -f $script:RunTag) -Object $resp)
+    Write-WarnLine "Unable to verify /api/features after profile apply: $($resp.Error)"
+}
+
+function Invoke-Doctor
+{
+    param(
+        [switch]$SkipEvidence,
+        [switch]$ReturnDispositionOnly
+    )
+
+    Ensure-SessionArtifactDir | Out-Null
+    if (-not $SkipEvidence)
+    {
+        Invoke-CollectEvidence -Stage "doctor-before"
+    }
+
+    $dtcSig = Test-DtcFrozenStartupSignature -IgnoreStageRequirement
+    $dtcRecovered = $false
+    if ($dtcSig.IsFrozen)
+    {
+        Write-WarnLine "Doctor detected frozen DTC signature; attempting /reload recovery"
+        $dtcRecovery = Invoke-DtcReloadRecovery -Reason "doctor-dtc-frozen" -Force
+        $dtcRecovered = [bool]$dtcRecovery.Recovered
+        if (-not $dtcRecovered)
+        {
+            $disposition = [pscustomobject]@{
+                Disposition = "Blocked"
+                Reason = "DTCFrozen"
+                DtcRecovered = $false
+            }
+
+            if (-not $SkipEvidence)
+            {
+                Invoke-CollectEvidence -Stage "doctor-blocked-dtc"
+            }
+
+            if ($ReturnDispositionOnly)
+            {
+                return $disposition
+            }
+
+            $disposition | ConvertTo-Json -Depth 8
+            return
+        }
+    }
+
+    Invoke-ReadinessFixes
+    $launch = $null
+    try
+    {
+        $launch = Wait-ForReadiness
+    }
+    catch
+    {
+        if (-not $SkipEvidence)
+        {
+            Invoke-CollectEvidence -Stage "doctor-blocked-readiness"
+        }
+
+        if ($ReturnDispositionOnly)
+        {
+            return [pscustomobject]@{
+                Disposition = "Blocked"
+                Reason = "ReadinessTimeout"
+                Error = $_.Exception.Message
+            }
+        }
+
+        throw
+    }
+
+    $actionBarBypassed = $false
+    try
+    {
+        $launchPost = Invoke-AgentApi -Method GET -Path "/api/launch/status" -TimeoutSec 8
+        [void](Clear-TransientKeyBindingsBypassIfHealthy -Launch $launchPost)
+        [void](Clear-TransientActionBarBypassIfHealthy -Launch $launchPost)
+        $launchPost = Invoke-AgentApi -Method GET -Path "/api/launch/status" -TimeoutSec 8
+        $launch = $launchPost
+        $actionBarBypassed = [bool](Get-LaunchActionBarBypassOverrideInfo -Launch $launchPost).Enabled
+    }
+    catch { }
+
+    if (-not $SkipEvidence)
+    {
+        Invoke-CollectEvidence -Stage "doctor-after"
+    }
+
+    $finalDisposition = if ($actionBarBypassed) { "ReadyWithBypass" } else { "Ready" }
+    $doctorResult = [pscustomobject]@{
+        Disposition = $finalDisposition
+        Reason = "Ready"
+        DtcRecovered = $dtcRecovered
+        Launch = $launch
+    }
+
+    if ($ReturnDispositionOnly)
+    {
+        return $doctorResult
+    }
+
+    $doctorResult | ConvertTo-Json -Depth 12
+}
+
+function Invoke-WatchNav
+{
+    param(
+        [int]$DurationSeconds = $WatchSeconds,
+        [int]$CadenceMs = $WatchCadenceMs,
+        [switch]$Quiet
+    )
+
+    Ensure-SessionArtifactDir | Out-Null
+    $sampleFile = Join-Path $script:SessionArtifactDir ("{0}-watchnav-samples.jsonl" -f $script:RunTag)
+    $deadline = (Get-Date).AddSeconds([Math]::Max(1, $DurationSeconds))
+    $samples = New-Object System.Collections.Generic.List[object]
+
+    while ((Get-Date) -lt $deadline)
+    {
+        $stamp = (Get-Date).ToUniversalTime().ToString("o")
+        $bot = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
+        $snap = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 8
+        $launch = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+        $nav = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/navigation/runtime" -TimeoutSec 8
+        $soak = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/soak/current" -TimeoutSec 8
+
+        $sample = [ordered]@{
+            TimestampUtc = $stamp
+            BotStatus = $(if ($bot.Success) { $bot.Result } else { $null })
+            Snapshot = $(if ($snap.Success -and $null -ne $snap.Result -and $snap.Result.Success) { $snap.Result.Data.snapshot } else { $null })
+            LaunchStatus = $(if ($launch.Success) { $launch.Result } else { $null })
+            NavigationRuntime = $(if ($nav.Success) { $nav.Result } else { $null })
+            SoakCurrent = $(if ($soak.Success) { $soak.Result } else { $null })
+            Errors = @(
+                $(if (-not $bot.Success) { "bot:$($bot.Error)" }),
+                $(if (-not $snap.Success) { "snapshot:$($snap.Error)" }),
+                $(if (-not $launch.Success) { "launch:$($launch.Error)" }),
+                $(if (-not $nav.Success) { "nav:$($nav.Error)" }),
+                $(if (-not $soak.Success) { "soak:$($soak.Error)" })
+            ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        }
+
+        [void]$samples.Add($sample)
+        ($sample | ConvertTo-Json -Depth 24 -Compress) | Add-Content -LiteralPath $sampleFile -Encoding UTF8
+
+        if (-not $Quiet)
+        {
+            $goal = if ($sample.BotStatus) { "$($sample.BotStatus.CurrentGoal)" } else { "n/a" }
+            $maxDev = "n/a"
+            $repeatRate = "n/a"
+            $trigger = "n/a"
+            $bypass = "n/a"
+
+            if ($sample.NavigationRuntime)
+            {
+                if ($sample.NavigationRuntime.Soak -and $null -ne $sample.NavigationRuntime.Soak.CurrentWindowMaxRouteDeviation)
+                {
+                    $maxDev = [math]::Round([double]$sample.NavigationRuntime.Soak.CurrentWindowMaxRouteDeviation, 2)
+                }
+                if ($sample.NavigationRuntime.Soak -and $null -ne $sample.NavigationRuntime.Soak.CurrentWindowRepeatStuckRate)
+                {
+                    $repeatRate = [math]::Round([double]$sample.NavigationRuntime.Soak.CurrentWindowRepeatStuckRate, 4)
+                }
+                if ($sample.NavigationRuntime.StuckDetector -and $sample.NavigationRuntime.StuckDetector.LastTriggerReason)
+                {
+                    $trigger = "$($sample.NavigationRuntime.StuckDetector.LastTriggerReason)"
+                }
+                if ($sample.NavigationRuntime.Navigation)
+                {
+                    $bypass = "$($sample.NavigationRuntime.Navigation.FrontBypassAttemptCount)"
+                }
+            }
+
+            Write-Info ("WatchNav: Goal={0} MaxDev={1} RepeatRate={2} LastTrigger={3} FrontBypass={4}" -f $goal, $maxDev, $repeatRate, $trigger, $bypass)
+        }
+
+        Start-Sleep -Milliseconds ([Math]::Max(250, $CadenceMs))
+    }
+
+    $routeFollowSamples = @($samples | Where-Object {
+            $null -ne $_.BotStatus -and "$($_.BotStatus.CurrentGoal)".Trim() -like "Follow*"
+        })
+
+    function Get-TriggerStats
+    {
+        param(
+            [Parameter(Mandatory = $true)]$InputSamples
+        )
+
+        $enumeratedSamples = @()
+        if ($null -ne $InputSamples)
+        {
+            if ($InputSamples -is [System.Collections.IEnumerable] -and $InputSamples -isnot [string])
+            {
+                foreach ($item in $InputSamples)
+                {
+                    $enumeratedSamples += $item
+                }
+            }
+            else
+            {
+                $enumeratedSamples = @($InputSamples)
+            }
+        }
+        $seen = @{}
+        $uniqueTriggerCount = 0
+        $timeoutTriggerCountLocal = 0
+
+        foreach ($s in $enumeratedSamples)
+        {
+            try
+            {
+                if ($null -eq $s.NavigationRuntime -or $null -eq $s.NavigationRuntime.StuckDetector)
+                {
+                    continue
+                }
+
+                $st = $s.NavigationRuntime.StuckDetector
+                if ($null -eq $st.LastTriggerUtc)
+                {
+                    continue
+                }
+
+                $stamp = "$($st.LastTriggerUtc)"
+                if ([string]::IsNullOrWhiteSpace($stamp))
+                {
+                    continue
+                }
+
+                if (-not $seen.ContainsKey($stamp))
+                {
+                    $seen[$stamp] = $true
+                    $uniqueTriggerCount++
+                    if ("$($st.LastTriggerReason)" -eq "TimeoutNoProgress")
+                    {
+                        $timeoutTriggerCountLocal++
+                    }
+                }
+            }
+            catch { }
+        }
+
+        return [pscustomobject]@{
+            UniqueTriggerCount = $uniqueTriggerCount
+            TimeoutTriggerCount = $timeoutTriggerCountLocal
+        }
+    }
+
+    function Get-DeviationStats
+    {
+        param(
+            [Parameter(Mandatory = $true)]$InputSamples
+        )
+
+        $enumeratedSamples = @()
+        if ($null -ne $InputSamples)
+        {
+            if ($InputSamples -is [System.Collections.IEnumerable] -and $InputSamples -isnot [string])
+            {
+                foreach ($item in $InputSamples)
+                {
+                    $enumeratedSamples += $item
+                }
+            }
+            else
+            {
+                $enumeratedSamples = @($InputSamples)
+            }
+        }
+        $instantValues = @()
+        $fallbackValues = @()
+        foreach ($s in $enumeratedSamples)
+        {
+            try
+            {
+                $v = $null
+                if ($s.NavigationRuntime -and $s.NavigationRuntime.Soak -and $null -ne $s.NavigationRuntime.Soak.CurrentRouteDeviation)
+                {
+                    $v = [double]$s.NavigationRuntime.Soak.CurrentRouteDeviation
+                    $instantValues += $v
+                }
+                elseif ($s.SoakCurrent -and $null -ne $s.SoakCurrent.CurrentRouteDeviation)
+                {
+                    $v = [double]$s.SoakCurrent.CurrentRouteDeviation
+                    $instantValues += $v
+                }
+                elseif ($s.NavigationRuntime -and $s.NavigationRuntime.Soak -and $null -ne $s.NavigationRuntime.Soak.CurrentWindowMaxRouteDeviation)
+                {
+                    $v = [double]$s.NavigationRuntime.Soak.CurrentWindowMaxRouteDeviation
+                    $fallbackValues += $v
+                }
+                elseif ($s.SoakCurrent -and $null -ne $s.SoakCurrent.CurrentWindowMaxRouteDeviation)
+                {
+                    $v = [double]$s.SoakCurrent.CurrentWindowMaxRouteDeviation
+                    $fallbackValues += $v
+                }
+            }
+            catch { }
+        }
+
+        $devValues = @($(if ($instantValues.Count -gt 0) { $instantValues } else { $fallbackValues }))
+        $max = 0.0
+        $avg = 0.0
+        if ($devValues.Count -gt 0)
+        {
+            $max = ($devValues | Measure-Object -Maximum).Maximum
+            $avg = ($devValues | Measure-Object -Average).Average
+        }
+
+        return [pscustomobject]@{
+            Count = $devValues.Count
+            Max = [double]$max
+            Avg = [double]$avg
+            Mode = $(if ($instantValues.Count -gt 0) { "CurrentRouteDeviation" } elseif ($fallbackValues.Count -gt 0) { "CurrentWindowMaxRouteDeviationFallback" } else { "None" })
+        }
+    }
+
+    $allTriggerStats = Get-TriggerStats -InputSamples $samples
+    $routeTriggerStats = Get-TriggerStats -InputSamples $routeFollowSamples
+    $stuckTriggerCount = [int]$allTriggerStats.UniqueTriggerCount
+    $timeoutTriggerCount = [int]$allTriggerStats.TimeoutTriggerCount
+    $routeStuckTriggerCount = [int]$routeTriggerStats.UniqueTriggerCount
+    $routeTimeoutTriggerCount = [int]$routeTriggerStats.TimeoutTriggerCount
+
+    $allDevStats = Get-DeviationStats -InputSamples $samples
+    $routeDevStats = Get-DeviationStats -InputSamples $routeFollowSamples
+    $maxRouteDeviation = [double]$allDevStats.Max
+    $avgRouteDeviation = [double]$allDevStats.Avg
+    $routeMaxRouteDeviation = [double]$routeDevStats.Max
+    $routeAvgRouteDeviation = [double]$routeDevStats.Avg
+
+    $routeFollowDurationSeconds = 0
+    if ($samples.Count -gt 0 -and $DurationSeconds -gt 0)
+    {
+        $totalSampleCount = [int]$samples.Count
+        if ($totalSampleCount -lt 1)
+        {
+            $totalSampleCount = 1
+        }
+
+        $routeFollowDurationRatio = ([double]$DurationSeconds * [double]$routeFollowSamples.Count) / [double]$totalSampleCount
+        $routeFollowDurationSeconds = [int][Math]::Round([double]$routeFollowDurationRatio, 0)
+    }
+    if ($routeFollowDurationSeconds -lt 0)
+    {
+        $routeFollowDurationSeconds = 0
+    }
+
+    $routeFrontBypassAttemptCount = @($routeFollowSamples | ForEach-Object {
+            if ($_.NavigationRuntime -and $_.NavigationRuntime.Navigation) { [int]$_.NavigationRuntime.Navigation.FrontBypassAttemptCount }
+        } | Measure-Object -Maximum).Maximum
+    if ($null -eq $routeFrontBypassAttemptCount) { $routeFrontBypassAttemptCount = 0 }
+
+    $allFrontBypassAttemptCount = @($samples | ForEach-Object {
+            if ($_.NavigationRuntime -and $_.NavigationRuntime.Navigation) { [int]$_.NavigationRuntime.Navigation.FrontBypassAttemptCount }
+        } | Measure-Object -Maximum).Maximum
+    if ($null -eq $allFrontBypassAttemptCount) { $allFrontBypassAttemptCount = 0 }
+
+    $invalidReason = $null
+    if ($routeFollowSamples.Count -eq 0 -and $samples.Count -gt 0)
+    {
+        $goalCounts = @{}
+        foreach ($s in $samples)
+        {
+            $goalKey = $null
+            if ($s.NavigationRuntime -and -not [string]::IsNullOrWhiteSpace("$($s.NavigationRuntime.CurrentGoal)"))
+            {
+                $goalKey = "$($s.NavigationRuntime.CurrentGoal)"
+            }
+            elseif ($s.BotStatus -and -not [string]::IsNullOrWhiteSpace("$($s.BotStatus.currentGoal)"))
+            {
+                $goalKey = "$($s.BotStatus.currentGoal)"
+            }
+
+            if ([string]::IsNullOrWhiteSpace($goalKey))
+            {
+                continue
+            }
+
+            if (-not $goalCounts.ContainsKey($goalKey))
+            {
+                $goalCounts[$goalKey] = 0
+            }
+            $goalCounts[$goalKey] = [int]$goalCounts[$goalKey] + 1
+        }
+
+        if ($goalCounts.Count -gt 0)
+        {
+            $dominantGoal = $goalCounts.GetEnumerator() |
+                Sort-Object -Property Value -Descending |
+                Select-Object -First 1
+
+            if ($null -ne $dominantGoal)
+            {
+                $invalidReason = "No FollowRoute samples observed; dominant goal='$($dominantGoal.Key)' ($($dominantGoal.Value)/$($samples.Count) samples)"
+            }
+        }
+
+        if ([string]::IsNullOrWhiteSpace($invalidReason))
+        {
+            $invalidReason = "No FollowRoute samples observed"
+        }
+    }
+
+    $summary = [pscustomobject]@{
+        SampleFile = $sampleFile
+        DurationSeconds = $DurationSeconds
+        SampleCount = $samples.Count
+        RouteFollowSampleCount = $routeFollowSamples.Count
+        RouteFollowSamplesObserved = ($routeFollowSamples.Count -gt 0)
+        NavigationValidationValid = ($routeFollowSamples.Count -gt 0)
+        MixedGoalWindow = ($routeFollowSamples.Count -gt 0 -and $routeFollowSamples.Count -lt $samples.Count)
+        RouteFollowEstimatedDurationSeconds = $routeFollowDurationSeconds
+        StuckTriggersPerMinute = if ($DurationSeconds -gt 0) { [math]::Round(($stuckTriggerCount * 60.0) / $DurationSeconds, 3) } else { 0 }
+        TimeoutNoProgressTriggerRatio = if ($stuckTriggerCount -gt 0) { [math]::Round(($timeoutTriggerCount * 1.0) / $stuckTriggerCount, 3) } else { 0 }
+        RouteFollowStuckTriggersPerMinute = if ($routeFollowDurationSeconds -gt 0) { [math]::Round(($routeStuckTriggerCount * 60.0) / $routeFollowDurationSeconds, 3) } else { 0 }
+        RouteFollowTimeoutNoProgressTriggerRatio = if ($routeStuckTriggerCount -gt 0) { [math]::Round(($routeTimeoutTriggerCount * 1.0) / $routeStuckTriggerCount, 3) } else { 0 }
+        AvgRouteDeviation = [math]::Round([double]$avgRouteDeviation, 2)
+        MaxRouteDeviation = [math]::Round([double]$maxRouteDeviation, 2)
+        RouteFollowAvgRouteDeviation = [math]::Round([double]$routeAvgRouteDeviation, 2)
+        RouteFollowMaxRouteDeviation = [math]::Round([double]$routeMaxRouteDeviation, 2)
+        DeviationMetricMode = "$($allDevStats.Mode)"
+        RouteFollowDeviationMetricMode = "$($routeDevStats.Mode)"
+        FrontBypassAttemptCount = [int]$allFrontBypassAttemptCount
+        RouteFollowFrontBypassAttemptCount = [int]$routeFrontBypassAttemptCount
+        InvalidReason = $invalidReason
+        LastSample = $(if ($samples.Count -gt 0) { $samples[$samples.Count - 1] } else { $null })
+    }
+
+    [void](Write-ArtifactJson -Name ("{0}-watchnav-summary.json" -f $script:RunTag) -Object $summary)
+    return $summary
+}
+
+function Test-NavChurnDetected
+{
+    param([Parameter(Mandatory = $true)][object]$WatchSummary)
+
+    if ($null -eq $WatchSummary)
+    {
+        return $false
+    }
+
+    $useRouteOnly = $false
+    try
+    {
+        $useRouteOnly = [bool]$WatchSummary.NavigationValidationValid -and ([int]$WatchSummary.RouteFollowSampleCount -gt 0)
+    }
+    catch { }
+
+    if ($useRouteOnly)
+    {
+        return ([double]$WatchSummary.RouteFollowStuckTriggersPerMinute -ge 2.0) -or
+            ([double]$WatchSummary.RouteFollowMaxRouteDeviation -ge 20.0) -or
+            ([int]$WatchSummary.RouteFollowFrontBypassAttemptCount -ge 3)
+    }
+
+    return ([double]$WatchSummary.StuckTriggersPerMinute -ge 2.0) -or
+        ([double]$WatchSummary.MaxRouteDeviation -ge 20.0) -or
+        ([int]$WatchSummary.FrontBypassAttemptCount -ge 3)
+}
+
+function Invoke-NavTriage
+{
+    Ensure-SessionArtifactDir | Out-Null
+    $profiles = @($TriageProfiles.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($profiles.Count -eq 0)
+    {
+        throw "No triage profiles configured."
+    }
+
+    $results = New-Object System.Collections.Generic.List[object]
+    foreach ($profileName in $profiles)
+    {
+        Write-Info "NavTriage: testing profile '$profileName' for $TriageMinutesPerProfile minute(s)"
+        Apply-FeatureFlagProfile -ProfileName $profileName -VerifyViaApi
+
+        $doctor = Invoke-Doctor -SkipEvidence -ReturnDispositionOnly
+        if ($doctor.Disposition -eq "Blocked")
+        {
+            [void]$results.Add([pscustomobject]@{
+                    Profile = $profileName
+                    Blocked = $true
+                    Doctor = $doctor
+                    Score = 999999
+                })
+            continue
+        }
+
+        $botStatus = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
+        if (-not $botStatus.Success -or -not [bool]$botStatus.Result.IsActive)
+        {
+            Start-Bot
+            Start-Sleep -Seconds 2
+        }
+
+        $watch = Invoke-WatchNav -DurationSeconds ([Math]::Max(30, $TriageMinutesPerProfile * 60)) -CadenceMs $WatchCadenceMs -Quiet
+        $null = Invoke-AgentApiSafe -Method POST -Path "/api/diagnostics/soak/flush" -Body @{} -TimeoutSec 20
+        $null = Invoke-AgentApiSafe -Method POST -Path "/api/bot/stop" -Body @{} -TimeoutSec 10
+
+        if ([int]$watch.RouteFollowSampleCount -le 0)
+        {
+            [void]$results.Add([pscustomobject]@{
+                    Profile = $profileName
+                    Blocked = $true
+                    InvalidSample = $true
+                    Doctor = $doctor
+                    Watch = $watch
+                    Score = 999998
+                    Reason = "NoRouteFollowSamples"
+                })
+            continue
+        }
+
+        $score = ([double]$watch.StuckTriggersPerMinute * 100.0) +
+            ([double]$watch.TimeoutNoProgressTriggerRatio * 50.0) +
+            ([double]$watch.AvgRouteDeviation) +
+            ([double]$watch.MaxRouteDeviation * 0.25) +
+            ([double]$watch.FrontBypassAttemptCount * 10.0)
+
+        [void]$results.Add([pscustomobject]@{
+                Profile = $profileName
+                Blocked = $false
+                Doctor = $doctor
+                Watch = $watch
+                Score = [math]::Round($score, 3)
+            })
+    }
+
+    $ranked = @($results | Sort-Object Score, Profile)
+    $report = [pscustomobject]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Profiles = $profiles
+        Results = $ranked
+        RecommendedProfile = $(if ($ranked.Count -gt 0) { $ranked[0].Profile } else { $null })
+    }
+
+    [void](Write-ArtifactJson -Name ("{0}-navtriage-report.json" -f $script:RunTag) -Object $report)
+    return $report
+}
+
 function Invoke-CollectEvidence
 {
     param(
@@ -2033,12 +3874,64 @@ function Invoke-LiveSession
     [void](Write-ArtifactJson -Name "session-manifest.json" -Object $baseline)
     [void](Write-ArtifactJson -Name "prestart-ports.json" -Object (Get-PortStateSnapshot))
 
-    Invoke-StartFlow -WithValidation
-    Invoke-CollectEvidence -Stage "post-start"
-    Invoke-ShortActiveValidation -DurationSeconds $ShortValidationSeconds
-    Invoke-CollectEvidence -Stage "pre-soak"
-    Invoke-SoakRun
-    Invoke-CollectEvidence -Stage "final" -FlushSoak
+    try
+    {
+        if (-not $NoAutoNavProfile)
+        {
+            Save-FeatureFlagSnapshot | Out-Null
+            Apply-FeatureFlagProfile -ProfileName $NavProfile
+        }
+
+        Invoke-StartFlow -WithValidation
+        Invoke-CollectEvidence -Stage "post-start"
+
+        $watchDuration = [Math]::Min([Math]::Max(60, $ShortValidationSeconds), 300)
+        $watchSummary = Invoke-WatchNav -DurationSeconds $watchDuration -CadenceMs $WatchCadenceMs
+        [void](Write-ArtifactJson -Name ("{0}-live-watchnav-initial.json" -f $script:RunTag) -Object $watchSummary)
+
+        if ([int]$watchSummary.RouteFollowSampleCount -le 0)
+        {
+            Invoke-CollectEvidence -Stage "watchnav-invalid-no-routefollow"
+            throw "Initial navigation validation was invalid (no FollowRoute samples observed). Refusing to treat this run as a navigation pass."
+        }
+
+        if (Test-NavChurnDetected -WatchSummary $watchSummary)
+        {
+            Write-WarnLine "Navigation churn detected during initial watch; running NavTriage"
+            $triage = Invoke-NavTriage
+            [void](Write-ArtifactJson -Name ("{0}-live-navtriage.json" -f $script:RunTag) -Object $triage)
+            if ($null -ne $triage -and -not [string]::IsNullOrWhiteSpace("$($triage.RecommendedProfile)") -and "$($triage.RecommendedProfile)" -ne "$NavProfile")
+            {
+                Write-Info "Applying triage-recommended profile '$($triage.RecommendedProfile)' for soak run"
+                Apply-FeatureFlagProfile -ProfileName "$($triage.RecommendedProfile)" -VerifyViaApi
+            }
+
+            $botStatusAfterTriage = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
+            if (-not $botStatusAfterTriage.Success -or -not [bool]$botStatusAfterTriage.Result.IsActive)
+            {
+                Start-Bot
+            }
+        }
+
+        Invoke-CollectEvidence -Stage "pre-soak"
+        Invoke-SoakRun
+        Invoke-CollectEvidence -Stage "final" -FlushSoak
+    }
+    finally
+    {
+        if ([bool]$RestoreFlagsOnExit -and $script:FeatureFlagSnapshotActive)
+        {
+            try
+            {
+                Restore-FeatureFlagSnapshot
+                [void](Wait-ForFeatureFlagsApplied -ExpectedPatch @{} -TimeoutSec 2 -SkipIfApiUnavailable)
+            }
+            catch
+            {
+                Write-WarnLine "Failed to restore feature flags on exit: $($_.Exception.Message)"
+            }
+        }
+    }
 }
 
 function Invoke-StartFlow([switch]$WithValidation)
@@ -2049,8 +3942,21 @@ function Invoke-StartFlow([switch]$WithValidation)
     Set-LaunchOverrides
     Load-BotProfile
     Assert-CharacterAlignment
-    Invoke-ReadinessFixes | Out-Null
-    $null = Wait-ForReadiness
+
+    if ($AutoRepairReadiness)
+    {
+        $doctor = Invoke-Doctor -SkipEvidence -ReturnDispositionOnly
+        if ($doctor.Disposition -eq "Blocked")
+        {
+            throw "Doctor readiness repair failed: $($doctor.Reason)"
+        }
+    }
+    else
+    {
+        Invoke-ReadinessFixes | Out-Null
+        $null = Wait-ForReadiness
+    }
+
     Start-Bot
 
     if ($WithValidation)
@@ -2145,6 +4051,28 @@ try
         {
             Invoke-CollectEvidence -Stage "manual" -FlushSoak
         }
+        "Doctor"
+        {
+            Invoke-Doctor
+        }
+        "GameCmd"
+        {
+            Invoke-GameCommandAction
+        }
+        "FlagsProfile"
+        {
+            Invoke-FlagsProfileAction
+        }
+        "WatchNav"
+        {
+            $summary = Invoke-WatchNav -DurationSeconds $WatchSeconds -CadenceMs $WatchCadenceMs
+            $summary | ConvertTo-Json -Depth 16
+        }
+        "NavTriage"
+        {
+            $report = Invoke-NavTriage
+            $report | ConvertTo-Json -Depth 24
+        }
         "Soak"
         {
             Invoke-SoakRun
@@ -2159,6 +4087,19 @@ try
 }
 catch
 {
-    Write-ErrLine $_.Exception.Message
+    $line = $null
+    try { $line = $_.InvocationInfo.ScriptLineNumber } catch { }
+    if ($line)
+    {
+        Write-ErrLine ("{0} (line {1})" -f $_.Exception.Message, $line)
+    }
+    else
+    {
+        Write-ErrLine $_.Exception.Message
+    }
+    if (-not [string]::IsNullOrWhiteSpace($_.ScriptStackTrace))
+    {
+        Write-ErrLine $_.ScriptStackTrace
+    }
     exit 1
 }

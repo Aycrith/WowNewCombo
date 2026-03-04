@@ -12,6 +12,11 @@ namespace Core.GOAP;
 
 public static class GoapPlanner
 {
+    // Disabled for now: many goals' CanRun() depend on dynamic state not fully represented in WorldState
+    // (cooldowns, auras/forms, action usability, globalTime-driven requirement evaluation). Caching usable
+    // goals only by WorldState bits can return stale runnable sets and trap the planner in invalid goals.
+    private static bool EnableUsableGoalCache => false;
+
     [ThreadStatic]
     private static GoapGoal[]? cachedUsableGoals;
 
@@ -57,7 +62,8 @@ public static class GoapPlanner
 
         int worldStateBits = worldState.Data;
 
-        if (hasUsableGoalsCache &&
+        if (EnableUsableGoalCache &&
+            hasUsableGoalsCache &&
             cachedUsableGoals != null &&
             cachedWorldStateBits == worldStateBits &&
             ReferenceEquals(cachedAvailableGoals, available))
@@ -82,10 +88,13 @@ public static class GoapPlanner
                 }
             }
 
-            cachedUsableGoals = usableList.Count == 0 ? Array.Empty<GoapGoal>() : usableList.ToArray();
-            cachedAvailableGoals = available;
-            cachedWorldStateBits = worldStateBits;
-            hasUsableGoalsCache = true;
+            if (EnableUsableGoalCache)
+            {
+                cachedUsableGoals = usableList.Count == 0 ? Array.Empty<GoapGoal>() : usableList.ToArray();
+                cachedAvailableGoals = available;
+                cachedWorldStateBits = worldStateBits;
+                hasUsableGoalsCache = true;
+            }
         }
 
         // build up the tree and record the leaf nodes that provide a solution to the goal.

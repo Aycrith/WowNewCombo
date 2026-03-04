@@ -210,6 +210,13 @@ public sealed partial class MountHandler : IMountHandler
         if (bits.Combat())
             return false;
 
+        // Pre-mount characters (e.g. low-level rogues) can get into an Adhoc Stealth ->
+        // Follow -> auto-unstealth travel churn loop that looks robotic and degrades path
+        // following. Only use this travel-speed unstealth optimization once mounts are
+        // actually unlocked for the current client/version/level.
+        if (!MeetsMountUnlockRequirement())
+            return false;
+
         if (CanMount())
             return false;
 

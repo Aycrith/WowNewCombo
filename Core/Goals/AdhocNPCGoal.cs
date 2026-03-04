@@ -44,6 +44,10 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     private const int TIMEOUT = 5000;
     private const float NPC_DESTINATION_PROXIMITY = 12f;
     private const int MAX_FAR_DESTINATION_RETRIES = 3;
+    // Keep broad enough to reach nearby town service NPCs from common grind loops,
+    // but still reject obviously remote candidates before pathing.
+    private const float MAX_AUTO_NPC_TRAVEL_DISTANCE = 750f;
+    private const float MAX_AUTO_NPC_VERTICAL_DELTA = 60f;
 
     private readonly FrozenDictionary<NpcFlags, SearchValues<string>> npcSearchPatterns;
 
@@ -329,6 +333,44 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         key.Path = [worldPos];
 
         LogFoundCloesestNPCByType(logger, npc.Name, npcFlag.ToStringF(), worldPos);
+    }
+
+    private bool IsReasonableAutoNpcCandidate(in NpcSearchResult candidate, out string reason)
+    {
+        // Ghostlands service data currently includes "Samir" at a location that is not safely reachable
+        // on the live client route being tested (bot runs into terrain/zonewall near the target point).
+        // Skip this candidate during auto NPC selection to prevent suicidal repair/vendor runs.
+        if (playerReader.UIMapId.Value == 1942 &&
+            candidate.Creature.Name.Equals("Samir", StringComparison.OrdinalIgnoreCase))
+        {
+            reason = "known bad Ghostlands service target";
+            return false;
+        }
+
+        float xyDistance = playerReader.WorldPos.WorldDistanceXYTo(candidate.WorldPosition);
+        float playerZ = playerReader.WorldPos.Z;
+        bool hasReliablePlayerZ = MathF.Abs(playerZ) > 1f;
+        float zDelta = hasReliablePlayerZ
+            ? MathF.Abs(candidate.WorldPosition.Z - playerZ)
+            : 0f;
+
+        if (xyDistance > MAX_AUTO_NPC_TRAVEL_DISTANCE)
+        {
+            reason = $"distance {xyDistance:F1} > {MAX_AUTO_NPC_TRAVEL_DISTANCE:F0}";
+            return false;
+        }
+
+        // Allow significant Z changes only when the NPC is still geographically close.
+        if (hasReliablePlayerZ &&
+            zDelta > MAX_AUTO_NPC_VERTICAL_DELTA &&
+            xyDistance > 80f)
+        {
+            reason = $"z delta {zDelta:F1} > {MAX_AUTO_NPC_VERTICAL_DELTA:F0} (xy={xyDistance:F1})";
+            return false;
+        }
+
+        reason = string.Empty;
+        return true;
     }
 
     private void Navigation_OnNoPathFound()
@@ -675,6 +717,18 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             searchIndex++;
         }
 
+        while (searchIndex < searchCount)
+        {
+            ref readonly NpcSearchResult candidate = ref searchResult[searchIndex];
+            if (IsReasonableAutoNpcCandidate(candidate, out string reason))
+            {
+                break;
+            }
+
+            LogWarn($"Skipping NPC candidate '{candidate.Creature.Name}' ({candidate.WorldPosition}) - {reason}");
+            searchIndex++;
+        }
+
         if (searchIndex >= searchCount)
         {
             // Fallback: Try hard-coded vendor locations when auto-search exhausted
@@ -686,7 +740,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
             noPathBackoffUntilUtc = DateTime.UtcNow.Add(NoPathRetryDelay);
             pathState = PathState.Finished;
-            LogWarn("No more NPC to try!");
+            LogWarn("No more reasonable NPC candidates to try!");
 
             searchIndex = 0;
             searchResult = [];

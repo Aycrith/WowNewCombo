@@ -45,6 +45,7 @@ public sealed class StuckEventData
     public bool IsSpinning { get; init; }
     public int AttemptCount { get; init; }
     public DateTime Timestamp { get; init; }
+    public StuckTriggerReason? TriggerReason { get; init; }
     public string? AdditionalInfo { get; init; }
 }
 
@@ -105,14 +106,23 @@ public sealed class StuckDetector : IGoapEventListener
     private Vector3 lastStuckTriggerPosition = Vector3.Zero;
     private DateTime lastStuckTriggerUtc = DateTime.MinValue;
     private int repeatedHotspotCount;
+    private StuckTriggerReason? lastTriggerReason;
+    private DateTime? lastTriggerUtc;
+    private int? lastPredictiveRisk;
+    private readonly Queue<StuckTriggerSample> recentTriggers = new();
+    private const int RecentTriggerHistoryLimit = 20;
 
     public event Action<StuckEventData>? OnStuckDetected;
 
     public double ActionDurationMs => GetElapsedTime(startTime).TotalMilliseconds;
     private double UnstuckMs => GetElapsedTime(attemptTime).TotalMilliseconds;
+    public double CurrentUnstuckDurationMs => UnstuckMs;
     public UnstuckState CurrentState => currentUnstuckState;
     public bool IsCurrentlyStuck => currentUnstuckState != UnstuckState.None;
     public bool IsSpinningDetected => spinDetectionCounter >= SPIN_DETECTION_COUNT;
+    public StuckTriggerReason? LastTriggerReason => lastTriggerReason;
+    public DateTime? LastTriggerUtc => lastTriggerUtc;
+    public int? LastPredictiveRisk => lastPredictiveRisk;
 
     /// <summary>
     /// Indicates whether enhanced stuck recovery (breadcrumb backtracking) is available.
@@ -170,9 +180,15 @@ public sealed class StuckDetector : IGoapEventListener
         currentUnstuckState = UnstuckState.None;
         unstuckAttemptCount = 0;
         lastAttemptPosition = null;
+        lastPredictiveRisk = null;
     }
 
     public void Update(CancellationToken token = default)
+    {
+        Update(token, null);
+    }
+
+    public void Update(CancellationToken token, StuckTriggerReason? externalTriggerHint)
     {
         if (bits.Falling())
             return;
@@ -195,10 +211,33 @@ public sealed class StuckDetector : IGoapEventListener
         }
 
         bool predictiveTriggered = IsPredictiveStuckRiskTriggered();
-        bool shouldTriggerUnstuck =
-            UnstuckMs > GetUnstuckAfterMsThreshold() ||
-            IsSpinningDetected ||
-            predictiveTriggered;
+        bool shouldTriggerUnstuck;
+        StuckTriggerReason? triggerReason = null;
+
+        if (externalTriggerHint == StuckTriggerReason.ExternalOscillationNotify)
+        {
+            shouldTriggerUnstuck = true;
+            triggerReason = StuckTriggerReason.ExternalOscillationNotify;
+        }
+        else if (predictiveTriggered)
+        {
+            shouldTriggerUnstuck = true;
+            triggerReason = StuckTriggerReason.PredictiveRisk;
+        }
+        else if (IsSpinningDetected)
+        {
+            shouldTriggerUnstuck = true;
+            triggerReason = StuckTriggerReason.SpinDetected;
+        }
+        else if (UnstuckMs > GetUnstuckAfterMsThreshold())
+        {
+            shouldTriggerUnstuck = true;
+            triggerReason = StuckTriggerReason.TimeoutNoProgress;
+        }
+        else
+        {
+            shouldTriggerUnstuck = false;
+        }
 
         if (shouldTriggerUnstuck)
         {
@@ -208,7 +247,7 @@ public sealed class StuckDetector : IGoapEventListener
                     "[StuckDetector] Predictive stuck risk exceeded threshold; forcing recovery early.");
             }
 
-            TriggerUnstuck(token);
+            TriggerUnstuck(token, triggerReason ?? StuckTriggerReason.TimeoutNoProgress);
         }
     }
 
@@ -276,8 +315,9 @@ public sealed class StuckDetector : IGoapEventListener
         }
     }
 
-    private void TriggerUnstuck(CancellationToken token)
+    private void TriggerUnstuck(CancellationToken token, StuckTriggerReason triggerReason)
     {
+        RecordTrigger(triggerReason);
         currentUnstuckState = GetInitialUnstuckState(playerReader.WorldPos);
         unstuckStateEnterTime = GetTimestamp();
         lastAttemptPosition = playerReader.WorldPos;
@@ -285,7 +325,8 @@ public sealed class StuckDetector : IGoapEventListener
         unstuckAttemptCount++;
 
         logger.LogWarning(
-            "[StuckDetector] TRIGGERING UNSTUCK - State: {State}, Attempt: {Attempt}, RepeatedHotspotCount: {RepeatedHotspotCount}, Spinning: {IsSpinning}",
+            "[StuckDetector] TRIGGERING UNSTUCK - Trigger: {TriggerReason}, State: {State}, Attempt: {Attempt}, RepeatedHotspotCount: {RepeatedHotspotCount}, Spinning: {IsSpinning}",
+            triggerReason,
             currentUnstuckState,
             unstuckAttemptCount,
             repeatedHotspotCount,
@@ -293,6 +334,25 @@ public sealed class StuckDetector : IGoapEventListener
 
         CollectStuckData($"Unstuck triggered - {currentUnstuckState}");
         ExecuteUnstuckState(token);
+    }
+
+    private void RecordTrigger(StuckTriggerReason triggerReason)
+    {
+        DateTime now = DateTime.UtcNow;
+        lastTriggerReason = triggerReason;
+        lastTriggerUtc = now;
+
+        recentTriggers.Enqueue(new StuckTriggerSample(
+            TimestampUtc: now,
+            Reason: triggerReason,
+            ActionDurationMs: ActionDurationMs,
+            State: currentUnstuckState,
+            PredictiveRisk: lastPredictiveRisk));
+
+        while (recentTriggers.Count > RecentTriggerHistoryLimit)
+        {
+            recentTriggers.Dequeue();
+        }
     }
 
     private void EscalateUnstuckState(CancellationToken token)
@@ -542,13 +602,14 @@ public sealed class StuckDetector : IGoapEventListener
                 IsSpinning = IsSpinningDetected,
                 AttemptCount = unstuckAttemptCount,
                 Timestamp = DateTime.UtcNow,
+                TriggerReason = lastTriggerReason,
                 AdditionalInfo = reason
             };
 
             OnStuckDetected?.Invoke(eventData);
 
             logger.LogInformation($"[StuckDetector] DATA COLLECTION - Pos: {eventData.Position}, Dir: {eventData.Direction:F2}, " +
-                $"State: {eventData.State}, Duration: {eventData.DurationMs:F0}ms, Spinning: {eventData.IsSpinning}, Reason: {reason}");
+                $"State: {eventData.State}, Duration: {eventData.DurationMs:F0}ms, Spinning: {eventData.IsSpinning}, Trigger: {eventData.TriggerReason}, Reason: {reason}");
 
             screenCapture?.Request();
         }
@@ -619,6 +680,7 @@ public sealed class StuckDetector : IGoapEventListener
     {
         if (breadcrumbTracker == null || featureFlagService == null)
         {
+            lastPredictiveRisk = null;
             return false;
         }
 
@@ -627,11 +689,13 @@ public sealed class StuckDetector : IGoapEventListener
 
         if (!options.Enabled || !options.EnablePredictiveDetection || breadcrumbTracker.Count < 6)
         {
+            lastPredictiveRisk = null;
             return false;
         }
 
         int threshold = Math.Clamp(options.PredictiveRiskThreshold, 20, 95);
         int risk = breadcrumbTracker.CalculateStuckRisk();
+        lastPredictiveRisk = risk;
 
         // Avoid firing predictive recovery instantly after a reset.
         if (UnstuckMs < GetUnstuckAfterMsThreshold() * 0.5)
@@ -749,5 +813,23 @@ public sealed class StuckDetector : IGoapEventListener
         }
 
         return Math.Clamp(featureFlagService.Current.StuckRecoveryV2.BacktrackSteps, 1, 12);
+    }
+
+    public StuckDetectorRuntimeSnapshot GetRuntimeSnapshot()
+    {
+        return new StuckDetectorRuntimeSnapshot(
+            CurrentState: currentUnstuckState,
+            IsCurrentlyStuck: IsCurrentlyStuck,
+            ActionDurationMs: ActionDurationMs,
+            UnstuckMs: CurrentUnstuckDurationMs,
+            IsSpinningDetected: IsSpinningDetected,
+            RangeDiffThreshold: GetRangeDiffThreshold(),
+            MinDistanceThreshold: GetMinDistanceThreshold(),
+            UnstuckAfterMsThreshold: GetUnstuckAfterMsThreshold(),
+            ActionStuckTimeThreshold: GetActionStuckTimeThreshold(),
+            LastTriggerReason: lastTriggerReason,
+            LastTriggerUtc: lastTriggerUtc,
+            LastPredictiveRisk: lastPredictiveRisk,
+            RecentTriggers: recentTriggers.ToArray());
     }
 }

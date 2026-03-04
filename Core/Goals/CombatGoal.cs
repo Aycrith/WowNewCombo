@@ -77,11 +77,14 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         }
 
         AddPrecondition(GoapKey.incombat, true);
-        AddPrecondition(GoapKey.hastarget, true);
-        AddPrecondition(GoapKey.targetisalive, true);
-        AddPrecondition(GoapKey.targethostile, true);
+        // CombatGoal is the combat-state handler, not only the "already have a valid target in
+        // range" executor. During loot/kill transitions WoW can remain in-combat while the target
+        // is dead/cleared, and CombatGoal.Update() contains the threat reacquire / wait-to-leave-
+        // combat logic for that exact case.
         //AddPrecondition(GoapKey.targettargetsus, true);
-        AddPrecondition(GoapKey.incombatrange, true);
+        // Do not require in-combat range at planner time. Multi-target transitions can leave
+        // us briefly out of range while still in combat, and gating CombatGoal here creates a
+        // planner gap (CombatGoal requires in-range, ApproachTargetGoal requires not in combat).
 
         AddEffect(GoapKey.producedcorpse, true);
         AddEffect(GoapKey.targetisalive, false);
@@ -167,6 +170,14 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             !input.PetAttack.OnCooldown())
         {
             input.PressPetAttack();
+        }
+
+        // For melee-centric combat profiles, close distance aggressively when a hostile target
+        // exists but melee range has not been reached yet. This prevents repeated out-of-range
+        // cast failures that look like indecisive spinning/standing in place.
+        if (ShouldApproachCurrentTarget())
+        {
+            input.PressApproachOnCooldown();
         }
 
         ReadOnlySpan<KeyAction> span = Keys;
@@ -296,6 +307,17 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         }
 
         return mobCount;
+    }
+
+    private bool ShouldApproachCurrentTarget()
+    {
+        return
+            bits.Target() &&
+            bits.Target_Alive() &&
+            bits.Target_Hostile() &&
+            !playerReader.IsInMeleeRange() &&
+            !playerReader.IsCasting() &&
+            !castingHandler.SpellInQueue();
     }
 
     private void FindPossibleThreats()

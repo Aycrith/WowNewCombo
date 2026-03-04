@@ -25,12 +25,17 @@ public sealed class GlobalHotkeyKillSwitchService : BackgroundService
     private const int VK_MENU = 0x12; // Alt
     private const int VK_F12 = 0x7B;
 
+    private const int SoftChordHoldMs = 1000;
+    private const int HardChordHoldMs = 500;
+
     private readonly ILogger<GlobalHotkeyKillSwitchService> logger;
     private readonly IServiceProvider serviceProvider;
     private readonly IHostApplicationLifetime appLifetime;
 
     private bool softChordLatched;
     private bool hardChordLatched;
+    private DateTimeOffset? softChordSinceUtc;
+    private DateTimeOffset? hardChordSinceUtc;
 
     public GlobalHotkeyKillSwitchService(
         ILogger<GlobalHotkeyKillSwitchService> logger,
@@ -70,10 +75,13 @@ public sealed class GlobalHotkeyKillSwitchService : BackgroundService
 
                 bool hardChord = ctrl && shift && alt && f12;
                 bool softChord = ctrl && shift && !alt && f12;
+                DateTimeOffset now = DateTimeOffset.UtcNow;
 
                 if (hardChord)
                 {
-                    if (!hardChordLatched)
+                    hardChordSinceUtc ??= now;
+                    if (!hardChordLatched &&
+                        (now - hardChordSinceUtc.Value).TotalMilliseconds >= HardChordHoldMs)
                     {
                         hardChordLatched = true;
                         softChordLatched = true;
@@ -83,11 +91,14 @@ public sealed class GlobalHotkeyKillSwitchService : BackgroundService
                 else
                 {
                     hardChordLatched = false;
+                    hardChordSinceUtc = null;
                 }
 
                 if (softChord)
                 {
-                    if (!softChordLatched)
+                    softChordSinceUtc ??= now;
+                    if (!softChordLatched &&
+                        (now - softChordSinceUtc.Value).TotalMilliseconds >= SoftChordHoldMs)
                     {
                         softChordLatched = true;
                         TriggerSoftStop();
@@ -96,6 +107,7 @@ public sealed class GlobalHotkeyKillSwitchService : BackgroundService
                 else if (!hardChord)
                 {
                     softChordLatched = false;
+                    softChordSinceUtc = null;
                 }
             }
             catch (Exception ex)

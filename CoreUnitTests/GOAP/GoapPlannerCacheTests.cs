@@ -34,7 +34,7 @@ public sealed class GoapPlannerCacheTests
     }
 
     [Fact]
-    public void Plan_TwiceWithSameWorldState_CallsCanRunOncePerGoal()
+    public void Plan_TwiceWithSameWorldState_ReevaluatesCanRunForDynamicGoals()
     {
         CountingGoal g1 = new("Goal1", effectKey: GoapKey.incombat, canRun: true);
         CountingGoal g2 = new("Goal2", effectKey: GoapKey.hastarget, canRun: true);
@@ -45,8 +45,10 @@ public sealed class GoapPlannerCacheTests
         _ = GoapPlanner.Plan(available, worldState, goalState);
         _ = GoapPlanner.Plan(available, worldState, goalState);
 
-        g1.CanRunCallCount.Should().Be(1);
-        g2.CanRunCallCount.Should().Be(1);
+        // Planner correctness must not rely on WorldState-only cache keys because many goals
+        // evaluate dynamic state outside WorldState (e.g. cooldowns, auras/forms, global time).
+        g1.CanRunCallCount.Should().Be(2);
+        g2.CanRunCallCount.Should().Be(2);
     }
 
     [Fact]

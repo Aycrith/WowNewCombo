@@ -139,6 +139,8 @@ public sealed partial class Navigation : IDisposable
     private const float TightTurnPrecisionRadians = PI / 5f;
     private const float SimplifyPreserveVerticalZDelta = 0.75f;
     private const float SimplifyPreserveTurnRadians = PI / 6f;
+    private const int TurnInPlaceStuckGraceMs = 1200;
+    private const int SharpTurnStuckGraceMs = 1800;
 
     private DateTime lastDynamicDetourAttemptUtc = DateTime.MinValue;
     private DateTime lastFrontBypassUtc = DateTime.MinValue;
@@ -149,11 +151,15 @@ public sealed partial class Navigation : IDisposable
     private DateTime lastFrontBypassRepeatUtc = DateTime.MinValue;
     private DateTime lastFrontBypassNoProgressUtc = DateTime.MinValue;
     private DateTime lastFailedReconnectUtc = DateTime.MinValue;
+    private DateTime turnStuckGraceUntilUtc = DateTime.MinValue;
+    private DateTime lastSuppressedTurnStuckRecoveryUtc = DateTime.MinValue;
     private int frontBypassAttemptCount;
     private int repeatedHazardDetourCount;
     private int repeatedFrontBypassCount;
     private int repeatedFrontBypassNoProgressCount;
     private int tailRecalcFailures;
+    private int suppressedTurnStuckRecoveryCount;
+    private float lastHeadingDiffRadians;
     private Vector3 lastHazardDetourRepeatPoint;
     private Vector3 lastFrontBypassRepeatPoint;
     private Vector3 lastFrontBypassNoProgressPoint;
@@ -332,6 +338,15 @@ public sealed partial class Navigation : IDisposable
             }
             else
             {
+                if (ShouldSuppressStuckRecoveryForIntentionalTurn(DateTime.UtcNow))
+                {
+                    suppressedTurnStuckRecoveryCount++;
+                    lastSuppressedTurnStuckRecoveryUtc = DateTime.UtcNow;
+                    AdjustHeading(heading, steeringIgnoreDistance, token);
+                    lastWorldDistance = worldDistance;
+                    return;
+                }
+
                 if (TryApplyDynamicHazardDetour(token))
                 {
                     return;
@@ -810,6 +825,7 @@ public sealed partial class Navigation : IDisposable
         float diff2 = Abs(heading - playerReader.Direction - Tau) % Tau;
 
         float diff = Min(diff1, diff2);
+        lastHeadingDiffRadians = diff;
 
         if (stuckDetector.IsCurrentlyStuck)
         {
@@ -819,9 +835,12 @@ public sealed partial class Navigation : IDisposable
         // Nav recovery baseline: removed oscillation detector integration
         // and heading throttle. These added complexity that masked real stuck
         // conditions and created sluggish steering. Just turn if needed.
-
         if (diff > minAngleToTurn)
         {
+            // Any meaningful turn correction can temporarily look like "no progress" to the stuck detector,
+            // especially on tight route segments. Refresh a bounded grace window before turning.
+            SetTurnStuckGraceWindow(now);
+
             if (diff > minAngleToStopBeforeTurn)
             {
                 stopMoving.Stop();
@@ -991,6 +1010,71 @@ public sealed partial class Navigation : IDisposable
     private bool HasBeenActiveRecently()
     {
         return (DateTime.UtcNow - LastActive).TotalSeconds < 2;
+    }
+
+    private void SetTurnStuckGraceWindow(DateTime now)
+    {
+        bool sharpTurn = false;
+        if (routeToNextWaypoint.Count >= 2 &&
+            TryGetUpcomingRoutePoints(out Vector3 current, out Vector3 next) &&
+            IsSharpTurn(playerReader.WorldPos, current, next, TightTurnPrecisionRadians))
+        {
+            sharpTurn = true;
+        }
+
+        int graceMs = GetTurnStuckGraceMs(sharpTurn);
+        DateTime candidate = now.AddMilliseconds(graceMs);
+        if (candidate > turnStuckGraceUntilUtc)
+        {
+            turnStuckGraceUntilUtc = candidate;
+        }
+    }
+
+    private int GetTurnStuckGraceMs(bool sharpTurn)
+    {
+        int baseGraceMs = sharpTurn ? SharpTurnStuckGraceMs : TurnInPlaceStuckGraceMs;
+        if (featureFlagService == null)
+        {
+            return baseGraceMs;
+        }
+
+        StuckSensitivityOptions options = featureFlagService.Current.StuckSensitivity;
+        if (!options.Enabled)
+        {
+            return baseGraceMs;
+        }
+
+        double unstuckAfterMs = Math.Clamp(options.UnstuckAfterMs, 750, 10_000);
+        double baseWindow = Math.Clamp(unstuckAfterMs + 1200, 1_500, 15_000);
+        double multiplier = Math.Clamp(options.ApproachTimeoutMultiplier, 1.0f, 3f);
+        double actionThresholdMs = baseWindow * multiplier;
+
+        int extraBufferMs = sharpTurn ? 450 : 300;
+        int maxGraceMs = sharpTurn ? 7500 : 6000;
+        int scaledGraceMs = (int)Math.Ceiling(Math.Clamp(actionThresholdMs + extraBufferMs, baseGraceMs, maxGraceMs));
+        return scaledGraceMs;
+    }
+
+    private bool ShouldSuppressStuckRecoveryForIntentionalTurn(DateTime now)
+    {
+        if (stuckDetector.IsCurrentlyStuck || routeToNextWaypoint.Count == 0)
+        {
+            return false;
+        }
+
+        if (now >= turnStuckGraceUntilUtc)
+        {
+            return false;
+        }
+
+        if (lastHeadingDiffRadians <= minAngleToTurn)
+        {
+            return false;
+        }
+
+        // Once a stop-before-turn grace window is active, keep suppression in place
+        // for the remainder of that bounded window even if movement bits flicker.
+        return true;
     }
 
     private bool TryApplyDynamicHazardDetour(CancellationToken token)
@@ -1672,8 +1756,52 @@ public sealed partial class Navigation : IDisposable
             return DefaultRouteResetTimeoutMs;
         }
 
-        float multiplier = Math.Clamp(options.ApproachTimeoutMultiplier, 0.5f, 3f);
+        // Keep route resets conservative even if stuck sensitivity is tuned aggressively.
+        // Lower values caused false "clear route" churn on normal turn-heavy waypoint segments.
+        float multiplier = Math.Clamp(options.ApproachTimeoutMultiplier, 1.0f, 3f);
         return DefaultRouteResetTimeoutMs * multiplier;
+    }
+
+    public NavigationRuntimeSnapshot GetRuntimeSnapshot()
+    {
+        DateTime now = DateTime.UtcNow;
+        bool frontBreakerActive = now < frontBypassBreakerUntilUtc;
+        bool hazardBreakerActive = now < hazardDetourBreakerUntilUtc;
+
+        float? distanceToNextWaypoint = null;
+        if (routeToNextWaypoint.Count > 0)
+        {
+            distanceToNextWaypoint = playerReader.WorldPos.WorldDistanceXYTo(routeToNextWaypoint.Peek());
+        }
+
+        return new NavigationRuntimeSnapshot(
+            RouteToNextWaypointCount: routeToNextWaypoint.Count,
+            WayPointCount: wayPoints.Count,
+            TailRecalcFailures: tailRecalcFailures,
+            DistanceToNextWaypoint: distanceToNextWaypoint,
+            LastHeadingDiffRadians: lastHeadingDiffRadians,
+            OscillationDetected: false,
+            OscillationCount: 0,
+            TurnStuckGraceActive: now < turnStuckGraceUntilUtc,
+            TurnStuckGraceRemainingMs: now < turnStuckGraceUntilUtc
+                ? Math.Max(0, (int)Math.Ceiling((turnStuckGraceUntilUtc - now).TotalMilliseconds))
+                : 0,
+            SuppressedTurnStuckRecoveryCount: suppressedTurnStuckRecoveryCount,
+            LastSuppressedTurnStuckRecoveryUtc: lastSuppressedTurnStuckRecoveryUtc == DateTime.MinValue
+                ? null
+                : lastSuppressedTurnStuckRecoveryUtc,
+            FrontBypassBreakerActive: frontBreakerActive,
+            FrontBypassBreakerRemainingMs: frontBreakerActive
+                ? Math.Max(0, (int)Math.Ceiling((frontBypassBreakerUntilUtc - now).TotalMilliseconds))
+                : 0,
+            HazardDetourBreakerActive: hazardBreakerActive,
+            HazardDetourBreakerRemainingMs: hazardBreakerActive
+                ? Math.Max(0, (int)Math.Ceiling((hazardDetourBreakerUntilUtc - now).TotalMilliseconds))
+                : 0,
+            FrontBypassAttemptCount: frontBypassAttemptCount,
+            RepeatedFrontBypassCount: repeatedFrontBypassCount,
+            RepeatedFrontBypassNoProgressCount: repeatedFrontBypassNoProgressCount,
+            RepeatedHazardDetourCount: repeatedHazardDetourCount);
     }
 
 
