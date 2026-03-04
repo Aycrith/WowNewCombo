@@ -56,7 +56,7 @@ public sealed partial class Navigation : IDisposable
     private readonly float IndoorMinDistance = 1f;
     private readonly float OutDoorMinDistance = 3f;
 
-    private float AvgDistance;
+    private float AvgDistance = 200_0000;
     private float lastWorldDistance = float.MaxValue;
 
     /// <summary>Minimum angle in radians (~5.14 degrees) before triggering turn adjustment. Prevents over-correction on minor heading deviations.</summary>

@@ -99,7 +99,7 @@ local IsInGroup = IsInGroup
 local IsAutoRepeatSpell = IsAutoRepeatSpell
 local IsCurrentSpell = IsCurrentSpell
 local UnitIsVisible = UnitIsVisible
-local GetPetHappiness = GetPetHappiness
+local GetPetHappiness = GetPetHappiness or function() return 3 end
 
 local ammoSlot = GetInventorySlotInfo("AmmoSlot")
 
@@ -125,6 +125,7 @@ function DataToColor:Bits1()
     -- 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384
 
     local mainHandEnchant, _, _, _, offHandEnchant = GetWeaponEnchantInfo()
+    local ammoSlotCount = GetInventoryItemCount(DataToColor.C.unitPlayer, ammoSlot) or 0
 
     return
         (UnitAffectingCombat(DataToColor.C.unitTarget) and 1 or 0) +

@@ -652,6 +652,9 @@ function DataToColor:InitSpellBookQueue()
 end
 
 function DataToColor:InitTalentQueue()
+
+    if GetNumTalentTabs == nil then return end
+
     for tab = 1, GetNumTalentTabs(false, false) do
         for i = 1, GetNumTalents(tab) do
             local _, _, tier, column, currentRank = GetTalentInfo(tab, i)
