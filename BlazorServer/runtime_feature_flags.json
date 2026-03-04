@@ -28,7 +28,7 @@
       "Description": "Enhanced stuck recovery with breadcrumb tracking. Enabled after baseline stability proven."
     },
     "HazardAvoidance": {
-      "Enabled": true,
+      "Enabled": false,
       "DBSCANEpsilon": 12.0,
       "DBSCANMinPoints": 2,
       "HazardCostMultiplier": 18.0,
@@ -36,7 +36,7 @@
       "MaxEventsBeforePrune": 10000,
       "ClusteringIntervalSeconds": 15,
       "SaveIntervalMinutes": 3,
-      "Description": "Self-learning hazard avoidance. Enabled after baseline stability proven."
+      "Description": "DISABLED: Detour algorithm replaces entire pathfinder routes with 5-point straight lines, causing stuck feedback loops. Re-enable after CalculateDetourAsync is fixed to stitch detours into existing paths."
     },
     "Humanization": {
       "Enabled": false,
@@ -45,7 +45,7 @@
         "KeyHoldStdDevMs": 15,
         "KeyHoldMinMs": 30,
         "KeyHoldMaxMs": 200,
-        "ReactionMaxMs": 500
+        "ReactionMaxMs": 800
       },
       "MouseMovement": {
         "Enabled": false,
@@ -111,7 +111,7 @@
       "FocusGuard": true,
       "HybridModifiers": true,
       "KeyRepeat": false,
-      "BurstDampening": false,
+      "BurstDampening": true,
       "ModifierStaggerMinMs": 4,
       "ModifierStaggerMaxMs": 12,
       "ModifierReleaseStaggerMinMs": 2,
@@ -124,11 +124,11 @@
       "Description": "Input security hardening to reduce detection vectors (WM_CHAR, focus guard, hybrid modifiers)"
     },
     "CombatRotationOptimizer": {
-      "Enabled": false,
-      "FallbackToStaticPriority": false,
+      "Enabled": true,
+      "FallbackToStaticPriority": true,
       "BaseWeightMultiplier": 1,
-      "EnableMetrics": false,
-      "EnableResourceForecasting": false,
+      "EnableMetrics": true,
+      "EnableResourceForecasting": true,
       "EnableSwingTimerAlignment": false,
       "MetricsFlushIntervalSeconds": 30,
       "MetricsOutputPath": "logs/rotation_metrics.json"
@@ -162,7 +162,7 @@
     }
   },
   "GlobalKillSwitch": false,
-  "DebugMode": false,
+  "DebugMode": true,
   "Version": "1.0.0",
-  "LastModified": "2026-02-28T15:09:22Z"
+  "LastModified": "2026-03-02T22:44:33Z"
 }
