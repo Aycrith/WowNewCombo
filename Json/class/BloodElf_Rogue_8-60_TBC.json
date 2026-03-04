@@ -46,7 +46,7 @@
     "MIN_HP_SPRINT%": 20,
     "FLEE_HP%": 12,
     "FLEE_MOB_COUNT": 3,
-    "FOOD_HP%": 50,
+    "FOOD_HP%": 95,
     "BANDAGE_HP%": 45,
     "EVISCERATE_CP": 4,
     "SLICE_DICE_CP": 2,
@@ -195,12 +195,23 @@
   "Pull": {
     "Sequence": [
       {
+        "Name": "Throw",
+        "Key": "Z",
+        "Slot": 10,
+        "Item": true,
+        "BeforeCastStop": true,
+        "AfterCastWaitMeleeRange": true,
+        "Requirements": ["!InMeleeRange"],
+        "Cost": 15
+      },
+      {
         "Name": "Stealth",
         "Key": "1",
         "Slot": 1,
         "WhenUsable": true,
-        "Requirements": ["!Form:Rogue_Stealth", "Energy >= STEALTH_ENERGY", "!Swimming", "Level >= 14"],
-        "AfterCastWaitBuff": true
+        "Requirements": ["!Form:Rogue_Stealth", "!HasRangedWeapon", "Energy >= STEALTH_ENERGY", "!Swimming", "Level >= 14"],
+        "AfterCastWaitBuff": true,
+        "Cost": 25
       },
       {
         "Name": "Cheap Shot",
@@ -228,16 +239,6 @@
         "Requirements": ["Form:Rogue_Stealth", "InMeleeRange", "BehindTarget", "Level >= 14"],
         "StopBeforeCast": true,
         "Cost": 12
-      },
-      {
-        "Name": "Throw",
-        "Key": "Z",
-        "Slot": 10,
-        "Item": true,
-        "BeforeCastStop": true,
-        "AfterCastWaitMeleeRange": true,
-        "Requirements": ["HasRangedWeapon", "!InMeleeRange", "!Form:Rogue_Stealth"],
-        "Cost": 15
       },
       {
         "Name": "Approach",
@@ -402,7 +403,7 @@
         "Key": "1",
         "Slot": 1,
         "WhenUsable": true,
-        "Requirements": ["!Form:Rogue_Stealth", "!Swimming", "!InCombat", "Energy >= STEALTH_ENERGY", "Level >= 14"],
+        "Requirements": ["!Form:Rogue_Stealth", "!Food", "Health% >= FOOD_HP%", "!Swimming", "!InCombat", "Energy >= STEALTH_ENERGY", "Level >= 14"],
         "Cost": 2
       },
       {

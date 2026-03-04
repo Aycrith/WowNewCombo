@@ -59,6 +59,7 @@ public sealed class FeatureFlagController : ControllerBase
                 flags.ObjectPooling,
                 flags.CircuitBreaker,
                 flags.PathSmoothing,
+                flags.StuckSensitivity,
                 flags.StuckRecoveryV2,
                 flags.HazardAvoidance,
                 flags.Humanization,

@@ -100,6 +100,8 @@ public static class DependencyInjection
         s.ForwardSingleton<NpcNameFinder>(sp);
         s.ForwardSingleton<NpcNameTargetingLocations>(sp);
         s.ForwardSingleton<IWowScreen>(sp);
+        s.ForwardSingleton<IMinimapImageProvider>(sp);
+        s.ForwardSingleton<MinimapNodeFinder>(sp);
 
         s.ForwardSingleton<IPPather>(sp);
         s.ForwardSingleton<ExecGameCommand>(sp);
@@ -421,9 +423,16 @@ public static class DependencyInjection
         NativeMethods.GetWindowRect(process.MainWindowHandle, out Rectangle rect);
         if (!FrameConfig.Exists())
         {
-            log.LogError($"{nameof(FrameConfig)} doesn't exists!");
-            configurationComplete = false;
-            return true; // WoW is running, but config is not complete
+            if (FrameConfig.TryActivateForResolution(rect, installVersion))
+            {
+                log.LogInformation($"{nameof(FrameConfig)} activated resolution-specific config for {rect.Width}x{rect.Height}");
+            }
+            else
+            {
+                log.LogError($"{nameof(FrameConfig)} doesn't exists!");
+                configurationComplete = false;
+                return true; // WoW is running, but config is not complete
+            }
         }
 
         if (!FrameConfig.IsValid(rect, installVersion))

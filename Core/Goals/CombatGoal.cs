@@ -36,6 +36,13 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
     private float lastMaxDistance;
     private BehaviorContext? behaviorContext;
 
+    /// <summary>
+    /// Number of consecutive GOAP ticks on which the target-loss condition fired.
+    /// A grace period of 2 ticks is required before acting, which absorbs single-frame
+    /// addon latency gaps that temporarily report bits.Target() == false mid-combat.
+    /// </summary>
+    private int targetLostConsecutiveTicks;
+
     public CombatGoal(ILogger<CombatGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, StopMoving stopMoving, AddonBits bits,
         ClassConfiguration classConfig,
@@ -70,11 +77,14 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         }
 
         AddPrecondition(GoapKey.incombat, true);
-        AddPrecondition(GoapKey.hastarget, true);
-        AddPrecondition(GoapKey.targetisalive, true);
-        AddPrecondition(GoapKey.targethostile, true);
+        // CombatGoal is the combat-state handler, not only the "already have a valid target in
+        // range" executor. During loot/kill transitions WoW can remain in-combat while the target
+        // is dead/cleared, and CombatGoal.Update() contains the threat reacquire / wait-to-leave-
+        // combat logic for that exact case.
         //AddPrecondition(GoapKey.targettargetsus, true);
-        AddPrecondition(GoapKey.incombatrange, true);
+        // Do not require in-combat range at planner time. Multi-target transitions can leave
+        // us briefly out of range while still in combat, and gating CombatGoal here creates a
+        // planner gap (CombatGoal requires in-range, ApproachTargetGoal requires not in combat).
 
         AddEffect(GoapKey.producedcorpse, true);
         AddEffect(GoapKey.targetisalive, false);
@@ -116,6 +126,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         }
 
         lastDirection = playerReader.Direction;
+        targetLostConsecutiveTicks = 0;
     }
 
     public override void OnExit()
@@ -159,6 +170,14 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             !input.PetAttack.OnCooldown())
         {
             input.PressPetAttack();
+        }
+
+        // For melee-centric combat profiles, close distance aggressively when a hostile target
+        // exists but melee range has not been reached yet. This prevents repeated out-of-range
+        // cast failures that look like indecisive spinning/standing in place.
+        if (ShouldApproachCurrentTarget())
+        {
+            input.PressApproachOnCooldown();
         }
 
         ReadOnlySpan<KeyAction> span = Keys;
@@ -235,6 +254,19 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
             DealWithSoftInteract();
         }
 
+        // Debounce target-loss: require 2 consecutive ticks to absorb single-frame
+        // addon latency gaps that transiently report no target during active combat.
+        if (!bits.Target() || (bits.Target() && bits.Target_Dead()))
+        {
+            targetLostConsecutiveTicks++;
+            if (targetLostConsecutiveTicks < 2)
+                return;
+        }
+        else
+        {
+            targetLostConsecutiveTicks = 0;
+        }
+
         if (!bits.Target() || (bits.Target() && bits.Target_Dead()))
         {
             logger.LogInformation("Lost target!");
@@ -275,6 +307,17 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener
         }
 
         return mobCount;
+    }
+
+    private bool ShouldApproachCurrentTarget()
+    {
+        return
+            bits.Target() &&
+            bits.Target_Alive() &&
+            bits.Target_Hostile() &&
+            !playerReader.IsInMeleeRange() &&
+            !playerReader.IsCasting() &&
+            !castingHandler.SpellInQueue();
     }
 
     private void FindPossibleThreats()

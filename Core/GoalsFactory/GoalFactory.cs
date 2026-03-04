@@ -1,6 +1,7 @@
 using Core.Database;
 using Core.FeatureFlags;
 using Core.Goals;
+using Core.GoalsComponent;
 using Core.GOAP;
 using Core.Hazard;
 using Core.Session;
@@ -137,12 +138,21 @@ public static class GoalFactory
         {
             services.AddScoped<GoapGoal, WalkToCorpseGoal>();
         }
-        else if (classConfig.Mode == Mode.AttendedGather)
+        else if (classConfig.GatheringMode)
         {
             services.AddScoped<GoapGoal, WalkToCorpseGoal>();
             services.AddScoped<GoapGoal, CombatGoal>();
             services.AddScoped<GoapGoal, ApproachTargetGoal>();
-            services.AddScoped<GoapGoal, WaitForGatheringGoal>();
+
+            if (classConfig.Mode == Mode.AttendedGather)
+            {
+                services.AddScoped<GoapGoal, WaitForGatheringGoal>();
+            }
+            else if (classConfig.Mode == Mode.AutoGather)
+            {
+                ResolveAutoGatherGoal(services);
+            }
+
             ResolveFollowRouteGoal(services, classConfig);
 
             ResolveLootAndSkin(services, classConfig);
@@ -280,6 +290,28 @@ public static class GoalFactory
             services.AddScoped<GoapGoal>(sp =>
                 ActivatorUtilities.CreateInstance<AdhocNPCGoal>(sp, keyAction));
         }
+    }
+
+    private static void ResolveAutoGatherGoal(IServiceCollection services)
+    {
+        services.AddKeyedScoped<KeyAction>(AutoGatherGoal.KeyActionName, (sp, key) =>
+        {
+            var keyAction = new KeyAction
+            {
+                Name = AutoGatherGoal.KeyActionName
+            };
+
+            keyAction.Init(
+                sp.GetRequiredService<ILogger>(),
+                sp.GetRequiredService<ClassConfiguration>().Log,
+                sp.GetRequiredService<PlayerReader>(),
+                sp.GetRequiredService<AddonReader>().GlobalTime);
+
+            return keyAction;
+        });
+
+        services.AddScoped<FoundNodeListener>();
+        services.AddScoped<GoapGoal, AutoGatherGoal>();
     }
 
     private static void ResolveWaitGoal(IServiceCollection services,

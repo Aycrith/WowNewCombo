@@ -55,6 +55,8 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
     public const int MiniMapSize = 200;
     public Rectangle MiniMapRect { get; private set; }
     public Image<Bgra32> MiniMapImage { get; init; }
+    public SharedLib.MinimapSettings MinimapSettings
+        => new(((MiniMapRect.Width + 2) << 6) | (1 << 3), 0);
 
     private static readonly FeatureLevel[] s_featureLevels =
     [
@@ -137,7 +139,35 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
         if (result == Result.Fail)
             throw new Exception($"device is null {result.Description}");
 
-        duplication = output1.DuplicateOutput(device);
+        // DXGI_ERROR_NOT_CURRENTLY_AVAILABLE (0x887A0022) is transient:
+        // another app may briefly hold the duplication handle. Retry up to 10s.
+        IDXGIOutputDuplication? dup = null;
+        for (int attempt = 0; attempt < 10; attempt++)
+        {
+            try
+            {
+                dup = output1.DuplicateOutput(device);
+                break;
+            }
+            catch (SharpGenException ex) when ((uint)ex.ResultCode.Code == 0x887A0022u)
+            {
+                logger.LogWarning(
+                    "[WowScreenDXGI] DuplicateOutput attempt {Attempt}/10 failed (DXGI_ERROR_NOT_CURRENTLY_AVAILABLE). " +
+                    "WoW may be in exclusive fullscreen – switch to Windowed (Maximized) in Graphics settings. Retrying in 1s…",
+                    attempt + 1);
+                System.Threading.Thread.Sleep(1000);
+            }
+        }
+
+        if (dup is null)
+        {
+            throw new Exception(
+                "DXGI desktop duplication unavailable after 10 attempts. " +
+                "Ensure WoW is in Windowed or Windowed (Maximized) mode, not exclusive Fullscreen. " +
+                "In WoW: System > Advanced > Display Mode → Windowed (Maximized).");
+        }
+
+        duplication = dup;
 
         Texture2DDescription screenTextureDesc = new()
         {

@@ -99,7 +99,7 @@ local IsInGroup = IsInGroup
 local IsAutoRepeatSpell = IsAutoRepeatSpell
 local IsCurrentSpell = IsCurrentSpell
 local UnitIsVisible = UnitIsVisible
-local GetPetHappiness = GetPetHappiness
+local GetPetHappiness = GetPetHappiness or function() return 3 end
 
 local ammoSlot = GetInventorySlotInfo("AmmoSlot")
 
@@ -125,6 +125,7 @@ function DataToColor:Bits1()
     -- 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384
 
     local mainHandEnchant, _, _, _, offHandEnchant = GetWeaponEnchantInfo()
+    local ammoSlotCount = GetInventoryItemCount(DataToColor.C.unitPlayer, ammoSlot) or 0
 
     return
         (UnitAffectingCombat(DataToColor.C.unitTarget) and 1 or 0) +
@@ -544,10 +545,35 @@ function DataToColor:GetCorpsePosition()
         return 0, 0
     end
 
+    -- Try current map first
     local corpseMap = C_DeathInfo.GetCorpseMapPosition(DataToColor.map)
     if corpseMap then
         return corpseMap:GetXY()
     end
+
+    -- Current map returned nil: ghost is on a different sub-map than the corpse.
+    -- Walk up the map parent chain to find the map that contains the corpse.
+    if C_Map.GetMapInfo then
+        local mapInfo = C_Map.GetMapInfo(DataToColor.map)
+        if mapInfo and mapInfo.parentMapID and mapInfo.parentMapID ~= DataToColor.map then
+            corpseMap = C_DeathInfo.GetCorpseMapPosition(mapInfo.parentMapID)
+            if corpseMap then
+                return corpseMap:GetXY()
+            end
+        end
+    end
+
+    -- Try continent-level parent as a last resort
+    if C_Map.GetMapParentInfo then
+        local parentInfo = C_Map.GetMapParentInfo(DataToColor.map, Enum.UIMapType.Continent, true)
+        if parentInfo then
+            corpseMap = C_DeathInfo.GetCorpseMapPosition(parentInfo.mapID)
+            if corpseMap then
+                return corpseMap:GetXY()
+            end
+        end
+    end
+
     return 0, 0
 end
 
@@ -682,4 +708,43 @@ function DataToColor:PetIsDefensive()
     end
 
     return false
+end
+
+function DataToColor:MiniMapSettings1()
+    local zoomlevels = Minimap:GetZoomLevels() or 0
+    local zoom = Minimap:GetZoom() or 0
+    local rotateMinimap = (GetCVar("rotateMinimap") == "1") and 1 or 0
+    local width = math.floor(Minimap:GetWidth() or 0)
+
+    -- Layout:
+    -- bits  0-2  : zoom (0–7)
+    -- bits  3-5  : zoomlevels (0–7)
+    -- bits  6-15 : width (0–1023)
+    -- bit    23  : rotateMinimap (0/1)
+    local packed = bit.bor(
+        bit.lshift(zoom, 0),
+        bit.lshift(zoomlevels, 3),
+        bit.lshift(width, 6),
+        bit.lshift(rotateMinimap, 23)
+    )
+
+    return packed
+end
+
+function DataToColor:MiniMapSettings2()
+    local screenW = GetScreenWidth()
+    local screenH = GetScreenHeight()
+
+    local left   = Minimap:GetLeft() or 0
+    local top    = Minimap:GetTop() or 0
+    local width  = Minimap:GetWidth() or 0
+
+    local offsetRight = math.floor(screenW - (left + width))
+    local offsetTop   = math.floor(screenH - top)
+
+    local packed = offsetRight + 10000 * offsetTop
+
+    --DataToColor:Print("offsetRight: ", offsetRight, " offsetTop: ", offsetTop, " packed: ", packed)
+
+    return packed
 end

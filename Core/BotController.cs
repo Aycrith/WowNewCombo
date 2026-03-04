@@ -1,5 +1,6 @@
 using Core.Analytics;
 using Core.Goals;
+using Core.GoalsComponent;
 using Core.GOAP;
 using Core.LLM;
 using Core.Launch;
@@ -501,7 +502,16 @@ public sealed partial class BotController : IBotController, IDisposable
             ClassConfig = tryLoadConfig;
 
             ClassConfig.FileName = classFile;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to load or initialize class configuration: {Message}", ex.Message);
+            return false;
+        }
 
+        // Additional initialization steps that may fail but should not prevent ClassConfig from being set
+        try
+        {
             // Validate action bar slots against expected spells
             // (may be deferred if textures aren't ready yet)
             texturesValidated = false;
@@ -518,8 +528,8 @@ public sealed partial class BotController : IBotController, IDisposable
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, ex.Message);
-            return false;
+            logger.LogWarning(ex, "Failed during post-load initialization: {Message}", ex.Message);
+            // Continue anyway - ClassConfig is already set and profile is loaded
         }
 
         LogProfileLoadedTime(logger,
@@ -577,7 +587,12 @@ public sealed partial class BotController : IBotController, IDisposable
         RouteInfo = sessionScope.
             ServiceProvider.GetService<RouteInfo>();
 
-        screen.MinimapEnabled = config.Mode == Mode.AttendedGather;
+        screen.MinimapEnabled = config.GatheringMode;
+
+        if (config.Mode == Mode.AutoGather)
+        {
+            sessionScope.ServiceProvider.GetRequiredService<FoundNodeListener>();
+        }
     }
 
     private static IEnumerable<IRouteProvider> GetPathProviders(IServiceProvider sp)

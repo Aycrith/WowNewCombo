@@ -5,12 +5,28 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Navigation;
+
+public sealed record NavSoakMetricsSnapshot(
+    bool IsAttached,
+    string ArtifactPath,
+    int CompletedWindowCount,
+    DateTime SoakStartUtc,
+    DateTime CurrentWindowStartUtc,
+    int CurrentWindowFrontBypassActivations,
+    int CurrentWindowSuccessfulReconnects,
+    int CurrentWindowStuckEvents,
+    int CurrentWindowRepeatStuckCount,
+    double CurrentWindowRepeatStuckRate,
+    float CurrentRouteDeviation,
+    float CurrentWindowMaxRouteDeviation,
+    float CurrentWindowAvgRouteDeviation);
 
 /// <summary>
 /// Session-scoped service accumulating navigation soak metrics and persisting them
@@ -41,6 +57,7 @@ public sealed class NavSoakMetricsService : IDisposable
     private float maxDeviation;
     private float deviationSum;
     private int deviationSampleCount;
+    private float currentDeviation;
 
     public int CurrentWindowFrontBypassActivations => frontBypassActivations;
     public int CurrentWindowSuccessfulReconnects => successfulReconnects;
@@ -48,6 +65,10 @@ public sealed class NavSoakMetricsService : IDisposable
     public int CurrentWindowRepeatStuckCount => repeatStuckCount;
     public double CurrentWindowRepeatStuckRate =>
         stuckEvents == 0 ? 0.0 : Math.Round((double)repeatStuckCount / stuckEvents, 4);
+    public float CurrentWindowMaxRouteDeviation => maxDeviation;
+    public float CurrentWindowAvgRouteDeviation =>
+        deviationSampleCount == 0 ? 0f : deviationSum / deviationSampleCount;
+    public float CurrentRouteDeviation => currentDeviation;
 
     public NavSoakMetricsService(
         ILogger<NavSoakMetricsService> logger,
@@ -85,6 +106,37 @@ public sealed class NavSoakMetricsService : IDisposable
     {
         CloseCurrentWindow();
         await WriteArtifactAsync(cancellationToken);
+    }
+
+    public NavSoakMetricsSnapshot GetSnapshot()
+    {
+        lock (sync)
+        {
+            return new NavSoakMetricsSnapshot(
+                IsAttached: stuckDetector != null && attachedNavigations.Count > 0,
+                ArtifactPath: artifactPath,
+                CompletedWindowCount: completedWindows.Count,
+                SoakStartUtc: soakStart,
+                CurrentWindowStartUtc: windowStart,
+                CurrentWindowFrontBypassActivations: frontBypassActivations,
+                CurrentWindowSuccessfulReconnects: successfulReconnects,
+                CurrentWindowStuckEvents: stuckEvents,
+                CurrentWindowRepeatStuckCount: repeatStuckCount,
+                CurrentWindowRepeatStuckRate: stuckEvents == 0 ? 0.0 : Math.Round((double)repeatStuckCount / stuckEvents, 4),
+                CurrentRouteDeviation: currentDeviation,
+                CurrentWindowMaxRouteDeviation: maxDeviation,
+                CurrentWindowAvgRouteDeviation: deviationSampleCount == 0 ? 0f : deviationSum / deviationSampleCount);
+        }
+    }
+
+    public bool TryGetRuntimeSources(out StuckDetector? currentStuckDetector, out Goals.Navigation? currentNavigation)
+    {
+        lock (sync)
+        {
+            currentStuckDetector = stuckDetector;
+            currentNavigation = attachedNavigations.Count > 0 ? attachedNavigations.First() : null;
+            return currentStuckDetector != null && currentNavigation != null;
+        }
     }
 
     /// <summary>
@@ -166,6 +218,8 @@ public sealed class NavSoakMetricsService : IDisposable
     {
         lock (sync)
         {
+            currentDeviation = deviation;
+
             if (deviation > maxDeviation)
             {
                 maxDeviation = deviation;
@@ -229,6 +283,7 @@ public sealed class NavSoakMetricsService : IDisposable
             maxDeviation = 0f;
             deviationSum = 0f;
             deviationSampleCount = 0;
+            currentDeviation = 0f;
             windowStart = DateTime.UtcNow;
         }
 
@@ -288,6 +343,7 @@ public sealed class NavSoakMetricsService : IDisposable
         maxDeviation = 0f;
         deviationSum = 0f;
         deviationSampleCount = 0;
+        currentDeviation = 0f;
     }
 
     private static string ResolveOutputDir(string configuredOutputDir)

@@ -9,13 +9,13 @@ namespace Frontend.Controllers;
 [ApiController]
 public class FrameConfigController : ControllerBase
 {
-    private readonly FrameConfigurator _frameConfigurator;
     private readonly IWowScreen _screen;
+    private readonly FrameConfigurator? _frameConfigurator;
 
-    public FrameConfigController(FrameConfigurator frameConfigurator, IWowScreen screen)
+    public FrameConfigController(IWowScreen screen, FrameConfigurator? frameConfigurator = null)
     {
-        _frameConfigurator = frameConfigurator;
         _screen = screen;
+        _frameConfigurator = frameConfigurator;
     }
 
     /// <summary>
@@ -24,6 +24,21 @@ public class FrameConfigController : ControllerBase
     [HttpGet("status")]
     public IActionResult GetStatus()
     {
+        if (_frameConfigurator == null)
+        {
+            return Ok(new
+            {
+                FrameConfigExists = FrameConfig.Exists(),
+                AddonConfigExists = AddonConfig.Exists(),
+                StatusMessage = "FrameConfigurator unavailable (WoW not running)",
+                PreFlightFailed = false,
+                Saved = false,
+                DataFrameCount = 0,
+                ExpectedFrameCount = 0,
+                AddonNotVisible = true
+            });
+        }
+
         return Ok(new
         {
             FrameConfigExists = FrameConfig.Exists(),
@@ -43,6 +58,16 @@ public class FrameConfigController : ControllerBase
     [HttpPost("auto-configure")]
     public async Task<IActionResult> AutoConfigure(CancellationToken cancellationToken)
     {
+        if (_frameConfigurator == null)
+        {
+            return Ok(new
+            {
+                Success = false,
+                Message = "WoW is not running (FrameConfigurator unavailable)",
+                StatusMessage = "Start WoW and reload the page"
+            });
+        }
+
         if (FrameConfig.Exists())
         {
             return Ok(new
@@ -118,6 +143,15 @@ public class FrameConfigController : ControllerBase
     [HttpGet("diagnostics")]
     public IActionResult GetDiagnostics()
     {
+        if (_frameConfigurator == null)
+        {
+            return Ok(new
+            {
+                Message = "FrameConfigurator unavailable (WoW not running)",
+                ScreenEnabled = _screen.Enabled
+            });
+        }
+
         _screen.GetRectangle(out var screenRect);
 
         // Enable screen capture temporarily to get a frame
@@ -308,6 +342,11 @@ public class FrameConfigController : ControllerBase
     [HttpGet("screenshot")]
     public IActionResult GetScreenshot()
     {
+        if (_frameConfigurator == null)
+        {
+            return NotFound(new { Message = "FrameConfigurator unavailable (WoW not running)" });
+        }
+
         var imageDataUri = _frameConfigurator.ImageDataUri;
 
         if (string.IsNullOrEmpty(imageDataUri))

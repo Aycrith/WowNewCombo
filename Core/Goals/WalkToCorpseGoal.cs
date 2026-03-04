@@ -33,14 +33,22 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
     private DateTime nextSpiritHealerInteractUtc;
 
     private const int CorpseWalkTimeoutSec = 90;
+    private const int CorpseNoProgressEscalationSec = 25;
     private const int CorpseRetrieveRetryMs = 3000;
     private const int SpiritHealerInteractRetryMs = 5000;
+    private const int SpiritHealerEscalationRetryMs = 12000;
     private const float SpiritHealerInteractDistanceYards = 7f;
+    private const float SpiritHealerInteractFallbackDistanceYards = 35f;
     private const float SpiritHealerLookupMaxDistanceYards = 500f;
     private const float CorpseRetrieveConfirmDistanceYards = 35f;
+    private const float CorpseProgressDeltaYards = 1.5f;
     private bool navigatedToSpiritHealer;
     private Vector3 spiritHealerWorldPos;
     private string spiritHealerName = string.Empty;
+    private bool spiritHealerLookupWasSuspicious;
+    private Vector3 lastProgressWorldPos;
+    private DateTime lastProgressUtc;
+    private DateTime nextNoProgressEscalationUtc;
 
     #region IRouteProvider
 
@@ -126,13 +134,18 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
                 playerWorldPos);
 
             worldPos = new Vector3(playerWorldPos.X, playerWorldPos.Y, worldPos.Z);
+            spiritHealerLookupWasSuspicious = true;
+        }
+        else
+        {
+            spiritHealerLookupWasSuspicious = false;
         }
 
         Log($"Player teleported to the graveyard! {worldPos}");
 
         playerReader.WorldPosZ = worldPos.Z;
         spiritHealerWorldPos = worldPos;
-        spiritHealerName = npc.Name ?? string.Empty;
+        spiritHealerName = spiritHealerLookupWasSuspicious ? string.Empty : (npc.Name ?? string.Empty);
         navigatedToSpiritHealer = false;
 
         Vector3 corpseLocation = playerReader.CorpseMapPos;
@@ -149,8 +162,8 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
             worldPos.Z);
 
         bool corpseOutOfBounds =
-            corpseLocation.X < 0 || corpseLocation.X > 100 ||
-            corpseLocation.Y < 0 || corpseLocation.Y > 100;
+            corpseLocation.X <= 0 || corpseLocation.X > 100 ||
+            corpseLocation.Y <= 0 || corpseLocation.Y > 100;
 
         if (corpseOutOfBounds)
         {
@@ -166,6 +179,9 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
         onEnterTime = DateTime.UtcNow;
         nextCorpseRetrieveAttemptUtc = DateTime.UtcNow;
         nextSpiritHealerInteractUtc = DateTime.UtcNow;
+        nextNoProgressEscalationUtc = DateTime.UtcNow;
+        lastProgressWorldPos = playerReader.WorldPos;
+        lastProgressUtc = DateTime.UtcNow;
     }
 
     public override void OnExit()
@@ -176,8 +192,22 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
 
     public override void Update()
     {
+        TrackMovementProgress();
+
         if (!IsCorpseInRetrieveRange())
         {
+            RandomJump();
+
+            if (!navigatedToSpiritHealer &&
+                IsDeadNoProgressEscalationDue() &&
+                (DateTime.UtcNow - onEnterTime).TotalSeconds > 10)
+            {
+                Log($"No corpse progress for {CorpseNoProgressEscalationSec}s - escalating early to spirit healer route at {spiritHealerWorldPos}");
+                navigatedToSpiritHealer = true;
+                navigation.SetWayPoints([spiritHealerWorldPos]);
+                nextNoProgressEscalationUtc = DateTime.UtcNow.AddMilliseconds(SpiritHealerEscalationRetryMs);
+            }
+
             if (IsNearSpiritHealerForInteraction())
             {
                 stopMoving.Stop();
@@ -195,6 +225,13 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
                 navigation.SetWayPoints([spiritHealerWorldPos]);
             }
 
+            if (navigatedToSpiritHealer && IsDeadNoProgressEscalationDue())
+            {
+                Log($"No progress while routing to spirit healer - forcing interaction retry");
+                ForceSpiritHealerInteractionFallback();
+                nextNoProgressEscalationUtc = DateTime.UtcNow.AddMilliseconds(SpiritHealerEscalationRetryMs);
+            }
+
             TryInteractSpiritHealer();
             navigation.Update();
         }
@@ -206,6 +243,23 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
         }
 
         wait.Update();
+    }
+
+    private void TrackMovementProgress()
+    {
+        Vector3 pos = playerReader.WorldPos;
+        if (pos.WorldDistanceXYTo(lastProgressWorldPos) >= CorpseProgressDeltaYards)
+        {
+            lastProgressWorldPos = pos;
+            lastProgressUtc = DateTime.UtcNow;
+        }
+    }
+
+    private bool IsDeadNoProgressEscalationDue()
+    {
+        return bits.Dead() &&
+            DateTime.UtcNow >= nextNoProgressEscalationUtc &&
+            (DateTime.UtcNow - lastProgressUtc).TotalSeconds >= CorpseNoProgressEscalationSec;
     }
 
     private void RandomJump()
@@ -274,15 +328,19 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
             return;
         }
 
+        float interactDistanceThreshold = spiritHealerLookupWasSuspicious
+            ? SpiritHealerInteractFallbackDistanceYards
+            : SpiritHealerInteractDistanceYards;
+
         float distanceToSpiritHealer = playerReader.WorldPos.WorldDistanceXYTo(spiritHealerWorldPos);
-        if (distanceToSpiritHealer > SpiritHealerInteractDistanceYards)
+        if (distanceToSpiritHealer > interactDistanceThreshold)
         {
             return;
         }
 
         nextSpiritHealerInteractUtc = DateTime.UtcNow.AddMilliseconds(SpiritHealerInteractRetryMs);
 
-        Log($"Near spirit healer ({distanceToSpiritHealer:F1}y) - attempting interaction");
+        Log($"Near spirit healer ({distanceToSpiritHealer:F1}y, threshold {interactDistanceThreshold:F1}) - attempting interaction");
         TryTargetAndInteractSpiritHealer();
         input.PressInteract();
         wait.Update();
@@ -297,8 +355,12 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
             return false;
         }
 
+        float interactDistanceThreshold = spiritHealerLookupWasSuspicious
+            ? SpiritHealerInteractFallbackDistanceYards
+            : (SpiritHealerInteractDistanceYards + 1.5f);
+
         float distanceToSpiritHealer = playerReader.WorldPos.WorldDistanceXYTo(spiritHealerWorldPos);
-        return distanceToSpiritHealer <= (SpiritHealerInteractDistanceYards + 1.5f);
+        return distanceToSpiritHealer <= interactDistanceThreshold;
     }
 
     private void TryTargetAndInteractSpiritHealer()
@@ -309,8 +371,35 @@ public sealed partial class WalkToCorpseGoal : GoapGoal, IGoapEventListener, IRo
             wait.Update();
         }
 
+        if (!bits.Target())
+        {
+            Log("Spirit healer target not acquired by name - trying nearest target fallback");
+            input.PressNearestTarget();
+            wait.Update();
+        }
+
         execGameCommand.Run("/run if UnitExists('target') then InteractUnit('target') end", logMessage: null);
         wait.Update();
+    }
+
+    private void ForceSpiritHealerInteractionFallback()
+    {
+        // When corpse-run pathing stalls for an extended period while dead, push a best-effort
+        // spirit healer interaction sequence instead of remaining in turn-only loops.
+        execGameCommand.Run("/targetexact Spirit Healer", logMessage: null);
+        wait.Update();
+
+        if (!bits.Target())
+        {
+            input.PressNearestTarget();
+            wait.Update();
+        }
+
+        input.PressInteract();
+        wait.Update();
+
+        TryConfirmSpiritHealerResurrection();
+        execGameCommand.Run("/run RetrieveCorpse()", logMessage: null);
     }
 
     private void TryConfirmSpiritHealerResurrection()

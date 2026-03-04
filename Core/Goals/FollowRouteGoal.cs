@@ -32,6 +32,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private const int RefillBackwardSegmentGrace = 1;
     private const float RefillAnchorTeleportResetDistance = 20f;
     private const int RefillSameSegmentLoopLimit = 5;
+    private const float RefillTurnaroundDistanceTolerance = 0.75f;
     private static readonly TimeSpan RefillSameSegmentLoopWindow = TimeSpan.FromSeconds(5);
 
     private readonly ILogger<FollowRouteGoal> logger;
@@ -85,6 +86,10 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private int lastRefillAppliedSegmentIndex;
     private DateTime lastRefillAppliedUtc;
     private int repeatedSameRefillCount;
+    private int refillForcedMinSegmentForward = -1;
+    private int refillForcedMinSegmentReversed = -1;
+    private DateTime lastBrokenGearTargetScanWarning = DateTime.MinValue;
+    private DateTime lastLowHealthTargetScanWarning = DateTime.MinValue;
 
     #region IRouteProvider
 
@@ -337,6 +342,20 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         while (!sideActivityCts.IsCancellationRequested)
         {
+            if (IsHealthTooLowToSearchForTargets())
+            {
+                wait.Update();
+                await sideActivityManualReset.WaitAsync();
+                continue;
+            }
+
+            if (IsGearTooBrokenToSearchForTargets())
+            {
+                wait.Update();
+                await sideActivityManualReset.WaitAsync();
+                continue;
+            }
+
             if (pathSettings.CanRunSideActivity() &&
                 targetFinder.Search(NpcNameToFind, bits.Target_NotDead, sideActivityCts.Token))
             {
@@ -344,6 +363,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
                 {
                     Log("Blacklisted target found, clearing target");
                     input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+                    targetFinder.NotifyBlacklistedResult();
+                    try { await Task.Delay(TargetFinder.BlacklistBackoffMs, sideActivityCts.Token).ConfigureAwait(false); } catch (OperationCanceledException) { }
                     continue; // Don't fall through - loop again to find a valid target
                 }
 
@@ -361,6 +382,44 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         if (logger.IsEnabled(Microsoft.Extensions.Logging.LogLevel.Debug))
             logger.LogDebug("LookingForTarget Task stopped!");
+    }
+
+    private bool IsGearTooBrokenToSearchForTargets()
+    {
+        if (!bits.Items_Broken() && playerReader.AvgEquipDurability() > 5)
+        {
+            return false;
+        }
+
+        if ((DateTime.UtcNow - lastBrokenGearTargetScanWarning).TotalSeconds >= 5)
+        {
+            Log("Gear durability critically low/broken; suspending target search while following route.");
+            lastBrokenGearTargetScanWarning = DateTime.UtcNow;
+        }
+
+        return true;
+    }
+
+    private bool IsHealthTooLowToSearchForTargets()
+    {
+        if (!classConfig.IntVariables.TryGetValue("FOOD_HP%", out int foodHpThreshold) ||
+            foodHpThreshold <= 0)
+        {
+            return false;
+        }
+
+        if (bits.Combat() || playerReader.HealthPercent() >= foodHpThreshold)
+        {
+            return false;
+        }
+
+        if ((DateTime.UtcNow - lastLowHealthTargetScanWarning).TotalSeconds >= 5)
+        {
+            Log($"Health below FOOD_HP% ({playerReader.HealthPercent()}% < {foodHpThreshold}%); suspending target search to finish resting.");
+            lastLowHealthTargetScanWarning = DateTime.UtcNow;
+        }
+
+        return true;
     }
 
     private async Task Thread_AttendedGatherAsync()
@@ -451,23 +510,34 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         int minSegmentIndex = hasRefillProgressAnchor
             ? refillSegmentAnchorIndex
             : 0;
+        if (refillForcedMinSegmentForward >= 0)
+        {
+            minSegmentIndex = Math.Max(minSegmentIndex, refillForcedMinSegmentForward);
+        }
         RefillCandidate normalCandidate = FindClosestRefillCandidate(normalPath, playerMap, minSegmentIndex);
         float normalScore = ScoreRefillCandidate(normalCandidate, reversed: false);
+        Vector3[]? reversedPath = null;
+        RefillCandidate reversedCandidate = default;
+        float reversedScore = float.MaxValue;
 
         Vector3[] chosenPath = normalPath;
         RefillCandidate chosenCandidate = normalCandidate;
         bool chosenReversed = false;
 
-        if (mapRoute.Length > 1)
+        if (pathSettings.PathThereAndBack && mapRoute.Length > 1)
         {
-            Vector3[] reversedPath = (Vector3[])mapRoute.Clone();
+            reversedPath = (Vector3[])mapRoute.Clone();
             Array.Reverse(reversedPath);
 
             int reversedMinSegment = hasRefillProgressAnchor
                 ? Math.Max(0, (mapRoute.Length - 1 - refillSegmentAnchorIndex) - RefillBackwardSegmentGrace)
                 : 0;
-            RefillCandidate reversedCandidate = FindClosestRefillCandidate(reversedPath, playerMap, reversedMinSegment);
-            float reversedScore = ScoreRefillCandidate(reversedCandidate, reversed: true);
+            if (refillForcedMinSegmentReversed >= 0)
+            {
+                reversedMinSegment = Math.Max(reversedMinSegment, refillForcedMinSegmentReversed);
+            }
+            reversedCandidate = FindClosestRefillCandidate(reversedPath, playerMap, reversedMinSegment);
+            reversedScore = ScoreRefillCandidate(reversedCandidate, reversed: true);
 
             if (reversedScore < normalScore)
             {
@@ -477,9 +547,46 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             }
         }
 
+        if (reversedPath != null &&
+            ShouldPreferThereAndBackTurnaround(normalCandidate, reversedCandidate))
+        {
+            chosenPath = refillRouteReversed ? normalPath : reversedPath;
+            chosenCandidate = refillRouteReversed ? normalCandidate : reversedCandidate;
+            chosenReversed = !refillRouteReversed;
+        }
+
         int closestSegmentStartIndex = chosenCandidate.SegmentStartIndex;
         Vector3 mapClosestPoint = chosenCandidate.MapClosestPoint;
         ApplyRefillLoopBreaker(chosenPath, onlyClosest, chosenReversed, ref closestSegmentStartIndex, ref mapClosestPoint);
+
+        if (!onlyClosest &&
+            pathSettings.PathThereAndBack &&
+            mapRoute.Length > 1 &&
+            reversedPath != null)
+        {
+            int remainingAfterLoopBreaker = chosenPath.Length - (closestSegmentStartIndex + 1);
+            if (remainingAfterLoopBreaker <= 0)
+            {
+                Vector3[] alternatePath = chosenReversed ? normalPath : reversedPath;
+                bool alternateReversed = !chosenReversed;
+                RefillCandidate alternateCandidate = FindClosestRefillCandidate(alternatePath, playerMap, 0);
+                int alternateRemaining = alternatePath.Length - (alternateCandidate.SegmentStartIndex + 1);
+
+                if (alternateRemaining > 0 ||
+                    alternateCandidate.DistanceToRoute <= chosenCandidate.DistanceToRoute + RefillTurnaroundDistanceTolerance)
+                {
+                    LogWarning("Reached route boundary; switching ThereAndBack orientation to avoid endpoint refill loop");
+                    chosenPath = alternatePath;
+                    chosenCandidate = alternateCandidate;
+                    chosenReversed = alternateReversed;
+                    closestSegmentStartIndex = alternateCandidate.SegmentStartIndex;
+                    mapClosestPoint = alternateCandidate.MapClosestPoint;
+                    hasRecentRefillApply = false;
+                    repeatedSameRefillCount = 0;
+                }
+            }
+        }
+
         UpdateRefillProgressAnchor(new RefillCandidate(closestSegmentStartIndex, mapClosestPoint, chosenCandidate.DistanceToRoute), chosenReversed);
 
         if (onlyClosest)
@@ -495,6 +602,11 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         int remainingCount = chosenPath.Length - (closestSegmentStartIndex + 1);
         if (remainingCount <= 0)
         {
+            if (!pathSettings.PathThereAndBack)
+            {
+                // Loop mode: reset anchor so next refill restarts from route beginning
+                ResetRefillProgressAnchor();
+            }
             navigation.SetWayPoints(stackalloc Vector3[1] { mapClosestPoint });
             return;
         }
@@ -521,6 +633,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         lastRefillAppliedSegmentIndex = 0;
         lastRefillAppliedUtc = DateTime.MinValue;
         repeatedSameRefillCount = 0;
+        refillForcedMinSegmentForward = -1;
+        refillForcedMinSegmentReversed = -1;
     }
 
     private void UpdateRefillProgressAnchor(RefillCandidate candidate, bool reversed)
@@ -578,6 +692,14 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         LogWarning($"Refill loop detected on segment {closestSegmentStartIndex} (x{repeatedSameRefillCount}) - advancing route anchor");
         closestSegmentStartIndex = advanceToPointIndex;
         mapClosestPoint = chosenPath[advanceToPointIndex];
+        if (chosenReversed)
+        {
+            refillForcedMinSegmentReversed = Math.Max(refillForcedMinSegmentReversed, advanceToPointIndex);
+        }
+        else
+        {
+            refillForcedMinSegmentForward = Math.Max(refillForcedMinSegmentForward, advanceToPointIndex);
+        }
         repeatedSameRefillCount = 0;
     }
 
@@ -604,6 +726,32 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         }
 
         return score;
+    }
+
+    private bool ShouldPreferThereAndBackTurnaround(RefillCandidate normalCandidate, RefillCandidate reversedCandidate)
+    {
+        if (!pathSettings.PathThereAndBack || !hasRefillProgressAnchor || mapRoute.Length < 2)
+        {
+            return false;
+        }
+
+        int lastSegmentStart = Math.Max(0, mapRoute.Length - 2);
+        if (!refillRouteReversed)
+        {
+            bool nearTail =
+                refillSegmentAnchorIndex >= lastSegmentStart ||
+                normalCandidate.SegmentStartIndex >= lastSegmentStart;
+
+            return nearTail &&
+                reversedCandidate.DistanceToRoute <= normalCandidate.DistanceToRoute + RefillTurnaroundDistanceTolerance;
+        }
+
+        bool nearHead =
+            refillSegmentAnchorIndex <= RefillBackwardSegmentGrace ||
+            normalCandidate.SegmentStartIndex <= RefillBackwardSegmentGrace;
+
+        return nearHead &&
+            normalCandidate.DistanceToRoute <= reversedCandidate.DistanceToRoute + RefillTurnaroundDistanceTolerance;
     }
 
     private static RefillCandidate FindClosestRefillCandidate(ReadOnlySpan<Vector3> pathMap, Vector3 playerMap, int minSegmentIndex = 0)

@@ -156,6 +156,10 @@ public sealed class AreaDB : IDisposable
 
                 foreach (var pos in worldPos)
                 {
+                    // Skip entries with missing elevation data (Z=0 causes pathfinder to route into building geometry)
+                    if (pos.Z == 0)
+                        continue;
+
                     var mapPos = WorldMapAreaDB.ToMap_FlipXY(pos, Hitbox!.Value);
                     if (mapPos.X <= 0 || mapPos.X >= 100 || mapPos.Y <= 0 || mapPos.Y >= 100)
                         continue;

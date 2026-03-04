@@ -1,5 +1,6 @@
 using Core;
 using Core.Diagnostics;
+using Core.FeatureFlags;
 using Core.Goals;
 using Core.Startup;
 using Core.Testing;
@@ -74,6 +75,24 @@ public record DiagnosticsSummary(
 public record PlaceRequest(int Slot, string Name);
 
 public record FixResult(bool Success, string Message, int ChangesApplied = 0);
+public record SlashCommandRequest(
+    string Command,
+    bool UseBackgroundCompatibleInput = false,
+    int PreDelayMs = 200,
+    int PostDelayMs = 500);
+public record SlashCommandResult(
+    bool Success,
+    string Command,
+    string DispatchPath,
+    long ElapsedMs,
+    string? Error = null);
+public record NavigationRuntimeDiagnosticsResponse(
+    bool BotActive,
+    string CurrentGoal,
+    NavigationRuntimeSnapshot? Navigation,
+    StuckDetectorRuntimeSnapshot? StuckDetector,
+    Core.Navigation.NavSoakMetricsSnapshot? Soak,
+    object? FeatureFlags);
 
 public record BagMetaDto(
     int Index,
@@ -140,6 +159,8 @@ public class DiagnosticsController : ControllerBase
     private readonly EquipmentReader equipmentReader;
     private readonly ILoggerFactory loggerFactory;
     private readonly SystemDiagnostics systemDiagnostics;
+    private readonly Core.Navigation.NavSoakMetricsService? navSoakMetricsService;
+    private readonly FeatureFlagService? featureFlagService;
 
     private readonly StartupOptions startupOptions;
 
@@ -159,7 +180,9 @@ public class DiagnosticsController : ControllerBase
         EquipmentReader equipmentReader,
         ILoggerFactory loggerFactory,
         SystemDiagnostics systemDiagnostics,
-        IOptions<StartupOptions> startupOptions)
+        IOptions<StartupOptions> startupOptions,
+        Core.Navigation.NavSoakMetricsService? navSoakMetricsService = null,
+        FeatureFlagService? featureFlagService = null)
     {
         this.logger = logger;
         this.keyBindingsReader = keyBindingsReader;
@@ -177,6 +200,8 @@ public class DiagnosticsController : ControllerBase
         this.loggerFactory = loggerFactory;
         this.systemDiagnostics = systemDiagnostics;
         this.startupOptions = startupOptions.Value;
+        this.navSoakMetricsService = navSoakMetricsService;
+        this.featureFlagService = featureFlagService;
     }
 
     #region Diagnostic Endpoints
@@ -241,6 +266,112 @@ public class DiagnosticsController : ControllerBase
         catch (Exception ex)
         {
             logger.LogError(ex, "Bag diagnostics failed");
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// GET /api/diagnostics/soak/current
+    /// Returns current in-memory navigation soak counters and artifact metadata.
+    /// </summary>
+    [HttpGet("soak/current")]
+    public IActionResult GetSoakCurrent()
+    {
+        try
+        {
+            if (navSoakMetricsService == null)
+            {
+                return StatusCode(503, new { Error = "NavSoakMetricsService is not available in the current runtime." });
+            }
+
+            Core.Navigation.NavSoakMetricsSnapshot snapshot = navSoakMetricsService.GetSnapshot();
+            return Ok(snapshot);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to retrieve current soak metrics");
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// POST /api/diagnostics/soak/flush
+    /// Forces the current soak window to close (if attached) and writes artifact JSON.
+    /// </summary>
+    [HttpPost("soak/flush")]
+    public async Task<IActionResult> FlushSoak()
+    {
+        try
+        {
+            if (navSoakMetricsService == null)
+            {
+                return StatusCode(503, new { Error = "NavSoakMetricsService is not available in the current runtime." });
+            }
+
+            await navSoakMetricsService.FlushAsync();
+            Core.Navigation.NavSoakMetricsSnapshot snapshot = navSoakMetricsService.GetSnapshot();
+
+            return Ok(new
+            {
+                Success = true,
+                snapshot.ArtifactPath,
+                snapshot.CompletedWindowCount,
+                Snapshot = snapshot,
+                TimestampUtc = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to flush soak metrics");
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// GET /api/diagnostics/navigation/runtime
+    /// Returns live navigation + stuck runtime diagnostics for autonomous triage.
+    /// </summary>
+    [HttpGet("navigation/runtime")]
+    public IActionResult GetNavigationRuntime()
+    {
+        try
+        {
+            if (navSoakMetricsService == null)
+            {
+                return StatusCode(503, new { Error = "NavSoakMetricsService is not available in the current runtime." });
+            }
+
+            if (!navSoakMetricsService.TryGetRuntimeSources(out StuckDetector? stuckDetector, out Core.Goals.Navigation? navigation) ||
+                stuckDetector == null ||
+                navigation == null)
+            {
+                return StatusCode(503, new { Error = "Active navigation runtime sources are not attached yet." });
+            }
+
+            FeatureFlagsOptions? flags = featureFlagService?.Current;
+            object? featureFlagSubset = flags == null
+                ? null
+                : new
+                {
+                    flags.StuckSensitivity,
+                    flags.HazardAvoidance,
+                    flags.PathSmoothing,
+                    flags.InputSecurity
+                };
+
+            NavigationRuntimeDiagnosticsResponse response = new(
+                BotActive: botController.IsBotActive,
+                CurrentGoal: TryGetCurrentGoalLabel(),
+                Navigation: navigation.GetRuntimeSnapshot(),
+                StuckDetector: stuckDetector.GetRuntimeSnapshot(),
+                Soak: navSoakMetricsService.GetSnapshot(),
+                FeatureFlags: featureFlagSubset);
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get navigation runtime diagnostics");
             return StatusCode(500, new { Error = ex.Message });
         }
     }
@@ -805,6 +936,124 @@ public class DiagnosticsController : ControllerBase
         }
     }
 
+    private string TryGetCurrentGoalLabel()
+    {
+        try
+        {
+            return botController.GoapAgent?.CurrentGoal?.DisplayName ??
+                botController.GoapAgent?.CurrentGoal?.Name ??
+                string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    public static bool TryNormalizeSupportedSlashCommand(string? command, out string normalized, out string? error)
+    {
+        normalized = string.Empty;
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(command))
+        {
+            error = "Command is required.";
+            return false;
+        }
+
+        string candidate = command.Trim();
+        if (!candidate.StartsWith('/'))
+        {
+            error = "Command must start with '/'.";
+            return false;
+        }
+
+        string lower = candidate.ToLowerInvariant();
+        switch (lower)
+        {
+            case "/reload":
+            case "/dc":
+            case "/dcflush":
+            case "/dcbindings":
+            case "/dcnumberkeys":
+            case "/dcactions":
+                normalized = lower;
+                return true;
+            default:
+                error = $"Unsupported slash command '{candidate}'.";
+                return false;
+        }
+    }
+
+    private async Task<SlashCommandResult> ExecuteSlashCommandAsync(
+        string command,
+        bool useBackgroundCompatibleInput,
+        int preDelayMs,
+        int postDelayMs)
+    {
+        Stopwatch sw = Stopwatch.StartNew();
+
+        preDelayMs = Math.Clamp(preDelayMs, 0, 3000);
+        postDelayMs = Math.Clamp(postDelayMs, 0, 5000);
+
+        (bool Enabled, bool FocusGuard, bool HybridModifiers, bool EmitWmChar) stateBefore = wowInput.GetInputSecurityState();
+        bool backgroundCompatibleBefore = !stateBefore.FocusGuard && !stateBefore.HybridModifiers;
+        bool restoreInputMode = backgroundCompatibleBefore != useBackgroundCompatibleInput;
+
+        try
+        {
+            if (restoreInputMode)
+            {
+                wowInput.EmergencyReleaseAllKeys();
+                wowInput.SetBackgroundCompatibleInputMode(useBackgroundCompatibleInput);
+                await Task.Delay(50);
+            }
+
+            logger.LogInformation(
+                "Executing slash command {Command} via WowProcessInput (BackgroundCompatible={BackgroundCompatible})",
+                command,
+                useBackgroundCompatibleInput);
+
+            wowInput.SetForegroundWindow();
+            if (preDelayMs > 0)
+            {
+                await Task.Delay(preDelayMs);
+            }
+
+            wowInput.PressRandom(ConsoleKey.Escape, 50);
+            await Task.Delay(300);
+            wowInput.PressRandom(ConsoleKey.Escape, 50);
+            await Task.Delay(300);
+            wowInput.PressRandom(ConsoleKey.Enter, 50);
+            await Task.Delay(200);
+            wowInput.SendText(command);
+            await Task.Delay(150);
+            wowInput.PressRandom(ConsoleKey.Enter, 50);
+
+            if (postDelayMs > 0)
+            {
+                await Task.Delay(postDelayMs);
+            }
+
+            return new SlashCommandResult(true, command, "WowProcessInput", sw.ElapsedMilliseconds);
+        }
+        finally
+        {
+            if (restoreInputMode)
+            {
+                try
+                {
+                    wowInput.EmergencyReleaseAllKeys();
+                    wowInput.SetBackgroundCompatibleInputMode(backgroundCompatibleBefore);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to restore input mode after slash command dispatch");
+                }
+            }
+        }
+    }
+
     private static string DetermineOverallStatus(IEnumerable<DiagnosticStatus> statuses)
     {
         if (statuses.Any(s => s == DiagnosticStatus.Error))
@@ -1048,6 +1297,68 @@ public class DiagnosticsController : ControllerBase
             logger.LogError(ex, "Sync action bar failed");
             sw.Stop();
             return StatusCode(500, new FixResult(false, ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// POST /api/diagnostics/fix/reload
+    /// Runs /reload in chat to recover a hung/frozen addon state.
+    /// </summary>
+    [HttpPost("fix/reload")]
+    public async Task<IActionResult> FixReload()
+    {
+        Stopwatch sw = Stopwatch.StartNew();
+
+        try
+        {
+            SlashCommandResult result = await ExecuteSlashCommandAsync(
+                command: "/reload",
+                useBackgroundCompatibleInput: false,
+                preDelayMs: 200,
+                postDelayMs: 500);
+
+            sw.Stop();
+            return Ok(new FixResult(result.Success, $"Executed {result.Command}", result.Success ? 1 : 0));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Fix reload failed");
+            sw.Stop();
+            return StatusCode(500, new FixResult(false, ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// POST /api/diagnostics/fix/slash
+    /// Executes a safe-listed slash command via WowProcessInput.
+    /// </summary>
+    [HttpPost("fix/slash")]
+    public async Task<IActionResult> FixSlash([FromBody] SlashCommandRequest request)
+    {
+        Stopwatch sw = Stopwatch.StartNew();
+
+        try
+        {
+            if (!TryNormalizeSupportedSlashCommand(request.Command, out string normalized, out string? error))
+            {
+                sw.Stop();
+                return BadRequest(new SlashCommandResult(false, request.Command ?? string.Empty, "Rejected", sw.ElapsedMilliseconds, error));
+            }
+
+            SlashCommandResult result = await ExecuteSlashCommandAsync(
+                command: normalized,
+                useBackgroundCompatibleInput: request.UseBackgroundCompatibleInput,
+                preDelayMs: request.PreDelayMs,
+                postDelayMs: request.PostDelayMs);
+
+            sw.Stop();
+            return Ok(result with { ElapsedMs = sw.ElapsedMilliseconds });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Fix slash command failed");
+            sw.Stop();
+            return StatusCode(500, new SlashCommandResult(false, request.Command ?? string.Empty, "Error", sw.ElapsedMilliseconds, ex.Message));
         }
     }
 

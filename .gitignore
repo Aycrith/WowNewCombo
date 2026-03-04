@@ -36,7 +36,6 @@ bld/
 
 # Git worktrees
 .worktrees/
-
 # Launcher smoke-test files
 .wow_mock/
 

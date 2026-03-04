@@ -257,6 +257,7 @@ public sealed class BotIntegrationTest : TestScenarioBase
         public Rectangle ScreenRect => _screen.ScreenRect;
         public Image<Bgra32> MiniMapImage => _screen.MiniMapImage;
         public Rectangle MiniMapRect => _screen.MiniMapRect;
+        public SharedLib.MinimapSettings MinimapSettings => _screen.MinimapSettings;
         public event Action? OnChanged
         {
             add => _screen.OnChanged += value;

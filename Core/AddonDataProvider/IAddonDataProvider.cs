@@ -1,4 +1,4 @@
-﻿using SixLabors.ImageSharp;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Advanced;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -51,7 +51,6 @@ public interface IAddonDataProvider : IDisposable
         {
             return 0;
         }
-
         return data[index];
     }
 
@@ -62,7 +61,6 @@ public interface IAddonDataProvider : IDisposable
         {
             return 0f;
         }
-
         return data[index] / 100000f;
     }
 

@@ -22,7 +22,7 @@
 
   "Paths": [
     {
-      "PathFilename": "_pack\\1-20\\Blood elf\\1-6_Eversong Woods.json",
+      "PathFilename": "_pack\\1-20\\Blood elf\\6-12_Eversong Woods.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true
     }
@@ -97,11 +97,13 @@
     "Sequence": [
       {
         "Name": "Repair",
+        "Key": "C",
         "Requirement": "Durability% < 35",
         "Cost": 6
       },
       {
         "Name": "Sell",
+        "Key": "C",
         "Requirements": [
           "BagFullAny",
           "BagGreyItem"

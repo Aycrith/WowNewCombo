@@ -251,15 +251,15 @@
             // This can be causes issues for really big path
             if (PathGraph.DelayMs > 0 && DrawTestPoints && BabylonJs)
             {
-                if (testPointsCount != pPatherService.TestPoints.Count)
+                if (testPointsCount != pPatherService.TestPoints.Length)
                 {
-                    testPointsCount = pPatherService.TestPoints.Count;
+                    testPointsCount = pPatherService.TestPoints.Length;
                     await SendDrawLines(pPatherService.TestPoints.ToHashSet(), Color.Green, "debug", token);
                 }
 
-                if (blockedPointsCount != pPatherService.BlockedPoints.Count)
+                if (blockedPointsCount != pPatherService.BlockedPoints.Length)
                 {
-                    blockedPointsCount = pPatherService.BlockedPoints.Count;
+                    blockedPointsCount = pPatherService.BlockedPoints.Length;
                     await SendDrawLines(pPatherService.BlockedPoints.ToHashSet(), Color.Red, "debug2", token);
                 }
             }

@@ -406,17 +406,13 @@ public class GoapGoalTests
         // Arrange - simulate CombatGoal configuration
         var goal = new TestGoal("CombatGoal");
         goal.TestAddPrecondition(GoapKey.incombat, true);
-        goal.TestAddPrecondition(GoapKey.hastarget, true);
-        goal.TestAddPrecondition(GoapKey.targetisalive, true);
-        goal.TestAddPrecondition(GoapKey.targethostile, true);
-        goal.TestAddPrecondition(GoapKey.incombatrange, true);
 
         goal.TestAddEffect(GoapKey.producedcorpse, true);
         goal.TestAddEffect(GoapKey.targetisalive, false);
         goal.TestAddEffect(GoapKey.hastarget, false);
 
         // Assert
-        goal.Preconditions.Should().HaveCount(5);
+        goal.Preconditions.Should().HaveCount(1);
         goal.Effects.Should().HaveCount(3);
     }
 

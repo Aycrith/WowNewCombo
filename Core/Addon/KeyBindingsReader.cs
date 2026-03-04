@@ -264,19 +264,19 @@ public sealed partial class KeyBindingsReader : IReader
 
     [LoggerMessage(
         EventId = 5,
-        Level = LogLevel.Debug,
+        Level = LogLevel.Trace,
         Message = "Reading binding slot - encodedValue={encodedValue}")]
     static partial void LogDebugSlotValue(ILogger logger, int encodedValue);
 
     [LoggerMessage(
         EventId = 6,
-        Level = LogLevel.Debug,
+        Level = LogLevel.Trace,
         Message = "Waiting for bindings - current count={count}")]
     static partial void LogDebugWaitingForBindings(ILogger logger, int count);
 
     [LoggerMessage(
         EventId = 7,
-        Level = LogLevel.Information,
+        Level = LogLevel.Debug,
         Message = "[KeyBindings Slot 106 Stats] Consecutive zeros: {consecutiveZeros}, Total reads: {totalReads}, Non-zero reads: {nonZeroReads}")]
     static partial void LogDebugZeroReadStats(ILogger logger, int consecutiveZeros, int totalReads, int nonZeroReads);
 

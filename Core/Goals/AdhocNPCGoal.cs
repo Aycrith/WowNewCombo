@@ -44,6 +44,10 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     private const int TIMEOUT = 5000;
     private const float NPC_DESTINATION_PROXIMITY = 12f;
     private const int MAX_FAR_DESTINATION_RETRIES = 3;
+    // Keep broad enough to reach nearby town service NPCs from common grind loops,
+    // but still reject obviously remote candidates before pathing.
+    private const float MAX_AUTO_NPC_TRAVEL_DISTANCE = 750f;
+    private const float MAX_AUTO_NPC_VERTICAL_DELTA = 60f;
 
     private readonly FrozenDictionary<NpcFlags, SearchValues<string>> npcSearchPatterns;
 
@@ -69,7 +73,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     private PathState pathState = PathState.Finished;
 
-    private readonly bool tryFindClosestNPC;
+    private bool tryFindClosestNPC => key.Path.Length == 0;
     private Creature npc;
     private NpcSearchResult[] searchResult = [];
     private int searchCount;
@@ -144,8 +148,6 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         }
 
         Keys = [key];
-
-        tryFindClosestNPC = key.Path.Length == 0;
 
         npcSearchPatterns = Enum.GetValues<NpcFlags>().Select(static flag =>
         {
@@ -333,6 +335,44 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         LogFoundCloesestNPCByType(logger, npc.Name, npcFlag.ToStringF(), worldPos);
     }
 
+    private bool IsReasonableAutoNpcCandidate(in NpcSearchResult candidate, out string reason)
+    {
+        // Ghostlands service data currently includes "Samir" at a location that is not safely reachable
+        // on the live client route being tested (bot runs into terrain/zonewall near the target point).
+        // Skip this candidate during auto NPC selection to prevent suicidal repair/vendor runs.
+        if (playerReader.UIMapId.Value == 1942 &&
+            candidate.Creature.Name.Equals("Samir", StringComparison.OrdinalIgnoreCase))
+        {
+            reason = "known bad Ghostlands service target";
+            return false;
+        }
+
+        float xyDistance = playerReader.WorldPos.WorldDistanceXYTo(candidate.WorldPosition);
+        float playerZ = playerReader.WorldPos.Z;
+        bool hasReliablePlayerZ = MathF.Abs(playerZ) > 1f;
+        float zDelta = hasReliablePlayerZ
+            ? MathF.Abs(candidate.WorldPosition.Z - playerZ)
+            : 0f;
+
+        if (xyDistance > MAX_AUTO_NPC_TRAVEL_DISTANCE)
+        {
+            reason = $"distance {xyDistance:F1} > {MAX_AUTO_NPC_TRAVEL_DISTANCE:F0}";
+            return false;
+        }
+
+        // Allow significant Z changes only when the NPC is still geographically close.
+        if (hasReliablePlayerZ &&
+            zDelta > MAX_AUTO_NPC_VERTICAL_DELTA &&
+            xyDistance > 80f)
+        {
+            reason = $"z delta {zDelta:F1} > {MAX_AUTO_NPC_VERTICAL_DELTA:F0} (xy={xyDistance:F1})";
+            return false;
+        }
+
+        reason = string.Empty;
+        return true;
+    }
+
     private void Navigation_OnNoPathFound()
     {
         if (pathState != PathState.ApproachPathStart || token.IsCancellationRequested)
@@ -470,6 +510,10 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         input.PressRandom(ConsoleKey.Escape, InputDuration.DefaultPress);
         input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
 
+        // Clear navigation state so next goal (FollowRoute) doesn't see stale vendor path
+        navigation.Stop();
+        pathState = PathState.Finished;
+
         return;
         // The following code no longer needed as we know for a fact we are close to an NPC spawnpoint
         // thus we know the world coordinate and Z/height component
@@ -585,24 +629,20 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         if (hadGreyToSell)
         {
-            e = wait.Until(TIMEOUT, gossipReader.MerchantWindowSelling);
-            if (e < 0)
-            {
-                Log($"Merchant sell nothing! {e}ms");
-                goto exit;
-            }
+            Log($"Merchant sell nothing! {e}ms");
+            goto exit;
+        }
 
-            Log($"Merchant sell grey items started after {e}ms");
+        Log($"Merchant sell items started after {e}ms");
 
-            e = wait.Until(TIMEOUT, gossipReader.MerchantWindowSellingFinished);
-            if (e >= 0)
-            {
-                Log($"Merchant sell grey items finished, took {e}ms");
-            }
-            else
-            {
-                Log($"Merchant sell grey items timeout! Too many items to sell?! Increase {nameof(TIMEOUT)} - {e}ms");
-            }
+        e = wait.Until(TIMEOUT, gossipReader.MerchantWindowSellingFinished);
+        if (e >= 0)
+        {
+            Log($"Merchant sell items finished, took {e}ms");
+        }
+        else
+        {
+            Log($"Merchant sell items timeout! Too many items to sell?! Increase {nameof(TIMEOUT)} - {e}ms");
         }
 
     exit:
@@ -677,11 +717,30 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             searchIndex++;
         }
 
+        while (searchIndex < searchCount)
+        {
+            ref readonly NpcSearchResult candidate = ref searchResult[searchIndex];
+            if (IsReasonableAutoNpcCandidate(candidate, out string reason))
+            {
+                break;
+            }
+
+            LogWarn($"Skipping NPC candidate '{candidate.Creature.Name}' ({candidate.WorldPosition}) - {reason}");
+            searchIndex++;
+        }
+
         if (searchIndex >= searchCount)
         {
+            // Fallback: Try hard-coded vendor locations when auto-search exhausted
+            if (TryUseHardCodedVendor(npcFlag))
+            {
+                LogWarn("Auto-search exhausted - using hard-coded vendor fallback");
+                return true;
+            }
+
             noPathBackoffUntilUtc = DateTime.UtcNow.Add(NoPathRetryDelay);
             pathState = PathState.Finished;
-            LogWarn("No more NPC to try!");
+            LogWarn("No more reasonable NPC candidates to try!");
 
             searchIndex = 0;
             searchResult = [];
@@ -693,6 +752,51 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         LogWarn($"Try next closest NPC -- {searchIndex}");
 
         UpdateClosestNPC(npcFlag);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Fallback method: Try to use hard-coded vendor locations when auto-search fails
+    /// </summary>
+    private bool TryUseHardCodedVendor(NpcFlags npcFlag)
+    {
+        // Only use fallback for vendors
+        if (npcFlag != NpcFlags.Vendor)
+            return false;
+
+        if (areaDB.CurrentWorldMapArea == null)
+            return false;
+
+        string zoneName = areaDB.CurrentWorldMapArea.Value.AreaName;
+        
+        if (!VendorLocations.TryGetVendorsForZone(zoneName, out var vendors) || vendors == null || vendors.Count == 0)
+        {
+            LogWarn($"No hard-coded vendors available for zone: {zoneName}");
+            return false;
+        }
+
+        var closestVendor = VendorLocations.FindClosestVendor(vendors, playerReader.WorldPos);
+        if (closestVendor == null)
+            return false;
+
+        // Create a temporary creature for the vendor
+        npc = new Creature
+        {
+            Name = closestVendor.Name,
+            Entry = 0, // Unknown entry
+            Faction = 0, // Assume friendly
+            NpcFlag = NpcFlags.Vendor
+        };
+
+        // Set the vendor position as the path
+        key.Path = [closestVendor.WorldPosition];
+
+        logger.LogInformation($"Using hard-coded vendor: {closestVendor.Name} at {closestVendor.WorldPosition} (Priority {closestVendor.Priority})");
+        if (!string.IsNullOrEmpty(closestVendor.Notes))
+        {
+            LogDebug($"Vendor notes: {closestVendor.Notes}");
+        }
 
         return true;
     }
