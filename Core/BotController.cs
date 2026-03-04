@@ -1,5 +1,6 @@
 using Core.Analytics;
 using Core.Goals;
+using Core.GoalsComponent;
 using Core.GOAP;
 using Core.LLM;
 using Core.Launch;
@@ -577,7 +578,12 @@ public sealed partial class BotController : IBotController, IDisposable
         RouteInfo = sessionScope.
             ServiceProvider.GetService<RouteInfo>();
 
-        screen.MinimapEnabled = config.Mode == Mode.AttendedGather;
+        screen.MinimapEnabled = config.GatheringMode;
+
+        if (config.Mode == Mode.AutoGather)
+        {
+            sessionScope.ServiceProvider.GetRequiredService<FoundNodeListener>();
+        }
     }
 
     private static IEnumerable<IRouteProvider> GetPathProviders(IServiceProvider sp)
