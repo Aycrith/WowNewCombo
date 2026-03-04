@@ -53,19 +53,18 @@ public sealed partial class GoapAgent : IDisposable
 
     /// <summary>
     /// Goal-switch hysteresis: a new goal must win for this many consecutive
-    /// ticks before the agent actually transitions to it. Prevents single-frame
-    /// plan oscillation (e.g. FollowRoute → Adhoc → FollowRoute churn).
+    /// ticks before the transition is committed. Prevents single-frame plan churn.
     /// </summary>
     private const int GoalSwitchHysteresisThreshold = 3;
+
     private GoapGoal? pendingGoal;
     private int pendingGoalTicks;
 
     /// <summary>
-    /// Hysteresis for withinpullrange: once in pull range, hold true for 500 ms
-    /// to prevent single-frame oscillation at the range boundary that causes
-    /// PullTargetGoal ↔ ApproachTargetGoal flip-flopping.
+    /// Hold within-pull-range true briefly after leaving boundary to avoid
+    /// PullTargetGoal/ApproachTargetGoal oscillation at range edge.
     /// </summary>
-    private DateTime _pullRangeHysteresisUntilUtc = DateTime.MinValue;
+    private DateTime pullRangeHysteresisUntilUtc = DateTime.MinValue;
 
     private bool active;
     public bool Active
@@ -77,6 +76,9 @@ public sealed partial class GoapAgent : IDisposable
             if (!active)
             {
                 sessionPauseEvent.Reset();
+                pendingGoal = null;
+                pendingGoalTicks = 0;
+                pullRangeHysteresisUntilUtc = DateTime.MinValue;
 
                 foreach (IGoapEventListener goal in AvailableGoals.OfType<IGoapEventListener>())
                 {
@@ -97,6 +99,9 @@ public sealed partial class GoapAgent : IDisposable
             {
                 addonReader.SessionReset();
                 SessionStat.Reset();
+                pendingGoal = null;
+                pendingGoalTicks = 0;
+                pullRangeHysteresisUntilUtc = DateTime.MinValue;
 
                 if (CurrentGoal is IGoapEventListener listener)
                 {
@@ -249,47 +254,6 @@ public sealed partial class GoapAgent : IDisposable
         cts.Dispose();
     }
 
-    /// <summary>
-    /// Advances the goal-switch hysteresis state machine. When a new goal differs from the
-    /// current goal, this method tracks how many consecutive ticks the new goal has won
-    /// planning. When the threshold is reached, returns true to signal that the transition
-    /// should be committed.
-    ///
-    /// Prevents single-frame plan oscillation (e.g., FollowRoute → Adhoc → FollowRoute churn)
-    /// caused by transient world-state bits like DamageTaken.
-    /// </summary>
-    /// <param name="newGoal">The goal returned by this tick's GOAP planning pass.</param>
-    /// <returns>
-    /// True if the hysteresis threshold has been satisfied (newGoal has won for
-    /// GoalSwitchHysteresisThreshold consecutive ticks). False if the goal is still
-    /// accumulating ticks or has just switched.
-    /// </returns>
-    internal bool TryAdvanceHysteresis(GoapGoal? newGoal)
-    {
-        // If newGoal == CurrentGoal, clear any pending alternative and return true
-        // (no state change needed — execute the goal normally).
-        if (newGoal == CurrentGoal)
-        {
-            pendingGoal = null;
-            pendingGoalTicks = 0;
-            return true;
-        }
-
-        // Track consecutive wins for the new goal
-        if (newGoal == pendingGoal)
-        {
-            pendingGoalTicks++;
-        }
-        else
-        {
-            pendingGoal = newGoal;
-            pendingGoalTicks = 1;
-        }
-
-        // Return true when threshold is satisfied
-        return pendingGoalTicks >= GoalSwitchHysteresisThreshold;
-    }
-
     private void GoapThread()
     {
         bool wasEmpty = false;
@@ -324,7 +288,6 @@ public sealed partial class GoapAgent : IDisposable
                 {
                     if (!TryAdvanceHysteresis(newGoal))
                     {
-                        // Not enough consecutive wins yet — keep executing current goal
                         CurrentGoal?.Update();
                         Thread.Sleep(2);
 
@@ -333,12 +296,18 @@ public sealed partial class GoapAgent : IDisposable
                             WaitHandle.WaitAny(waitHandles);
                             sessionPauseEvent.Wait(cts.Token);
                         }
-                        catch (OperationCanceledException) { break; }
-                        catch (ObjectDisposedException) { break; }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            break;
+                        }
+
                         continue;
                     }
 
-                    // Hysteresis satisfied — commit the transition
                     wasEmpty = false;
                     string? fromGoalName = CurrentGoal?.Name;
                     CurrentGoal?.OnExit();
@@ -477,22 +446,38 @@ public sealed partial class GoapAgent : IDisposable
         static int B(bool b) => b ? 1 : 0;
     }
 
-    /// <summary>
-    /// Returns true if the player is currently in pull range OR was within
-    /// pull range within the last 500 ms. The hysteresis prevents
-    /// PullTargetGoal ↔ ApproachTargetGoal oscillation when the target drifts
-    /// just inside/outside the pull-range boundary on consecutive ticks.
-    /// </summary>
+    internal bool TryAdvanceHysteresis(GoapGoal? newGoal)
+    {
+        if (newGoal == CurrentGoal)
+        {
+            pendingGoal = null;
+            pendingGoalTicks = 0;
+            return true;
+        }
+
+        if (newGoal == pendingGoal)
+        {
+            pendingGoalTicks++;
+        }
+        else
+        {
+            pendingGoal = newGoal;
+            pendingGoalTicks = 1;
+        }
+
+        return pendingGoalTicks >= GoalSwitchHysteresisThreshold;
+    }
+
     private bool WithInPullRangeHysteresis()
     {
         bool nowInRange = playerReader.WithInPullRange();
         if (nowInRange)
         {
-            _pullRangeHysteresisUntilUtc = DateTime.UtcNow.AddMilliseconds(500);
+            pullRangeHysteresisUntilUtc = DateTime.UtcNow.AddMilliseconds(500);
             return true;
         }
 
-        return DateTime.UtcNow < _pullRangeHysteresisUntilUtc;
+        return DateTime.UtcNow < pullRangeHysteresisUntilUtc;
     }
 
     private void HandleGoapEvent(GoapEventArgs e)

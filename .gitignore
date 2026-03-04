@@ -321,6 +321,8 @@ PathingAPI/data_config.json
 
 # Session-specific files (not for version control)
 session-*.md
+claudeSession*.txt
+.git-safety/
 nul
 *.txt.backup
 test-report-*.json
