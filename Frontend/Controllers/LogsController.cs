@@ -60,10 +60,29 @@ public sealed class LogsController : ControllerBase
 
         try
         {
-            string[] lastLines = System.IO.File
-                .ReadLines(fullPath)
-                .TakeLast(lines)
-                .ToArray();
+            string[] lastLines;
+            using (FileStream stream = new(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            using (StreamReader reader = new(stream))
+            {
+                Queue<string> tail = new(lines);
+                while (!reader.EndOfStream)
+                {
+                    string? line = reader.ReadLine();
+                    if (line == null)
+                    {
+                        continue;
+                    }
+
+                    if (tail.Count == lines)
+                    {
+                        tail.Dequeue();
+                    }
+
+                    tail.Enqueue(line);
+                }
+
+                lastLines = tail.ToArray();
+            }
 
             FileInfo info = new(fullPath);
             return Ok(new

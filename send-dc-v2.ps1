@@ -35,12 +35,15 @@ public class WowInputV2 {
 }
 "@
 
-$hwnd = [IntPtr]::new(132382)
+$wow = Get-Process -Name "WowClassic" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($null -eq $wow) { throw "WowClassic process not found." }
+$wow.Refresh()
+$rawHwnd = [long]$wow.MainWindowHandle
+if ($rawHwnd -le 0) { throw "WowClassic MainWindowHandle is unavailable (0). Ensure the WoW client has a visible window and is not minimized/tray-hidden." }
+$hwnd = [IntPtr]$rawHwnd
 Write-Host "WoW HWND: $hwnd"
 
-# Focus WoW
-[WowInputV2]::ShowWindow($hwnd, 9)
-Start-Sleep -Milliseconds 500
+# Focus WoW (avoid ShowWindow restore; can resize/reposition the client)
 [WowInputV2]::SetForegroundWindow($hwnd)
 Start-Sleep -Milliseconds 500
 

@@ -35,7 +35,12 @@ public class WowInputV2 {
 }
 "@
 
-$hwnd = [IntPtr]::new(2033338)
+$wow = Get-Process -Name "WowClassic" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($null -eq $wow) { throw "WowClassic process not found." }
+$wow.Refresh()
+$rawHwnd = [long]$wow.MainWindowHandle
+if ($rawHwnd -le 0) { throw "WowClassic MainWindowHandle is unavailable (0). Ensure the WoW client has a visible window and is not minimized/tray-hidden." }
+$hwnd = [IntPtr]$rawHwnd
 Write-Host "WoW HWND: $hwnd"
 
 # Focus WoW - use SetForegroundWindow only (NOT ShowWindow SW_RESTORE which breaks fullscreen)

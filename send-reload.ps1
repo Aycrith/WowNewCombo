@@ -5,39 +5,109 @@ using System.Runtime.InteropServices;
 using System.Threading;
 public class WowInputSend {
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
-    [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-    const uint WM_KEYDOWN = 0x0100;
-    const uint WM_KEYUP   = 0x0101;
-    const uint WM_CHAR    = 0x0102;
-    public static void SendKey(IntPtr hwnd, int vk) {
-        PostMessage(hwnd, WM_KEYDOWN, (IntPtr)vk, IntPtr.Zero);
-        Thread.Sleep(60);
-        PostMessage(hwnd, WM_KEYUP, (IntPtr)vk, IntPtr.Zero);
-        Thread.Sleep(60);
+    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll", SetLastError = true)] public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+    const uint INPUT_KEYBOARD = 1;
+    const uint KEYEVENTF_KEYUP = 0x0002;
+    const uint KEYEVENTF_UNICODE = 0x0004;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct INPUT {
+        public uint type;
+        public InputUnion U;
     }
-    public static void TypeText(IntPtr hwnd, string text) {
-        foreach (char c in text) {
-            PostMessage(hwnd, WM_CHAR, (IntPtr)c, IntPtr.Zero);
-            Thread.Sleep(35);
-        }
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct InputUnion {
+        [FieldOffset(0)] public KEYBDINPUT ki;
     }
-    public static void SendCommand(IntPtr hwnd, string cmd) {
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KEYBDINPUT {
+        public ushort wVk;
+        public ushort wScan;
+        public uint dwFlags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
+
+    public static void PrepUiForSlashCommand(IntPtr hwnd) {
         SetForegroundWindow(hwnd);
-        Thread.Sleep(300);
-        SendKey(hwnd, 0x0D);
-        Thread.Sleep(400);
-        TypeText(hwnd, cmd);
-        Thread.Sleep(200);
-        SendKey(hwnd, 0x0D);
-        Thread.Sleep(600);
+        Thread.Sleep(500);
+    }
+
+    public static void SendVirtualKey(int vk) {
+        INPUT[] inputs = new INPUT[2];
+        inputs[0].type = INPUT_KEYBOARD;
+        inputs[0].U.ki.wVk = (ushort)vk;
+        inputs[0].U.ki.wScan = 0;
+        inputs[0].U.ki.dwFlags = 0;
+
+        inputs[1].type = INPUT_KEYBOARD;
+        inputs[1].U.ki.wVk = (ushort)vk;
+        inputs[1].U.ki.wScan = 0;
+        inputs[1].U.ki.dwFlags = KEYEVENTF_KEYUP;
+
+        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+        Thread.Sleep(60);
+    }
+
+    public static void SendUnicodeChar(char c) {
+        INPUT[] inputs = new INPUT[2];
+        inputs[0].type = INPUT_KEYBOARD;
+        inputs[0].U.ki.wVk = 0;
+        inputs[0].U.ki.wScan = c;
+        inputs[0].U.ki.dwFlags = KEYEVENTF_UNICODE;
+
+        inputs[1].type = INPUT_KEYBOARD;
+        inputs[1].U.ki.wVk = 0;
+        inputs[1].U.ki.wScan = c;
+        inputs[1].U.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+
+        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+        Thread.Sleep(35);
+    }
+
+    public static void SendText(string text) {
+        foreach (char c in text) {
+            SendUnicodeChar(c);
+        }
     }
 }
 "@
 
-$hwnd = [IntPtr]::new(2033338)
+$wow = Get-Process -Name "WowClassic" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($null -eq $wow) { throw "WowClassic process not found." }
+$wow.Refresh()
+$rawHwnd = [long]$wow.MainWindowHandle
+if ($rawHwnd -le 0) { throw "WowClassic MainWindowHandle is unavailable (0). Ensure the WoW client has a visible window and is not minimized/tray-hidden." }
+$hwnd = [IntPtr]$rawHwnd
 Write-Host "WoW HWND: $hwnd"
 
 $cmd = if ($args.Count -gt 0) { $args[0] } else { "/reload" }
 Write-Host "Sending: $cmd"
-[WowInputSend]::SendCommand($hwnd, $cmd)
+
+[WowInputSend]::PrepUiForSlashCommand($hwnd)
+Start-Sleep -Milliseconds 250
+
+$fg = [WowInputSend]::GetForegroundWindow()
+Write-Host "Foreground: $fg (expected: $hwnd)"
+if ($fg -ne $hwnd)
+{
+    Write-Warning "WoW is not in foreground; SendInput may target a different window."
+}
+
+# Use SendInput to simulate real keyboard input for the full sequence.
+[WowInputSend]::SendVirtualKey(0x1B) # Escape
+Start-Sleep -Milliseconds 200
+[WowInputSend]::SendVirtualKey(0x1B) # Escape
+Start-Sleep -Milliseconds 250
+[WowInputSend]::SendVirtualKey(0x0D) # Enter
+Start-Sleep -Milliseconds 300
+[WowInputSend]::SendText($cmd)
+Start-Sleep -Milliseconds 250
+[WowInputSend]::SendVirtualKey(0x0D) # Enter
+Start-Sleep -Milliseconds 900
+
 Write-Host "Done"

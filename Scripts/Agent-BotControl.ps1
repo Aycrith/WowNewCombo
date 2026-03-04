@@ -15,7 +15,7 @@
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action Api -ApiMethod GET -ApiPath /api/launch/status
 #>
 param(
-    [ValidateSet("Start", "StartAndValidate", "Validate", "Status", "Stop", "Restart", "Monitor", "Api")]
+    [ValidateSet("Start", "StartAndValidate", "Validate", "Status", "Stop", "Restart", "Monitor", "Api", "CollectEvidence", "Soak", "LiveSession")]
     [string]$Action = "StartAndValidate",
 
     [string]$Profile = "BloodElf_Rogue_8-60_TBC.json",
@@ -27,6 +27,12 @@ param(
     [int]$ReadinessTimeoutSeconds = 120,
     [int]$ValidationTimeoutSeconds = 30,
     [int]$MonitorIntervalSeconds = 10,
+    [int]$SoakMinutes = 20,
+    [int]$WindowMinutes = 10,
+    [int]$MaxPatchLoops = 5,
+    [string]$ArtifactTag = "",
+    [int]$EvidenceIntervalSeconds = 150,
+    [int]$ShortValidationSeconds = 240,
 
     [switch]$AllowStartWithWarnings,
     [switch]$BypassActionBar,
@@ -57,6 +63,9 @@ $script:LogsDir = Join-Path $BotRoot "logs"
 New-Item -ItemType Directory -Path $script:LogsDir -Force | Out-Null
 $script:RunStamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $script:RunTag = "agentctl-$script:RunStamp"
+$script:SessionTag = if ([string]::IsNullOrWhiteSpace($ArtifactTag)) { "live-session-$script:RunStamp" } else { $ArtifactTag }
+$script:SessionArtifactDir = Join-Path $script:LogsDir $script:SessionTag
+$script:DtcReloadRecoveryAttempted = $false
 
 function Write-Info([string]$Message)
 {
@@ -81,6 +90,173 @@ function Write-ErrLine([string]$Message)
 function Get-JsonDepth([object]$Obj, [int]$Depth = 8)
 {
     return ($Obj | ConvertTo-Json -Depth $Depth)
+}
+
+function Ensure-SessionArtifactDir
+{
+    if (-not (Test-Path -LiteralPath $script:SessionArtifactDir))
+    {
+        New-Item -ItemType Directory -Path $script:SessionArtifactDir -Force | Out-Null
+    }
+
+    return $script:SessionArtifactDir
+}
+
+function Get-SafeArtifactName([string]$Name)
+{
+    $invalid = [System.IO.Path]::GetInvalidFileNameChars()
+    $safe = $Name
+    foreach ($c in $invalid)
+    {
+        $safe = $safe.Replace([string]$c, "_")
+    }
+
+    return $safe
+}
+
+function Write-ArtifactText
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$Content
+    )
+
+    $dir = Ensure-SessionArtifactDir
+    $path = Join-Path $dir (Get-SafeArtifactName -Name $Name)
+    Set-Content -LiteralPath $path -Value $Content -Encoding UTF8
+    return $path
+}
+
+function Write-ArtifactJson
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [AllowNull()][object]$Object
+    )
+
+    $dir = Ensure-SessionArtifactDir
+    $path = Join-Path $dir (Get-SafeArtifactName -Name $Name)
+    $Object | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $path -Encoding UTF8
+    return $path
+}
+
+function Invoke-AgentApiSafe
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Method,
+        [Parameter(Mandatory = $true)][string]$Path,
+        [AllowNull()][object]$Body = $null,
+        [int]$TimeoutSec = 15
+    )
+
+    try
+    {
+        return [ordered]@{
+            Success = $true
+            Result = (Invoke-AgentApi -Method $Method -Path $Path -Body $Body -TimeoutSec $TimeoutSec)
+            Error = $null
+        }
+    }
+    catch
+    {
+        return [ordered]@{
+            Success = $false
+            Result = $null
+            Error = $_.Exception.Message
+        }
+    }
+}
+
+function Save-ApiSnapshot
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$ApiPath,
+        [Parameter(Mandatory = $true)][string]$FileStem,
+        [int]$TimeoutSec = 10
+    )
+
+    $response = Invoke-AgentApiSafe -Method GET -Path $ApiPath -TimeoutSec $TimeoutSec
+    if ($response.Success)
+    {
+        $saved = Write-ArtifactJson -Name $FileStem -Object ([ordered]@{
+                TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                Path = $ApiPath
+                Success = $true
+                Data = $response.Result
+            })
+        Write-Info "Saved API snapshot: $ApiPath -> $saved"
+        return $true
+    }
+
+    $savedErr = Write-ArtifactJson -Name $FileStem -Object ([ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Path = $ApiPath
+            Success = $false
+            Error = $response.Error
+        })
+    Write-WarnLine "API snapshot failed: $ApiPath (saved error to $savedErr)"
+    return $false
+}
+
+function Get-PortStateSnapshot
+{
+    return [ordered]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        WebPort = [ordered]@{
+            Port = $WebPort
+            Listening = (Test-PortListening -Port $WebPort)
+            Pid = (Get-ListeningPid -Port $WebPort)
+        }
+        NavigationPort = [ordered]@{
+            Port = $NavigationPort
+            Listening = (Test-PortListening -Port $NavigationPort)
+            Pid = (Get-ListeningPid -Port $NavigationPort)
+        }
+        Processes = [ordered]@{
+            BlazorServer = @((Get-Process -Name "BlazorServer" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id))
+            AmeisenNavigationServer = @((Get-Process -Name "AmeisenNavigationServer" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id))
+            WowClassic = @((Get-Process -Name "WowClassic" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id))
+        }
+    }
+}
+
+function Save-LatestLogTail
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Pattern,
+        [Parameter(Mandatory = $true)][string]$Label,
+        [int]$Lines = 300
+    )
+
+    $filesResp = Invoke-AgentApiSafe -Method GET -Path "/api/logs/files" -TimeoutSec 8
+    if (-not $filesResp.Success -or $null -eq $filesResp.Result -or $null -eq $filesResp.Result.Files)
+    {
+        Write-WarnLine "Unable to list logs for $Label"
+        return
+    }
+
+    $file = $filesResp.Result.Files |
+        Where-Object { "$($_.Relative)" -like $Pattern -or "$($_.Name)" -like $Pattern } |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+
+    if ($null -eq $file)
+    {
+        Write-WarnLine "No log file matched '$Pattern' for $Label"
+        return
+    }
+
+    $encoded = [Uri]::EscapeDataString("$($file.Relative)")
+    $tailResp = Invoke-AgentApiSafe -Method GET -Path "/api/logs/tail?file=$encoded&lines=$Lines" -TimeoutSec 12
+    if (-not $tailResp.Success)
+    {
+        Write-WarnLine "Failed to tail log '$($file.Relative)'"
+        return
+    }
+
+    [void](Write-ArtifactJson -Name ("{0}-meta.json" -f $Label) -Object $file)
+    [void](Write-ArtifactText -Name ("{0}-tail.txt" -f $Label) -Content "$($tailResp.Result.Content)")
+    Write-Info "Saved log tail for $Label from $($file.Relative)"
 }
 
 function Invoke-AgentApi
@@ -279,9 +455,419 @@ function Get-StartupStageValue([object]$Health)
     return -998
 }
 
+function Get-StartupElapsedSeconds([object]$Health)
+{
+    try
+    {
+        if ($null -eq $Health -or $null -eq $Health.Startup -or $null -eq $Health.Startup.ElapsedTime)
+        {
+            return $null
+        }
+
+        $elapsedRaw = "$($Health.Startup.ElapsedTime)"
+        if ([string]::IsNullOrWhiteSpace($elapsedRaw))
+        {
+            return $null
+        }
+
+        $elapsed = [TimeSpan]::Parse($elapsedRaw)
+        return [int][Math]::Floor($elapsed.TotalSeconds)
+    }
+    catch
+    {
+        return $null
+    }
+}
+
+function Get-TestFramesValidationMarker
+{
+    param([AllowNull()][object]$FramesResponse)
+
+    try
+    {
+        if ($null -eq $FramesResponse -or $null -eq $FramesResponse.Data)
+        {
+            return $null
+        }
+
+        if ($null -eq $FramesResponse.Data.validationMarker)
+        {
+            return $null
+        }
+
+        return [int]$FramesResponse.Data.validationMarker
+    }
+    catch
+    {
+        return $null
+    }
+}
+
+function Save-DtcRecoveryApiArtifact
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [AllowNull()][object]$SafeResponse
+    )
+
+    [void](Write-ArtifactJson -Name $Name -Object ([ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Success = $(if ($null -ne $SafeResponse) { [bool]$SafeResponse.Success } else { $false })
+            Error = $(if ($null -ne $SafeResponse) { $SafeResponse.Error } else { "No response object" })
+            Data = $(if ($null -ne $SafeResponse) { $SafeResponse.Result } else { $null })
+        }))
+}
+
+function Test-DtcFrozenStartupSignature
+{
+    param(
+        [switch]$IgnoreStageRequirement
+    )
+
+    $healthResp = Invoke-AgentApiSafe -Method GET -Path "/api/health" -TimeoutSec 5
+    $frameStatusResp = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/status" -TimeoutSec 8
+    $snapshotResp = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 10
+    $framesResp = Invoke-AgentApiSafe -Method GET -Path "/api/test/frames" -TimeoutSec 10
+
+    $wowRunning = $null -ne (Get-Process -Name "WowClassic" -ErrorAction SilentlyContinue | Select-Object -First 1)
+    $stageValue = $(if ($healthResp.Success) { Get-StartupStageValue -Health $healthResp.Result } else { -999 })
+    $stageMatches = $IgnoreStageRequirement.IsPresent -or ($stageValue -eq 7)
+
+    $addonNotVisible = $false
+    if ($frameStatusResp.Success)
+    {
+        try
+        {
+            $addonNotVisible = [bool]$frameStatusResp.Result.AddonNotVisible
+        }
+        catch
+        {
+            $addonNotVisible = $false
+        }
+    }
+
+    $snapshotZeroed = $false
+    $uiMapId = $null
+    $level = $null
+    if ($snapshotResp.Success)
+    {
+        try
+        {
+            if ($null -ne $snapshotResp.Result.Data -and $null -ne $snapshotResp.Result.Data.snapshot)
+            {
+                $snap = $snapshotResp.Result.Data.snapshot
+                $uiMapId = [int]$snap.UIMapId
+                $level = [int]$snap.Level
+                $snapshotZeroed = ($uiMapId -le 0) -and ($level -le 0)
+            }
+        }
+        catch
+        {
+            $snapshotZeroed = $false
+        }
+    }
+
+    $validationMarker = $(Get-TestFramesValidationMarker -FramesResponse $(if ($framesResp.Success) { $framesResp.Result } else { $null }))
+    $framesMarkerMatches = ($null -eq $validationMarker) -or ($validationMarker -eq 0)
+
+    $isFrozen = $wowRunning -and
+        $healthResp.Success -and
+        $stageMatches -and
+        $frameStatusResp.Success -and
+        $addonNotVisible -and
+        $snapshotResp.Success -and
+        $snapshotZeroed -and
+        $framesMarkerMatches
+
+    return [pscustomobject][ordered]@{
+        IsFrozen = $isFrozen
+        WowRunning = $wowRunning
+        HealthReachable = [bool]$healthResp.Success
+        StageValue = $stageValue
+        RequireStage7 = (-not $IgnoreStageRequirement.IsPresent)
+        StageMatches = $stageMatches
+        AddonNotVisible = $addonNotVisible
+        SnapshotZeroed = $snapshotZeroed
+        SnapshotUIMapId = $uiMapId
+        SnapshotLevel = $level
+        FramesValidationMarker = $validationMarker
+        FramesMarkerMatches = $framesMarkerMatches
+        HealthResponse = $healthResp
+        FrameStatusResponse = $frameStatusResp
+        SnapshotResponse = $snapshotResp
+        FramesResponse = $framesResp
+    }
+}
+
+function Wait-ForDtcRecovery
+{
+    param(
+        [int]$TimeoutSec = 30
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $lastProbe = $null
+
+    while ((Get-Date) -lt $deadline)
+    {
+        $framesResp = Invoke-AgentApiSafe -Method GET -Path "/api/test/frames" -TimeoutSec 8
+        $snapshotResp = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 8
+        $diagResp = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/diagnostics" -TimeoutSec 8
+
+        $marker = $(Get-TestFramesValidationMarker -FramesResponse $(if ($framesResp.Success) { $framesResp.Result } else { $null }))
+
+        $uiMapId = $null
+        $level = $null
+        if ($snapshotResp.Success)
+        {
+            try
+            {
+                if ($null -ne $snapshotResp.Result.Data -and $null -ne $snapshotResp.Result.Data.snapshot)
+                {
+                    $snap = $snapshotResp.Result.Data.snapshot
+                    $uiMapId = [int]$snap.UIMapId
+                    $level = [int]$snap.Level
+                }
+            }
+            catch
+            {
+                $uiMapId = $null
+                $level = $null
+            }
+        }
+
+        $detectedXOffset = $null
+        if ($diagResp.Success)
+        {
+            try
+            {
+                $detectedXOffset = [int]$diagResp.Result.DetectedXOffset
+            }
+            catch
+            {
+                $detectedXOffset = $null
+            }
+        }
+
+        $recovered = ($marker -eq 2000001) -or
+            (($null -ne $uiMapId) -and ($null -ne $level) -and ($uiMapId -gt 0) -and ($level -gt 0)) -or
+            (($null -ne $detectedXOffset) -and ($detectedXOffset -ge 0))
+
+        $lastProbe = [pscustomobject][ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Recovered = $recovered
+            FramesValidationMarker = $marker
+            SnapshotUIMapId = $uiMapId
+            SnapshotLevel = $level
+            DetectedXOffset = $detectedXOffset
+            FramesResponse = $framesResp
+            SnapshotResponse = $snapshotResp
+            DiagnosticsResponse = $diagResp
+        }
+
+        if ($recovered)
+        {
+            return [pscustomobject][ordered]@{
+                Success = $true
+                Probe = $lastProbe
+            }
+        }
+
+        Start-Sleep -Seconds 1
+    }
+
+    return [pscustomobject][ordered]@{
+        Success = $false
+        Probe = $lastProbe
+    }
+}
+
+function Invoke-DtcReloadFallbackScript
+{
+    $fallbackScript = Join-Path $BotRoot "send-reload.ps1"
+    if (-not (Test-Path -LiteralPath $fallbackScript))
+    {
+        return [pscustomobject][ordered]@{
+            Success = $false
+            Error = "Fallback script not found: $fallbackScript"
+            Output = $null
+            ScriptPath = $fallbackScript
+        }
+    }
+
+    try
+    {
+        $output = & pwsh -NoProfile -ExecutionPolicy Bypass -File $fallbackScript 2>&1 | Out-String
+        return [pscustomobject][ordered]@{
+            Success = $true
+            Error = $null
+            Output = $output
+            ScriptPath = $fallbackScript
+        }
+    }
+    catch
+    {
+        return [pscustomobject][ordered]@{
+            Success = $false
+            Error = $_.Exception.Message
+            Output = $null
+            ScriptPath = $fallbackScript
+        }
+    }
+}
+
+function Invoke-DtcReloadRecovery
+{
+    param(
+        [string]$Reason = "unknown",
+        [switch]$Force
+    )
+
+    if ($script:DtcReloadRecoveryAttempted)
+    {
+        Write-WarnLine "DTC /reload recovery already attempted once in this startup flow; skipping additional attempt"
+        return [pscustomobject][ordered]@{
+            Attempted = $false
+            Recovered = $false
+            SkippedReason = "already-attempted"
+            Reason = $Reason
+            Error = $null
+            Signature = $null
+            RecoveryProbe = $null
+        }
+    }
+
+    $botStatusResp = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
+    if ($botStatusResp.Success)
+    {
+        try
+        {
+            if ([bool]$botStatusResp.Result.IsActive)
+            {
+                Write-WarnLine "Skipping DTC /reload recovery because bot is already active"
+                return [pscustomobject][ordered]@{
+                    Attempted = $false
+                    Recovered = $false
+                    SkippedReason = "bot-active"
+                    Reason = $Reason
+                    Error = $null
+                    Signature = $null
+                    RecoveryProbe = $null
+                }
+            }
+        }
+        catch
+        {
+            # Ignore parse issues and continue with recovery attempt.
+        }
+    }
+
+    $signature = Test-DtcFrozenStartupSignature -IgnoreStageRequirement:$Force.IsPresent
+    if (-not $Force.IsPresent -and -not $signature.IsFrozen)
+    {
+        return [pscustomobject][ordered]@{
+            Attempted = $false
+            Recovered = $false
+            SkippedReason = "signature-not-matched"
+            Reason = $Reason
+            Error = $null
+            Signature = $signature
+            RecoveryProbe = $null
+        }
+    }
+
+    if ($Force.IsPresent -and -not $signature.IsFrozen)
+    {
+        Write-WarnLine "Forcing DTC /reload recovery despite non-startup signature (reason: $Reason)"
+    }
+
+    $script:DtcReloadRecoveryAttempted = $true
+
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-before-health.json" -f $script:RunTag) -SafeResponse $signature.HealthResponse
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-before-frameconfig-status.json" -f $script:RunTag) -SafeResponse $signature.FrameStatusResponse
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-before-snapshot.json" -f $script:RunTag) -SafeResponse $signature.SnapshotResponse
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-before-frames.json" -f $script:RunTag) -SafeResponse $signature.FramesResponse
+    $beforeDiag = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/diagnostics" -TimeoutSec 10
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-before-diagnostics.json" -f $script:RunTag) -SafeResponse $beforeDiag
+
+    Write-WarnLine "Attempting one-time DTC /reload recovery ($Reason)"
+
+    $reloadResp = Invoke-AgentApiSafe -Method POST -Path "/api/diagnostics/fix/reload" -Body @{} -TimeoutSec 20
+    [void](Write-ArtifactJson -Name ("{0}-dtc-reload-result.json" -f $script:RunTag) -Object ([ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Reason = $Reason
+            Success = [bool]$reloadResp.Success
+            Error = $reloadResp.Error
+            Data = $reloadResp.Result
+            Signature = $signature
+        }))
+
+    if (-not $reloadResp.Success)
+    {
+        return [pscustomobject][ordered]@{
+            Attempted = $true
+            Recovered = $false
+            SkippedReason = $null
+            Reason = $Reason
+            Error = $reloadResp.Error
+            Signature = $signature
+            RecoveryProbe = $null
+        }
+    }
+
+    Start-Sleep -Seconds 8
+    $recovery = Wait-ForDtcRecovery -TimeoutSec 30
+
+    if (-not $recovery.Success)
+    {
+        Write-WarnLine "API /reload did not restore DTC within 30s; attempting send-reload.ps1 fallback"
+        $fallbackReload = Invoke-DtcReloadFallbackScript
+        [void](Write-ArtifactJson -Name ("{0}-dtc-reload-fallback-result.json" -f $script:RunTag) -Object ([ordered]@{
+                TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                Reason = $Reason
+                Success = [bool]$fallbackReload.Success
+                Error = $fallbackReload.Error
+                ScriptPath = $fallbackReload.ScriptPath
+                Output = $fallbackReload.Output
+            }))
+
+        if ($fallbackReload.Success)
+        {
+            Start-Sleep -Seconds 8
+            $fallbackRecovery = Wait-ForDtcRecovery -TimeoutSec 30
+            if ($fallbackRecovery.Success)
+            {
+                $recovery = $fallbackRecovery
+            }
+        }
+    }
+
+    $afterHealth = Invoke-AgentApiSafe -Method GET -Path "/api/health" -TimeoutSec 5
+    $afterFrameStatus = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/status" -TimeoutSec 8
+    $afterSnapshot = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 10
+    $afterFrames = Invoke-AgentApiSafe -Method GET -Path "/api/test/frames" -TimeoutSec 10
+    $afterDiag = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/diagnostics" -TimeoutSec 10
+
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-after-health.json" -f $script:RunTag) -SafeResponse $afterHealth
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-after-frameconfig-status.json" -f $script:RunTag) -SafeResponse $afterFrameStatus
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-after-snapshot.json" -f $script:RunTag) -SafeResponse $afterSnapshot
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-after-frames.json" -f $script:RunTag) -SafeResponse $afterFrames
+    Save-DtcRecoveryApiArtifact -Name ("{0}-dtc-freeze-after-diagnostics.json" -f $script:RunTag) -SafeResponse $afterDiag
+
+    return [pscustomobject][ordered]@{
+        Attempted = $true
+        Recovered = [bool]$recovery.Success
+        SkippedReason = $null
+        Reason = $Reason
+        Error = $null
+        Signature = $signature
+        RecoveryProbe = $recovery.Probe
+    }
+}
+
 function Should-ForceBlazorRestart
 {
-    return $Action -in @("Start", "StartAndValidate", "Restart")
+    return $Action -in @("Start", "StartAndValidate", "Restart", "LiveSession")
 }
 
 function Stop-StaleServerProcesses
@@ -453,6 +1039,126 @@ function Start-BlazorServer
         catch
         {
             $false
+        }
+    }
+
+    if (-not $ready)
+    {
+        $healthSnapshot = $null
+        try
+        {
+            $healthSnapshot = Invoke-AgentApi -Method GET -Path "/api/health" -TimeoutSec 5
+        }
+        catch
+        {
+            $healthSnapshot = $null
+        }
+
+        $stageValue = Get-StartupStageValue -Health $healthSnapshot
+        if ($stageValue -eq 7)
+        {
+            $stage7StallThresholdSec = 240
+            $startupElapsedSec = Get-StartupElapsedSeconds -Health $healthSnapshot
+            if ($null -ne $startupElapsedSec -and $startupElapsedSec -lt $stage7StallThresholdSec)
+            {
+                $graceSec = $stage7StallThresholdSec - $startupElapsedSec
+                Write-WarnLine "Startup still in frame configuration at ${startupElapsedSec}s; waiting additional ${graceSec}s before DTC recovery/auto-config intervention"
+
+                $ready = Wait-Until -Label "Startup stage Ready (stage 7 grace window)" -TimeoutSec $graceSec -PollMs 1500 -Condition {
+                    try
+                    {
+                        $health = Invoke-AgentApi -Method GET -Path "/api/health" -TimeoutSec 3
+                        (Get-StartupStageValue -Health $health) -ge 9
+                    }
+                    catch
+                    {
+                        $false
+                    }
+                }
+
+                if ($ready)
+                {
+                    return
+                }
+
+                try
+                {
+                    $healthSnapshot = Invoke-AgentApi -Method GET -Path "/api/health" -TimeoutSec 5
+                }
+                catch
+                {
+                    $healthSnapshot = $null
+                }
+
+                $stageValue = Get-StartupStageValue -Health $healthSnapshot
+            }
+        }
+
+        if ($stageValue -eq 7)
+        {
+            Write-WarnLine "Startup stalled in frame configuration (stage 7); attempting /api/frameconfig/auto-configure"
+
+            $startupDtcFreeze = Test-DtcFrozenStartupSignature
+            if ($startupDtcFreeze.FrameStatusResponse.Success)
+            {
+                [void](Write-ArtifactJson -Name ("{0}-frameconfig-status-precheck.json" -f $script:RunTag) -Object $startupDtcFreeze.FrameStatusResponse.Result)
+            }
+
+            if ($startupDtcFreeze.SnapshotResponse.Success -and
+                $null -ne $startupDtcFreeze.SnapshotResponse.Result -and
+                $startupDtcFreeze.SnapshotResponse.Result.Success)
+            {
+                [void](Write-ArtifactJson -Name ("{0}-frameconfig-snapshot-precheck.json" -f $script:RunTag) -Object $startupDtcFreeze.SnapshotResponse.Result)
+            }
+
+            if ($startupDtcFreeze.IsFrozen)
+            {
+                Write-WarnLine "Detected frozen DataToColor signature during stage 7; attempting one-time /reload recovery before failing"
+
+                $dtcRecovery = Invoke-DtcReloadRecovery -Reason "startup-stage7-frameconfig"
+                if (-not $dtcRecovery.Recovered)
+                {
+                    throw "DTC remained frozen after auto /reload; verify character is in-world and addon UI/pixels are visible."
+                }
+            }
+
+            try
+            {
+                $frameStatus = Invoke-AgentApiSafe -Method GET -Path "/api/frameconfig/status" -TimeoutSec 8
+                if ($frameStatus.Success)
+                {
+                    [void](Write-ArtifactJson -Name ("{0}-frameconfig-status-before.json" -f $script:RunTag) -Object $frameStatus.Result)
+                }
+
+                $autoCfg = Invoke-AgentApiSafe -Method POST -Path "/api/frameconfig/auto-configure" -Body @{} -TimeoutSec 180
+                [void](Write-ArtifactJson -Name ("{0}-frameconfig-auto-configure.json" -f $script:RunTag) -Object ([ordered]@{
+                        Success = $autoCfg.Success
+                        Error = $autoCfg.Error
+                        Data = $autoCfg.Result
+                        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                    }))
+
+                if (-not $autoCfg.Success)
+                {
+                    throw "Frame auto-config API call failed: $($autoCfg.Error)"
+                }
+
+                $ready = Wait-Until -Label "Startup stage Ready (after frame auto-config)" -TimeoutSec $StartupTimeoutSeconds -PollMs 1500 -Condition {
+                    try
+                    {
+                        $health = Invoke-AgentApi -Method GET -Path "/api/health" -TimeoutSec 3
+                        (Get-StartupStageValue -Health $health) -ge 9
+                    }
+                    catch
+                    {
+                        $false
+                    }
+                }
+            }
+            catch
+            {
+                Write-WarnLine "Frame auto-config recovery attempt failed: $($_.Exception.Message)"
+            }
         }
     }
 
@@ -668,6 +1374,7 @@ function Wait-ForReadiness
     $attempt = 0
     $lastBlocking = @()
     $actionBarBypassApplied = $false
+    $dtcHandshakeReloadAttempted = $false
 
     while ((Get-Date) -lt $deadline)
     {
@@ -691,6 +1398,8 @@ function Wait-ForReadiness
         $actionStatus = Get-LaunchStatusCode -Check $actionCheck
         $handshakeStatus = Get-LaunchStatusCode -Check $handshakeCheck
         $navStatus = Get-LaunchStatusCode -Check $navCheck
+        $handshakeMessage = $(if ($null -ne $handshakeCheck -and $null -ne $handshakeCheck.Message) { "$($handshakeCheck.Message)" } else { "" })
+        $handshakeGlobalTimeZero = (($handshakeStatus -eq 1) -or ($handshakeStatus -eq 4)) -and ($handshakeMessage -like "*GlobalTime=0*")
 
         if ($navStatus -eq 4 -and -not (Test-PortListening -Port $NavigationPort))
         {
@@ -698,7 +1407,7 @@ function Wait-ForReadiness
             Start-NavigationServer
         }
 
-        if ($handshakeStatus -eq 4 -or $keyStatus -eq 1 -or $actionStatus -eq 4)
+        if ($handshakeStatus -eq 4 -or $keyStatus -eq 1 -or $actionStatus -eq 4 -or $handshakeGlobalTimeZero)
         {
             $snapshot = Get-CurrentSnapshot
             if ($null -ne $snapshot -and $snapshot.ChatInputVisible)
@@ -714,6 +1423,27 @@ function Wait-ForReadiness
                 if (Try-ResolveBenignActionBarBlocker)
                 {
                     $actionBarBypassApplied = $true
+                }
+            }
+
+            if ($handshakeGlobalTimeZero -and -not $dtcHandshakeReloadAttempted)
+            {
+                Write-WarnLine "Addon handshake appears frozen (GlobalTime=0); attempting one-time /reload recovery"
+                $dtcRecovery = Invoke-DtcReloadRecovery -Reason "readiness-handshake-globaltime0" -Force
+                $dtcHandshakeReloadAttempted = $true
+
+                if ($dtcRecovery.Attempted -and $dtcRecovery.Recovered)
+                {
+                    Write-Info "DTC /reload recovery succeeded during readiness; reapplying startup fixes"
+                    Invoke-ReadinessFixes
+                }
+                elseif ($dtcRecovery.Attempted)
+                {
+                    Write-WarnLine "DTC /reload recovery did not restore addon handshake during readiness"
+                }
+                elseif ($null -ne $dtcRecovery.SkippedReason)
+                {
+                    Write-WarnLine "Skipped DTC /reload readiness recovery: $($dtcRecovery.SkippedReason)"
                 }
             }
         }
@@ -1104,6 +1834,213 @@ function Show-Status
     }
 }
 
+function Invoke-CollectEvidence
+{
+    param(
+        [string]$Stage = "snapshot",
+        [switch]$FlushSoak
+    )
+
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    Ensure-SessionArtifactDir | Out-Null
+
+    [void](Write-ArtifactJson -Name ("{0}-{1}-ports.json" -f $stamp, $Stage) -Object (Get-PortStateSnapshot))
+    [void](Save-ApiSnapshot -ApiPath "/api/health" -FileStem ("{0}-{1}-health.json" -f $stamp, $Stage) -TimeoutSec 6)
+    [void](Save-ApiSnapshot -ApiPath "/api/launch/status" -FileStem ("{0}-{1}-launch-status.json" -f $stamp, $Stage) -TimeoutSec 8)
+    [void](Save-ApiSnapshot -ApiPath "/api/bot/status" -FileStem ("{0}-{1}-bot-status.json" -f $stamp, $Stage) -TimeoutSec 6)
+    [void](Save-ApiSnapshot -ApiPath "/api/test/status" -FileStem ("{0}-{1}-test-status.json" -f $stamp, $Stage) -TimeoutSec $ValidationTimeoutSeconds)
+    [void](Save-ApiSnapshot -ApiPath "/api/test/frames" -FileStem ("{0}-{1}-test-frames.json" -f $stamp, $Stage) -TimeoutSec $ValidationTimeoutSeconds)
+    [void](Save-ApiSnapshot -ApiPath "/api/test/snapshot" -FileStem ("{0}-{1}-test-snapshot.json" -f $stamp, $Stage) -TimeoutSec $ValidationTimeoutSeconds)
+    [void](Save-ApiSnapshot -ApiPath "/api/diagnostics/bags?take=50" -FileStem ("{0}-{1}-bags.json" -f $stamp, $Stage) -TimeoutSec 10)
+    [void](Save-ApiSnapshot -ApiPath "/api/features" -FileStem ("{0}-{1}-features.json" -f $stamp, $Stage) -TimeoutSec 8)
+    [void](Save-ApiSnapshot -ApiPath "/api/diagnostics/soak/current" -FileStem ("{0}-{1}-soak-current.json" -f $stamp, $Stage) -TimeoutSec 8)
+    [void](Save-ApiSnapshot -ApiPath "/api/logs/files" -FileStem ("{0}-{1}-logs-files.json" -f $stamp, $Stage) -TimeoutSec 8)
+
+    if ($FlushSoak)
+    {
+        $flushResp = Invoke-AgentApiSafe -Method POST -Path "/api/diagnostics/soak/flush" -Body @{} -TimeoutSec 20
+        [void](Write-ArtifactJson -Name ("{0}-{1}-soak-flush.json" -f $stamp, $Stage) -Object ([ordered]@{
+                TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                Success = $flushResp.Success
+                Error = $flushResp.Error
+                Data = $flushResp.Result
+            }))
+        if ($flushResp.Success)
+        {
+            Write-Ok "Soak metrics flushed"
+        }
+        else
+        {
+            Write-WarnLine "Soak flush failed: $($flushResp.Error)"
+        }
+    }
+
+    Save-LatestLogTail -Pattern "logs/soak-nav-*.json" -Label ("{0}-{1}-soak-artifact" -f $stamp, $Stage) -Lines 1200
+    Save-LatestLogTail -Pattern "logs/agentctl-*-validation.json" -Label ("{0}-{1}-validation-artifact" -f $stamp, $Stage) -Lines 1200
+    Save-LatestLogTail -Pattern "out*.log" -Label ("{0}-{1}-server-out" -f $stamp, $Stage) -Lines 400
+    Save-LatestLogTail -Pattern "logs/*.log" -Label ("{0}-{1}-logs-tail" -f $stamp, $Stage) -Lines 400
+
+    Write-Ok "Evidence snapshot captured for stage '$Stage' in $script:SessionArtifactDir"
+}
+
+function Get-ActiveRunHealthSample
+{
+    $result = [ordered]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Ports = (Get-PortStateSnapshot)
+        BotStatus = $null
+        LaunchStatus = $null
+        Snapshot = $null
+        Health = $null
+        Errors = @()
+    }
+
+    $health = Invoke-AgentApiSafe -Method GET -Path "/api/health" -TimeoutSec 5
+    if ($health.Success) { $result.Health = $health.Result } else { $result.Errors += "health: $($health.Error)" }
+
+    $launch = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+    if ($launch.Success) { $result.LaunchStatus = $launch.Result } else { $result.Errors += "launch: $($launch.Error)" }
+
+    $bot = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
+    if ($bot.Success) { $result.BotStatus = $bot.Result } else { $result.Errors += "bot: $($bot.Error)" }
+
+    $snap = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 10
+    if ($snap.Success -and $snap.Result.Success) { $result.Snapshot = $snap.Result.Data.snapshot } else { $result.Errors += "snapshot: $($snap.Error)" }
+
+    return $result
+}
+
+function Assert-NoImmediateAbortCondition
+{
+    param([Parameter(Mandatory = $true)][object]$Sample)
+
+    if ($null -eq $Sample)
+    {
+        throw "Active run sample is null"
+    }
+
+    if (-not $Sample.Ports.WebPort.Listening)
+    {
+        throw "Abort: Web port $WebPort is not listening"
+    }
+    if (-not $Sample.Ports.NavigationPort.Listening)
+    {
+        throw "Abort: Navigation port $NavigationPort is not listening"
+    }
+
+    if ($null -ne $Sample.BotStatus -and -not [bool]$Sample.BotStatus.IsActive)
+    {
+        throw "Abort: Bot became inactive during live validation"
+    }
+
+    if ($null -ne $Sample.Snapshot)
+    {
+        if ([bool]$Sample.Snapshot.Dead) { throw "Abort: Character is dead during live run" }
+        if ([bool]$Sample.Snapshot.Swimming) { throw "Abort: Character is swimming during live run" }
+        if (($Sample.Snapshot.MapX -le 0) -or ($Sample.Snapshot.MapX -gt 100) -or ($Sample.Snapshot.MapY -le 0) -or ($Sample.Snapshot.MapY -gt 100))
+        {
+            throw "Abort: Character map position out of bounds (MapX=$($Sample.Snapshot.MapX), MapY=$($Sample.Snapshot.MapY))"
+        }
+    }
+}
+
+function Invoke-ShortActiveValidation
+{
+    param([int]$DurationSeconds = 240)
+
+    Write-Info "Running short active validation for ${DurationSeconds}s"
+    $deadline = (Get-Date).AddSeconds($DurationSeconds)
+    $sampleIndex = 0
+    while ((Get-Date) -lt $deadline)
+    {
+        $sampleIndex++
+        $sample = Get-ActiveRunHealthSample
+        Assert-NoImmediateAbortCondition -Sample $sample
+
+        [void](Write-ArtifactJson -Name ("{0}-short-validate-sample-{1:D3}.json" -f (Get-Date -Format "yyyyMMdd-HHmmss"), $sampleIndex) -Object $sample)
+
+        $goal = if ($null -ne $sample.BotStatus) { "$($sample.BotStatus.CurrentGoal)" } else { "n/a" }
+        $pos = if ($null -ne $sample.Snapshot) { "Map=($([math]::Round($sample.Snapshot.MapX,2)),$([math]::Round($sample.Snapshot.MapY,2)))" } else { "Map=(n/a)" }
+        Write-Info "Short validation sample ${sampleIndex}: Goal=$goal $pos"
+
+        Start-Sleep -Seconds ([Math]::Max(5, [Math]::Min(15, $MonitorIntervalSeconds)))
+    }
+
+    Write-Ok "Short active validation completed"
+}
+
+function Invoke-SoakRun
+{
+    Write-Info "Starting soak run (${SoakMinutes}m target, ${WindowMinutes}m windows, cadence ${EvidenceIntervalSeconds}s)"
+    if ($MaxPatchLoops -gt 0)
+    {
+        Write-Info "MaxPatchLoops parameter set to $MaxPatchLoops (manual triage/patch loop remains operator-driven)"
+    }
+
+    Invoke-CollectEvidence -Stage "soak-start"
+
+    $deadline = (Get-Date).AddMinutes($SoakMinutes)
+    $sampleIndex = 0
+    while ((Get-Date) -lt $deadline)
+    {
+        $sampleIndex++
+        $sample = Get-ActiveRunHealthSample
+        Assert-NoImmediateAbortCondition -Sample $sample
+        [void](Write-ArtifactJson -Name ("{0}-soak-sample-{1:D3}.json" -f (Get-Date -Format "yyyyMMdd-HHmmss"), $sampleIndex) -Object $sample)
+
+        $repeatRate = $null
+        $deviation = $null
+        $soakResp = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/soak/current" -TimeoutSec 8
+        if ($soakResp.Success -and $null -ne $soakResp.Result)
+        {
+            $repeatRate = $soakResp.Result.CurrentWindowRepeatStuckRate
+            $deviation = $soakResp.Result.CurrentWindowMaxRouteDeviation
+            [void](Write-ArtifactJson -Name ("{0}-soak-current-{1:D3}.json" -f (Get-Date -Format "yyyyMMdd-HHmmss"), $sampleIndex) -Object $soakResp.Result)
+        }
+
+        Write-Info ("Soak sample {0}: Goal={1} RepeatRate={2} MaxDev={3}" -f
+            $sampleIndex,
+            $(if ($sample.BotStatus) { $sample.BotStatus.CurrentGoal } else { "n/a" }),
+            $(if ($null -ne $repeatRate) { [string]([math]::Round([double]$repeatRate, 4)) } else { "n/a" }),
+            $(if ($null -ne $deviation) { [string]([math]::Round([double]$deviation, 2)) } else { "n/a" }))
+
+        $remaining = [int][Math]::Ceiling(($deadline - (Get-Date)).TotalSeconds)
+        if ($remaining -le 0) { break }
+        Start-Sleep -Seconds ([Math]::Min($EvidenceIntervalSeconds, [Math]::Max(1, $remaining)))
+    }
+
+    Invoke-CollectEvidence -Stage "soak-end" -FlushSoak
+    Write-Ok "Soak run completed"
+}
+
+function Invoke-LiveSession
+{
+    Ensure-SessionArtifactDir | Out-Null
+    Write-Info "Session artifact directory: $script:SessionArtifactDir"
+
+    $baseline = [ordered]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Action = $Action
+        Profile = $Profile
+        Branch = (& git rev-parse --abbrev-ref HEAD 2>$null)
+        Commit = (& git rev-parse --short HEAD 2>$null)
+        SoakMinutes = $SoakMinutes
+        WindowMinutes = $WindowMinutes
+        EvidenceIntervalSeconds = $EvidenceIntervalSeconds
+        ShortValidationSeconds = $ShortValidationSeconds
+        MaxPatchLoops = $MaxPatchLoops
+    }
+    [void](Write-ArtifactJson -Name "session-manifest.json" -Object $baseline)
+    [void](Write-ArtifactJson -Name "prestart-ports.json" -Object (Get-PortStateSnapshot))
+
+    Invoke-StartFlow -WithValidation
+    Invoke-CollectEvidence -Stage "post-start"
+    Invoke-ShortActiveValidation -DurationSeconds $ShortValidationSeconds
+    Invoke-CollectEvidence -Stage "pre-soak"
+    Invoke-SoakRun
+    Invoke-CollectEvidence -Stage "final" -FlushSoak
+}
+
 function Invoke-StartFlow([switch]$WithValidation)
 {
     Stop-StaleServerProcesses
@@ -1203,6 +2140,18 @@ try
 
             $result = Invoke-AgentApi -Method $ApiMethod -Path $ApiPath -Body $bodyObj -TimeoutSec $ApiTimeoutSeconds
             $result | ConvertTo-Json -Depth 16
+        }
+        "CollectEvidence"
+        {
+            Invoke-CollectEvidence -Stage "manual" -FlushSoak
+        }
+        "Soak"
+        {
+            Invoke-SoakRun
+        }
+        "LiveSession"
+        {
+            Invoke-LiveSession
         }
     }
 
