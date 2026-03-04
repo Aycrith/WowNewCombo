@@ -1,4 +1,5 @@
 using Game;
+using SharedLib;
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -24,6 +25,7 @@ public sealed class NullWowScreen : IWowScreen
 
     public Image<Bgra32> MiniMapImage { get; }
     public Rectangle MiniMapRect => EmptyRect;
+    public MinimapSettings MinimapSettings => new(((MiniMapRect.Width + 2) << 6) | (1 << 3), 0);
 
 #pragma warning disable CS0067 // Event is never used - required by IWowScreen interface
     public event Action? OnChanged;

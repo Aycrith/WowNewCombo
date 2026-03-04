@@ -88,7 +88,6 @@ public static class UnitRace_Extension
         UnitRace.Mechagnome => nameof(UnitRace.Mechagnome),
         UnitRace.Dracthyr1 => nameof(UnitRace.Dracthyr1),
         UnitRace.Dracthyr2 => nameof(UnitRace.Dracthyr2),
-        UnitRace.Worgen => nameof(UnitRace.Worgen),
         _ => nameof(UnitRace.None)
     };
 }

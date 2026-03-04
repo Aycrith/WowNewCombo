@@ -345,14 +345,14 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             if (IsHealthTooLowToSearchForTargets())
             {
                 wait.Update();
-                sideActivityManualReset.Wait();
+                await sideActivityManualReset.WaitAsync();
                 continue;
             }
 
             if (IsGearTooBrokenToSearchForTargets())
             {
                 wait.Update();
-                sideActivityManualReset.Wait();
+                await sideActivityManualReset.WaitAsync();
                 continue;
             }
 

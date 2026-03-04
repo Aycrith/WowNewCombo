@@ -55,6 +55,8 @@ public sealed class WowScreenDXGI : IWowScreen, IAddonDataProvider
     public const int MiniMapSize = 200;
     public Rectangle MiniMapRect { get; private set; }
     public Image<Bgra32> MiniMapImage { get; init; }
+    public SharedLib.MinimapSettings MinimapSettings
+        => new(((MiniMapRect.Width + 2) << 6) | (1 << 3), 0);
 
     private static readonly FeatureLevel[] s_featureLevels =
     [

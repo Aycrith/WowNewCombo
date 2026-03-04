@@ -31,6 +31,8 @@ public sealed class MockWowScreen : IWowScreen
     public Image<Bgra32> MiniMapImage => ScreenImage; // For simplicity, return same image
 
     public Rectangle MiniMapRect => new(0, 0, 100, 100); // Placeholder
+    public MinimapSettings MinimapSettings
+        => new(((MiniMapRect.Width + 2) << 6) | (1 << 3), 0);
 
     public event Action? OnChanged;
 
