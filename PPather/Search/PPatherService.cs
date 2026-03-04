@@ -8,6 +8,7 @@ using SharedLib.Data;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using static System.Diagnostics.Stopwatch;
 using System.Numerics;
 
@@ -17,6 +18,7 @@ namespace PPather;
 
 public sealed class PPatherService
 {
+    private readonly object gate = new();
     private readonly ILogger<PPatherService> logger;
     private readonly DataConfig dataConfig;
     private readonly WorldMapAreaDB worldMapAreaDB;
@@ -29,20 +31,96 @@ public sealed class PPatherService
     public Action<LinesEventArgs> OnLinesAdded;
     public Action<SphereEventArgs> OnSphereAdded;
 
-    private Search search { get; set; }
+    private Search? search { get; set; }
 
-    public bool Initialised => search != null;
+    public bool Initialised
+    {
+        get
+        {
+            lock (gate)
+            {
+                return search != null;
+            }
+        }
+    }
 
     public bool IsSearching { get; set; }
 
-    public Vector4 SearchFrom => search.From;
-    public Vector4 SearchTo => search.Target;
-    public Vector3 ClosestLocation => search?.PathGraph?.ClosestSpot?.Loc ?? Vector3.Zero;
-    public Vector3 PeekLocation => search?.PathGraph?.PeekSpot?.Loc ?? Vector3.Zero;
+    public Vector4 SearchFrom
+    {
+        get
+        {
+            lock (gate)
+            {
+                return search?.From ?? Vector4.Zero;
+            }
+        }
+    }
 
-    public HashSet<Vector3> TestPoints => search?.PathGraph?.TestPoints ?? [];
+    public Vector4 SearchTo
+    {
+        get
+        {
+            lock (gate)
+            {
+                return search?.Target ?? Vector4.Zero;
+            }
+        }
+    }
 
-    public HashSet<Vector3> BlockedPoints => search?.PathGraph?.BlockedPoints ?? [];
+    public Vector3 ClosestLocation
+    {
+        get
+        {
+            lock (gate)
+            {
+                return search?.PathGraph?.ClosestSpot?.Loc ?? Vector3.Zero;
+            }
+        }
+    }
+
+    public Vector3 PeekLocation
+    {
+        get
+        {
+            lock (gate)
+            {
+                return search?.PathGraph?.PeekSpot?.Loc ?? Vector3.Zero;
+            }
+        }
+    }
+
+    public Vector3[] TestPoints
+    {
+        get
+        {
+            lock (gate)
+            {
+                if (search?.PathGraph?.TestPoints == null || search.PathGraph.TestPoints.Count == 0)
+                {
+                    return [];
+                }
+
+                return search.PathGraph.TestPoints.ToArray();
+            }
+        }
+    }
+
+    public Vector3[] BlockedPoints
+    {
+        get
+        {
+            lock (gate)
+            {
+                if (search?.PathGraph?.BlockedPoints == null || search.PathGraph.BlockedPoints.Count == 0)
+                {
+                    return [];
+                }
+
+                return search.PathGraph.BlockedPoints.ToArray();
+            }
+        }
+    }
 
     public PPatherService(
         ILogger<PPatherService> logger,
@@ -61,27 +139,39 @@ public sealed class PPatherService
 
     public void Reset()
     {
-        if (search == null)
-            return;
+        lock (gate)
+        {
+            if (search == null)
+            {
+                return;
+            }
 
-        search.Clear();
-        search = null;
+            search.Clear();
+            search = null;
+        }
     }
 
     public void Initialise(float mapId)
     {
-        if (search != null && mapId == search.MapId)
+        lock (gate)
         {
-            return;
-        }
+            if (search != null && mapId == search.MapId)
+            {
+                return;
+            }
 
-        if (search != null && mapId != search.MapId)
-        {
-            Reset();
-        }
+            if (search != null && mapId != search.MapId)
+            {
+                search.Clear();
+                search = null;
+            }
 
-        search = new Search(mapId, logger, dataConfig, hazardProvider);
-        search.PathGraph.triangleWorld.NotifyChunkAdded = ChunkAdded;
+            search = hazardProvider != null
+                ? new Search(mapId, logger, dataConfig, hazardProvider)
+                : new Search(mapId, logger, dataConfig);
+
+            search.PathGraph.triangleWorld.NotifyChunkAdded = ChunkAdded;
+        }
     }
 
     public bool MPQSelfTest()
@@ -99,7 +189,15 @@ public sealed class PPatherService
 
     public TriangleCollection GetChunkAt(int grid_x, int grid_y)
     {
-        return search.PathGraph.triangleWorld.GetChunkAt(grid_x, grid_y);
+        lock (gate)
+        {
+            if (search == null)
+            {
+                throw new InvalidOperationException("PPatherService is not initialised");
+            }
+
+            return search.PathGraph.triangleWorld.GetChunkAt(grid_x, grid_y);
+        }
     }
 
     public void ChunkAdded(ChunkEventArgs e)
@@ -109,13 +207,11 @@ public sealed class PPatherService
 
     public Vector4[] CreateLocations(LineArgs lines)
     {
-        Vector4[] result = new Vector4[lines.Spots.Length];
-        Span<Vector4> span = result.AsSpan();
-
-        for (int i = 0; i < span.Length; i++)
+        var result = new Vector4[lines.Spots.Length];
+        for (int i = 0; i < result.Length; i++)
         {
             Vector3 spot = lines.Spots[i];
-            span[i] = ToWorld(lines.MapId, spot.X, spot.Y, spot.Z);
+            result[i] = ToWorld(lines.MapId, spot.X, spot.Y, spot.Z);
         }
 
         return result;
@@ -129,9 +225,11 @@ public sealed class PPatherService
         float worldX = wma.ToWorldX(mapY);
         float worldY = wma.ToWorldY(mapX);
 
-        Initialise(wma.MapID);
-
-        return search.CreateWorldLocation(worldX, worldY, z, wma.MapID, null);
+        lock (gate)
+        {
+            Initialise(wma.MapID);
+            return search!.CreateWorldLocation(worldX, worldY, z, wma.MapID, null);
+        }
     }
 
     public Vector4 ToWorldZ(int uiMap, float x, float y, float z, bool? startIndoors = null)
@@ -139,9 +237,11 @@ public sealed class PPatherService
         if (!worldMapAreaDB.TryGet(uiMap, out WorldMapArea wma))
             return Vector4.Zero;
 
-        Initialise(wma.MapID);
-
-        return search.CreateWorldLocation(x, y, z, wma.MapID, startIndoors);
+        lock (gate)
+        {
+            Initialise(wma.MapID);
+            return search!.CreateWorldLocation(x, y, z, wma.MapID, startIndoors);
+        }
     }
 
     public int GetMapId(int uiMap)
@@ -158,46 +258,68 @@ public sealed class PPatherService
     public Path DoSearch(SearchStrategy searchType)
     {
         SearchBegin?.Invoke();
-        IsSearching = true;
-        var path = search.DoSearch(searchType);
-        IsSearching = false;
+
+        Path path;
+        lock (gate)
+        {
+            if (search == null)
+            {
+                throw new InvalidOperationException("PPatherService is not initialised");
+            }
+
+            IsSearching = true;
+            path = search.DoSearch(searchType);
+            IsSearching = false;
+        }
+
         OnPathCreated?.Invoke(path);
         return path;
     }
 
     public void Save()
     {
-        long timestamp = GetTimestamp();
+        lock (gate)
+        {
+            if (search == null)
+            {
+                return;
+            }
 
-        search.PathGraph.Save();
+            long timestamp = GetTimestamp();
+            search.PathGraph.Save();
 
-        if (logger.IsEnabled(LogLevel.Trace))
-            logger.LogTrace($"Saved GraphChunks {GetElapsedTime(timestamp).TotalMilliseconds} ms");
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"Saved GraphChunks {GetElapsedTime(timestamp).TotalMilliseconds} ms");
+        }
     }
 
     public void SetLocations(Vector4 from, Vector4 to)
     {
-        Initialise(from.W);
+        lock (gate)
+        {
+            Initialise(from.W);
 
-        search.From = from;
-        search.Target = to;
+            search!.From = from;
+            search.Target = to;
+        }
     }
 
     public List<Vector3> GetCurrentSearchPath()
     {
-        return search == null || search.PathGraph == null
-            ? []
-            : search.PathGraph.CurrentSearchPath();
+        lock (gate)
+        {
+            return search == null || search.PathGraph == null
+                ? []
+                : search.PathGraph.CurrentSearchPath();
+        }
     }
 
     public float TransformMapToWorld(int uiMapId, Vector3[] path)
     {
         float mapId = -1;
-
-        Span<Vector3> span = path;
-        for (int i = 0; i < span.Length; i++)
+        for (int i = 0; i < path.Length; i++)
         {
-            Vector3 p = span[i];
+            Vector3 p = path[i];
             if (p.Z != 0)
             {
                 mapId = GetMapId(uiMapId);
@@ -205,8 +327,7 @@ public sealed class PPatherService
             }
 
             Vector4 world = ToWorld(uiMapId, p.X, p.Y, p.Z);
-
-            span[i] = world.AsVector3();
+            path[i] = world.AsVector3();
             mapId = world.W;
         }
 
@@ -215,29 +336,43 @@ public sealed class PPatherService
 
     public void DrawPath(float mapId, ReadOnlySpan<Vector3> path)
     {
-        Vector4 from = new(path[0], mapId);
-        Vector4 to = new(path[^1], mapId);
-
-        SetLocations(from, to);
-
-        if (search.PathGraph == null)
+        Path created;
+        lock (gate)
         {
-            search.CreatePathGraph(mapId);
+            Vector4 from = new(path[0], mapId);
+            Vector4 to = new(path[^1], mapId);
+
+            SetLocations(from, to);
+
+            if (search!.PathGraph == null)
+            {
+                search.CreatePathGraph(mapId);
+            }
+
+            List<Spot> spots = new(path.Length);
+            for (int i = 0; i < path.Length; i++)
+            {
+                Spot spot = new(path[i]);
+                spots.Add(spot);
+                search.PathGraph.CreateSpotsAroundSpot(spot, false, spot);
+            }
+
+            created = new Path(spots);
         }
 
-        List<Spot> spots = new(path.Length);
-        for (int i = 0; i < path.Length; i++)
-        {
-            Spot spot = new(path[i]);
-            spots.Add(spot);
-            search.PathGraph.CreateSpotsAroundSpot(spot, false, spot);
-        }
-
-        OnPathCreated?.Invoke(new(spots));
+        OnPathCreated?.Invoke(created);
     }
 
     public (int, float) GetAreaIdAndZ(Vector3 location)
     {
-        return search.GetAreaIdAndZ(location);
+        lock (gate)
+        {
+            if (search == null)
+            {
+                throw new InvalidOperationException("PPatherService is not initialised");
+            }
+
+            return search.GetAreaIdAndZ(location);
+        }
     }
 }

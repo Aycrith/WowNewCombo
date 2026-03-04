@@ -468,6 +468,10 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         input.PressRandom(ConsoleKey.Escape, InputDuration.DefaultPress);
         input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
 
+        // Clear navigation state so next goal (FollowRoute) doesn't see stale vendor path
+        navigation.Stop();
+        pathState = PathState.Finished;
+
         return;
         // The following code no longer needed as we know for a fact we are close to an NPC spawnpoint
         // thus we know the world coordinate and Z/height component
@@ -583,24 +587,20 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         if (hadGreyToSell)
         {
-            e = wait.Until(TIMEOUT, gossipReader.MerchantWindowSelling);
-            if (e < 0)
-            {
-                Log($"Merchant sell nothing! {e}ms");
-                goto exit;
-            }
+            Log($"Merchant sell nothing! {e}ms");
+            goto exit;
+        }
 
-            Log($"Merchant sell grey items started after {e}ms");
+        Log($"Merchant sell items started after {e}ms");
 
-            e = wait.Until(TIMEOUT, gossipReader.MerchantWindowSellingFinished);
-            if (e >= 0)
-            {
-                Log($"Merchant sell grey items finished, took {e}ms");
-            }
-            else
-            {
-                Log($"Merchant sell grey items timeout! Too many items to sell?! Increase {nameof(TIMEOUT)} - {e}ms");
-            }
+        e = wait.Until(TIMEOUT, gossipReader.MerchantWindowSellingFinished);
+        if (e >= 0)
+        {
+            Log($"Merchant sell items finished, took {e}ms");
+        }
+        else
+        {
+            Log($"Merchant sell items timeout! Too many items to sell?! Increase {nameof(TIMEOUT)} - {e}ms");
         }
 
     exit:
@@ -677,6 +677,13 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         if (searchIndex >= searchCount)
         {
+            // Fallback: Try hard-coded vendor locations when auto-search exhausted
+            if (TryUseHardCodedVendor(npcFlag))
+            {
+                LogWarn("Auto-search exhausted - using hard-coded vendor fallback");
+                return true;
+            }
+
             noPathBackoffUntilUtc = DateTime.UtcNow.Add(NoPathRetryDelay);
             pathState = PathState.Finished;
             LogWarn("No more NPC to try!");
@@ -691,6 +698,51 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         LogWarn($"Try next closest NPC -- {searchIndex}");
 
         UpdateClosestNPC(npcFlag);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Fallback method: Try to use hard-coded vendor locations when auto-search fails
+    /// </summary>
+    private bool TryUseHardCodedVendor(NpcFlags npcFlag)
+    {
+        // Only use fallback for vendors
+        if (npcFlag != NpcFlags.Vendor)
+            return false;
+
+        if (areaDB.CurrentWorldMapArea == null)
+            return false;
+
+        string zoneName = areaDB.CurrentWorldMapArea.Value.AreaName;
+        
+        if (!VendorLocations.TryGetVendorsForZone(zoneName, out var vendors) || vendors == null || vendors.Count == 0)
+        {
+            LogWarn($"No hard-coded vendors available for zone: {zoneName}");
+            return false;
+        }
+
+        var closestVendor = VendorLocations.FindClosestVendor(vendors, playerReader.WorldPos);
+        if (closestVendor == null)
+            return false;
+
+        // Create a temporary creature for the vendor
+        npc = new Creature
+        {
+            Name = closestVendor.Name,
+            Entry = 0, // Unknown entry
+            Faction = 0, // Assume friendly
+            NpcFlag = NpcFlags.Vendor
+        };
+
+        // Set the vendor position as the path
+        key.Path = [closestVendor.WorldPosition];
+
+        logger.LogInformation($"Using hard-coded vendor: {closestVendor.Name} at {closestVendor.WorldPosition} (Priority {closestVendor.Priority})");
+        if (!string.IsNullOrEmpty(closestVendor.Notes))
+        {
+            LogDebug($"Vendor notes: {closestVendor.Notes}");
+        }
 
         return true;
     }
