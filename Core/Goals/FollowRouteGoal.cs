@@ -344,6 +344,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
                 {
                     Log("Blacklisted target found, clearing target");
                     input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+                    targetFinder.NotifyBlacklistedResult();
+                    try { await Task.Delay(TargetFinder.BlacklistBackoffMs, sideActivityCts.Token).ConfigureAwait(false); } catch (OperationCanceledException) { }
                     continue; // Don't fall through - loop again to find a valid target
                 }
 
@@ -458,7 +460,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         RefillCandidate chosenCandidate = normalCandidate;
         bool chosenReversed = false;
 
-        if (mapRoute.Length > 1)
+        if (pathSettings.PathThereAndBack && mapRoute.Length > 1)
         {
             Vector3[] reversedPath = (Vector3[])mapRoute.Clone();
             Array.Reverse(reversedPath);
@@ -495,6 +497,11 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         int remainingCount = chosenPath.Length - (closestSegmentStartIndex + 1);
         if (remainingCount <= 0)
         {
+            if (!pathSettings.PathThereAndBack)
+            {
+                // Loop mode: reset anchor so next refill restarts from route beginning
+                ResetRefillProgressAnchor();
+            }
             navigation.SetWayPoints(stackalloc Vector3[1] { mapClosestPoint });
             return;
         }

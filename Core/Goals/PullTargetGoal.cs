@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using SharedLib.NpcFinder;
 
 using System;
+using System.Threading;
 
 using static System.Diagnostics.Stopwatch;
 
@@ -121,14 +122,32 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             Log("Stop auto interact!");
             input.PressStopAttack();
             wait.Update();
-            stopMoving.StopForward();
+            stopMoving.Stop();
             wait.Update(playerReader.DoubleNetworkLatency);
             wait.Update();
+
+            // Verify the character actually stopped — click-to-move
+            // momentum can persist after a single StopForward() call.
+            if (bits.Moving())
+            {
+                stopMoving.StopForward();
+                wait.Until(500, () => !bits.Moving());
+            }
         }
 
         if (requiresNpcNameFinder)
         {
             npcNameTargeting.ChangeNpcType(NpcNames.Enemy);
+        }
+
+        // Wait for GCD from any pre-pull ability (e.g., Adhoc spells like Life Tap) to
+        // clear before attempting pull spells. Without this, a GCD-active state exhausts
+        // the 4-attempt abort budget before the GCD expires, causing the bot to refuse
+        // body-pull on a healthy target. Uses CancellationToken.None so it always waits
+        // the full remaining GCD rather than being cut short by the interrupt watchdog.
+        if (Keys.Length > 0 && playerReader.GCD.Value > 0)
+        {
+            castingHandler.WaitForGCD(Keys[0], false, false, CancellationToken.None);
         }
 
         pullStart = GetTimestamp();
@@ -226,9 +245,12 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             bool isRangedPullAction = IsRangedPullAction(keyAction);
             bool interrupt() => keyAction.CanBeInterrupted() || PullPrevention();
 
-            if (castAny = castingHandler.Cast(keyAction, interrupt))
+            bool castResult = castingHandler.Cast(keyAction, interrupt);
+            if (castResult)
             {
-                castAny = !keyAction.BaseAction;
+                // Accumulate: a later cast failure must not erase an earlier success
+                if (!keyAction.BaseAction)
+                    castAny = true;
                 if (isRangedPullAction)
                 {
                     consecutiveRangedPullFailures = 0;
@@ -282,7 +304,8 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             combatLog.ToPull.Add(playerReader.TargetGuid);
         }
 
-        if (castAny || spellInQueue || playerReader.IsCasting() || (bits.AutoShot() && !playerReader.IsInMeleeRange()))
+        // Also skip approach if we entered combat (pull spell aggroed the mob)
+        if (castAny || spellInQueue || playerReader.IsCasting() || bits.Combat() || (bits.AutoShot() && !playerReader.IsInMeleeRange()))
             return;
 
         approachAction();
@@ -317,12 +340,12 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     private bool PullPrevention()
     {
-        return !targetBlacklist.Is() ||
-            playerReader.TargetTarget is
-            UnitsTarget.None or
+        return targetBlacklist.Is() ||
+            playerReader.TargetTarget is not
+            (UnitsTarget.None or
             UnitsTarget.Me or
             UnitsTarget.Pet or
-            UnitsTarget.PartyOrPet;
+            UnitsTarget.PartyOrPet);
     }
 
     private bool EligibleEnemySoftTargetExists() =>
@@ -334,8 +357,11 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     private static bool IsRangedPullAction(KeyAction keyAction)
     {
-        return keyAction.Name.Equals("Shoot", StringComparison.OrdinalIgnoreCase) ||
-               keyAction.Name.Equals("Throw", StringComparison.OrdinalIgnoreCase);
+        // Treat every explicit cast action (not just Shoot/Throw) as ranged so
+        // the consecutive-failure abort logic works for all caster pull sequences.
+        // The caller guards with !playerReader.IsInMeleeRange(), keeping this safe
+        // for melee classes whose pull spells only fail when target is truly out of range.
+        return !keyAction.BaseAction;
     }
 
     private void Log(string text)

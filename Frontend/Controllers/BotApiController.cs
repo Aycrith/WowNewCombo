@@ -315,7 +315,7 @@ public class BotApiController : ControllerBase
     /// <summary>
     /// POST /api/bot/profile/load
     /// Loads a specific class profile
-    /// Body: { "fileName": "BloodElf_Rogue_Starter_Test.json" }
+    /// Body: { "fileName": "BloodElf_Warlock_1-70_TBC.json" }
     /// </summary>
     [HttpPost("profile/load")]
     public IActionResult LoadProfile([FromBody] ProfileLoadRequest request)
@@ -330,21 +330,55 @@ public class BotApiController : ControllerBase
             }
 
             logger.LogInformation("Loading profile: {FileName}", request.FileName);
+
+            // Check state before loading
+            logger.LogDebug("Before load - ClassConfig: {ClassConfigBefore}, SelectedFile: {SelectedBefore}",
+                botController.ClassConfig?.FileName ?? "null",
+                botController.SelectedClassFilename ?? "empty");
+
+            // Call the load method - this may throw if file not found or invalid JSON
             botController.LoadClassProfile(request.FileName);
+
+            // Give time for async initialization and config setup
+            // The ClassConfig property may not be immediately available after load
+            System.Threading.Thread.Sleep(500);
+
+            // Check state after loading
+            logger.LogDebug("After load - ClassConfig: {ClassConfigAfter}, SelectedFile: {SelectedAfter}",
+                botController.ClassConfig?.FileName ?? "null",
+                botController.SelectedClassFilename ?? "empty");
+
+            // Verify the profile actually loaded
+            bool isLoaded = botController.ClassConfig != null;
+
+            if (!isLoaded)
+            {
+                logger.LogWarning("Profile load completed but ClassConfig is null. File: {FileName}", request.FileName);
+                sw.Stop();
+                return StatusCode(500, new
+                {
+                    Error = "Profile loaded but configuration is null - possible file not found or invalid JSON",
+                    FileName = request.FileName,
+                    IsLoaded = false
+                });
+            }
+
+            logger.LogInformation("Profile '{FileName}' loaded successfully",
+                request.FileName);
 
             sw.Stop();
             return Ok(new
             {
                 Message = $"Profile '{request.FileName}' loaded successfully",
                 FileName = request.FileName,
-                IsLoaded = botController.ClassConfig != null
+                IsLoaded = true
             });
         }
         catch (System.Exception ex)
         {
-            logger.LogError(ex, "Load profile failed: {FileName}", request.FileName);
+            logger.LogError(ex, "Load profile failed: {FileName}. Exception: {Message}", request.FileName, ex.Message);
             sw.Stop();
-            return StatusCode(500, new { Error = ex.Message });
+            return StatusCode(500, new { Error = $"Failed to load profile: {ex.Message}" });
         }
     }
 }

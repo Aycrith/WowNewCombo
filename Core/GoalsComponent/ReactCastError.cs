@@ -159,8 +159,11 @@ public sealed class ReactCastError
                     }
                     else if (!playerReader.WithInPullRange())
                     {
-                        logger.LogInformation($"React to {value.ToStringF()} -- Start moving forward as outside of pull range.");
-                        input.StartForward(true);
+                        // Re-face target and let PullTargetGoal's approach fallback
+                        // handle forward movement — StartForward here races with the
+                        // pull loop's own stopped state and causes uncontrolled body-pulls.
+                        logger.LogInformation($"React to {value.ToStringF()} -- Outside pull range, re-facing target.");
+                        input.PressInteract();
                     }
                     else
                     {

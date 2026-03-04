@@ -60,6 +60,13 @@ public sealed partial class GoapAgent : IDisposable
     private GoapGoal? pendingGoal;
     private int pendingGoalTicks;
 
+    /// <summary>
+    /// Hysteresis for withinpullrange: once in pull range, hold true for 500 ms
+    /// to prevent single-frame oscillation at the range boundary that causes
+    /// PullTargetGoal ↔ ApproachTargetGoal flip-flopping.
+    /// </summary>
+    private DateTime _pullRangeHysteresisUntilUtc = DateTime.MinValue;
+
     private bool active;
     public bool Active
     {
@@ -427,15 +434,21 @@ public sealed partial class GoapAgent : IDisposable
             (B(dmgTaken || dmgDone) << (int)GoapKey.damagetakenordone) |
             (B(hasTarget && !b.Target_Dead()) << (int)GoapKey.targetisalive) |
 
+            // A target that is targeting us is only "suspicious" (may be a tagged/linked
+            // mob) when we did NOT initiate the pull ourselves. Once a mob is in ToPull
+            // (we cast the first pull spell at it), its TargetTarget flipping to Me is
+            // expected — excluding it prevents PullTargetGoal from being ejected mid-
+            // sequence after the first DoT aggros but before all pull casts complete.
             (B((hasTarget &&
             playerReader.TargetHealthPercent() < 30) ||
-            playerReader.TargetTarget is UnitsTarget.Me or
-                UnitsTarget.Pet or UnitsTarget.PartyOrPet) << (int)GoapKey.targettargetsus) |
+            ((playerReader.TargetTarget is UnitsTarget.Me or
+                UnitsTarget.Pet or UnitsTarget.PartyOrPet) &&
+            !combatLog.ToPull.Contains(playerReader.TargetGuid))) << (int)GoapKey.targettargetsus) |
 
             (B(playerCombat) << (int)GoapKey.incombat) |
             (B(playerReader.PetTarget() && !b.PetTarget_Dead()) << (int)GoapKey.pethastarget) |
             (B(mountHandler.IsMounted()) << (int)GoapKey.ismounted) |
-            (B(playerReader.WithInPullRange()) << (int)GoapKey.withinpullrange) |
+            (B(WithInPullRangeHysteresis()) << (int)GoapKey.withinpullrange) |
             (B(playerReader.WithInCombatRange()) << (int)GoapKey.incombatrange) |
             (B(bits.Combat() && bits.Target_Combat() && combatLog.ToPullCount() > 0) << (int)GoapKey.pulled) |
             (B(b.Dead()) << (int)GoapKey.isdead) |
@@ -462,6 +475,24 @@ public sealed partial class GoapAgent : IDisposable
         WorldState = new(data);
 
         static int B(bool b) => b ? 1 : 0;
+    }
+
+    /// <summary>
+    /// Returns true if the player is currently in pull range OR was within
+    /// pull range within the last 500 ms. The hysteresis prevents
+    /// PullTargetGoal ↔ ApproachTargetGoal oscillation when the target drifts
+    /// just inside/outside the pull-range boundary on consecutive ticks.
+    /// </summary>
+    private bool WithInPullRangeHysteresis()
+    {
+        bool nowInRange = playerReader.WithInPullRange();
+        if (nowInRange)
+        {
+            _pullRangeHysteresisUntilUtc = DateTime.UtcNow.AddMilliseconds(500);
+            return true;
+        }
+
+        return DateTime.UtcNow < _pullRangeHysteresisUntilUtc;
     }
 
     private void HandleGoapEvent(GoapEventArgs e)

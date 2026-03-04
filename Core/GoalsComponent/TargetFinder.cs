@@ -8,6 +8,7 @@ namespace Core.Goals;
 public sealed class TargetFinder
 {
     private const int waitMs = 200;
+    private const int blacklistBackoffMs = 2000;
 
     private readonly ConfigurableInput input;
     private readonly AddonBits bits;
@@ -15,6 +16,7 @@ public sealed class TargetFinder
     private readonly Wait wait;
 
     private DateTime lastActive;
+    private DateTime lastBlacklistedAt;
 
     public int ElapsedMs =>
         (int)(DateTime.UtcNow - lastActive).TotalMilliseconds;
@@ -28,12 +30,21 @@ public sealed class TargetFinder
         this.wait = wait;
 
         lastActive = DateTime.UtcNow;
+        lastBlacklistedAt = DateTime.MinValue;
     }
 
     public void Reset()
     {
         npcNameTargeting.ChangeNpcType(NpcNames.None);
         npcNameTargeting.Reset();
+        lastBlacklistedAt = DateTime.MinValue;
+    }
+
+    public static int BlacklistBackoffMs => blacklistBackoffMs;
+
+    public void NotifyBlacklistedResult()
+    {
+        lastBlacklistedAt = DateTime.UtcNow;
     }
 
     public bool Search(
@@ -45,7 +56,11 @@ public sealed class TargetFinder
     private bool LookForTarget(
         NpcNames target, CancellationToken token)
     {
-        if (ElapsedMs < waitMs)
+        int effectiveWait = (int)(DateTime.UtcNow - lastBlacklistedAt).TotalMilliseconds < blacklistBackoffMs
+            ? blacklistBackoffMs
+            : waitMs;
+
+        if (ElapsedMs < effectiveWait)
             return bits.Target();
 
         if (!input.TargetNearestTarget.OnCooldown())

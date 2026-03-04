@@ -56,9 +56,12 @@ public sealed class StopMoving : IDisposable
         {
             input.SetKeyState(input.BackwardKey, false, true);
         }
-        else // moving by interact key
+        else
         {
-            input.PressFixed(input.ForwardKey, Random.Shared.Next(2, 5), token);
+            // Tap forward briefly to cancel interact/click-to-move, then release.
+            // Matches upstream pattern: 1ms press + short sleep.
+            input.PressFixed(input.ForwardKey, 1, token);
+            Thread.Sleep(10);
         }
     }
 

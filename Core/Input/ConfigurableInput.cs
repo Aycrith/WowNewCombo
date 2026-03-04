@@ -18,6 +18,7 @@ public sealed partial class ConfigurableInput
     private readonly AddonBits bits;
     private readonly IHumanizationProvider? humanization;
     private DateTime lastChatInputWarningUtc = DateTime.MinValue;
+    private DateTime _lastClearTargetAttemptUtc = DateTime.MinValue;
 
     private readonly bool Log;
 
@@ -296,6 +297,11 @@ public sealed partial class ConfigurableInput
         ExecGameCommand? execGameCommand = null,
         CancellationToken token = default)
     {
+        // Rate-limit: avoid spamming ClearTarget when called on every tick.
+        if ((DateTime.UtcNow - _lastClearTargetAttemptUtc).TotalMilliseconds < 500)
+            return false;
+        _lastClearTargetAttemptUtc = DateTime.UtcNow;
+
         // Stage 1: Configured binding retries.
         if (ClearTarget.ConsoleKey != ConsoleKey.NoName)
         {

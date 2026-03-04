@@ -21,19 +21,10 @@ public sealed partial class PlayerDirection
 
     public const int DefaultIgnoreDistance = 10;
 
-    // Closed-loop control constants
-    private const int MAX_TURN_RETRIES = 3;
-    private const float TURN_TOLERANCE_RADIANS = 0.20f;  // ~11.5 degrees
-    private const int TURN_VERIFICATION_DELAY_MS = 50;
-    private const int MAX_TOTAL_TURN_DURATION_MS = 3000;
-
     private readonly ILogger<PlayerDirection> logger;
     private readonly ConfigurableInput input;
     private readonly PlayerReader playerReader;
     private readonly CancellationToken token;
-
-    // Tracking for turn verification
-    private int consecutiveFailedTurns;
 
     public PlayerDirection(ILogger<PlayerDirection> logger,
         CancellationTokenSource<GoapAgent> cts,
@@ -69,118 +60,16 @@ public sealed partial class PlayerDirection
 
     public void SetDirection(float targetDir, CancellationToken token = default)
     {
-        // Use closed-loop control with verification
-        SetDirectionWithVerification(targetDir, token);
-    }
-
-    /// <summary>
-    /// Sets direction with closed-loop control - verifies turn completed and retries if needed
-    /// </summary>
-    private void SetDirectionWithVerification(float targetDir, CancellationToken token)
-    {
-        float initialDir = playerReader.Direction;
-        float currentDiff = CalculateAngleDifference(targetDir, initialDir);
-
-        if (currentDiff <= TURN_TOLERANCE_RADIANS)
-        {
-            // Already facing target
-            consecutiveFailedTurns = 0;
+        // Simple single-press turn matching upstream pattern.
+        // Navigation.AdjustHeading() runs every tick and will correct
+        // any residual error on the next frame — no retry loop needed.
+        float diff = TurnAmount(targetDir);
+        if (diff < PI / 35f) // same threshold as Navigation.minAngleToTurn
             return;
-        }
 
-        long turnStartTime = GetTimestamp();
-        int retryCount = 0;
-
-        while (retryCount < MAX_TURN_RETRIES)
-        {
-            float currentDir = playerReader.Direction;
-            float diff = CalculateAngleDifference(targetDir, currentDir);
-
-            if (diff <= TURN_TOLERANCE_RADIANS)
-            {
-                // Turn successful
-                consecutiveFailedTurns = 0;
-                LogTurnSuccess(logger, targetDir, retryCount);
-                return;
-            }
-
-            // Check total turn time
-            if (GetElapsedTime(turnStartTime).TotalMilliseconds > MAX_TOTAL_TURN_DURATION_MS)
-            {
-                logger.LogWarning($"[PlayerDirection] Turn to {targetDir:F2} exceeded max duration ({MAX_TOTAL_TURN_DURATION_MS}ms), aborting");
-                consecutiveFailedTurns++;
-                return;
-            }
-
-            // Execute turn
-            ConsoleKey turnKey = GetDirectionKeyToPress(targetDir, currentDir);
-            int duration = CalculateTurnDuration(diff);
-
-            if (retryCount > 0)
-            {
-                logger.LogDebug($"[PlayerDirection] Turn retry {retryCount}: diff={diff:F2}rad, duration={duration}ms");
-            }
-
-            input.PressFixed(turnKey, duration, token);
-
-            // Wait for turn to execute with verification
-            WaitForTurn(duration, token);
-
-            retryCount++;
-        }
-
-        // Max retries reached
-        float finalDiff = CalculateAngleDifference(targetDir, playerReader.Direction);
-        if (finalDiff > TURN_TOLERANCE_RADIANS)
-        {
-            consecutiveFailedTurns++;
-            logger.LogWarning($"[PlayerDirection] Failed to turn to {targetDir:F2} after {MAX_TURN_RETRIES} attempts. " +
-                $"Final diff: {finalDiff:F2}rad ({finalDiff * 180 / PI:F1}°)");
-        }
-        else
-        {
-            consecutiveFailedTurns = 0;
-        }
-    }
-
-    /// <summary>
-    /// Waits for turn to execute, polling direction to detect completion
-    /// </summary>
-    private static void WaitForTurn(int expectedDuration, CancellationToken token)
-    {
-        // Wait at least the expected duration (no hard cap: CalculateTurnDuration clamps to 40–700ms)
-        int waitTime = expectedDuration + TURN_VERIFICATION_DELAY_MS;
-
-        // Use spin wait for better precision with cancellation support
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        while (sw.ElapsedMilliseconds < waitTime)
-        {
-            if (token.IsCancellationRequested)
-                return;
-
-            token.WaitHandle.WaitOne(10);
-        }
-    }
-
-    /// <summary>
-    /// Calculates the shortest angle difference between two directions
-    /// </summary>
-    private static float CalculateAngleDifference(float target, float current)
-    {
-        float diff = MathF.Abs(target - current) % (2 * PI);
-        return diff > PI ? 2 * PI - diff : diff;
-    }
-
-    /// <summary>
-    /// Calculates turn duration based on angle with safety limits
-    /// </summary>
-    private static int CalculateTurnDuration(float angleRadians)
-    {
-        // Base calculation: time to turn at ~180°/second
-        int duration = (int)(angleRadians * 850f / PI);
-
-        // Clamp to reasonable range
-        return Math.Clamp(duration, 40, 700);
+        ConsoleKey turnKey = GetDirectionKeyToPress(targetDir);
+        int duration = TurnDuration(targetDir);
+        input.PressFixed(turnKey, duration, token);
     }
 
     private float TurnAmount(float targetDir)
@@ -204,28 +93,7 @@ public sealed partial class PlayerDirection
             : input.TurnRightKey;
     }
 
-    /// <summary>
-    /// Gets the number of consecutive failed turn attempts
-    /// </summary>
-    public int GetConsecutiveFailedTurns() => consecutiveFailedTurns;
 
-    /// <summary>
-    /// Resets the failed turn counter
-    /// </summary>
-    public void ResetFailedTurnCounter() => consecutiveFailedTurns = 0;
-
-    private static long GetTimestamp() => System.Diagnostics.Stopwatch.GetTimestamp();
-
-    private static TimeSpan GetElapsedTime(long startTimestamp)
-    {
-        return System.Diagnostics.Stopwatch.GetElapsedTime(startTimestamp);
-    }
-
-    [LoggerMessage(
-        EventId = 0032,
-        Level = LogLevel.Debug,
-        Message = "[PlayerDirection] Turn to {targetDir:F2} succeeded after {retryCount} retries")]
-    static partial void LogTurnSuccess(ILogger logger, float targetDir, int retryCount);
 
     #region Logging
 

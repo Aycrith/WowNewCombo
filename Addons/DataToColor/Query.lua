@@ -544,10 +544,35 @@ function DataToColor:GetCorpsePosition()
         return 0, 0
     end
 
+    -- Try current map first
     local corpseMap = C_DeathInfo.GetCorpseMapPosition(DataToColor.map)
     if corpseMap then
         return corpseMap:GetXY()
     end
+
+    -- Current map returned nil: ghost is on a different sub-map than the corpse.
+    -- Walk up the map parent chain to find the map that contains the corpse.
+    if C_Map.GetMapInfo then
+        local mapInfo = C_Map.GetMapInfo(DataToColor.map)
+        if mapInfo and mapInfo.parentMapID and mapInfo.parentMapID ~= DataToColor.map then
+            corpseMap = C_DeathInfo.GetCorpseMapPosition(mapInfo.parentMapID)
+            if corpseMap then
+                return corpseMap:GetXY()
+            end
+        end
+    end
+
+    -- Try continent-level parent as a last resort
+    if C_Map.GetMapParentInfo then
+        local parentInfo = C_Map.GetMapParentInfo(DataToColor.map, Enum.UIMapType.Continent, true)
+        if parentInfo then
+            corpseMap = C_DeathInfo.GetCorpseMapPosition(parentInfo.mapID)
+            if corpseMap then
+                return corpseMap:GetXY()
+            end
+        end
+    end
+
     return 0, 0
 end
 
