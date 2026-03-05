@@ -82,6 +82,10 @@ public sealed partial class Navigation : IDisposable
     public event Action? OnDynamicDetourApplied;
     public event Action? OnSuccessfulReconnect;
     public event Action<float>? OnDeviationSample;
+    public event Action? OnRerouteTriggered;
+    public event Action? OnRerouteApplied;
+    public event Action<string>? OnRerouteDropped;
+    public event Action? OnDetourOnlyCollapseDetected;
 
     public bool SimplifyRouteToWaypoint { get; set; } = true;
 
@@ -125,6 +129,12 @@ public sealed partial class Navigation : IDisposable
     private DateTime? lastSuppressedTurnStuckRecoveryUtc;
     private int suppressedTurnStuckRecoveryCount;
     private bool hadNoPathFailureSinceLastPath;
+    private int rerouteTriggerCount;
+    private int rerouteApplyCount;
+    private int rerouteDropCount;
+    private int detourOnlyCollapseCount;
+    private string? lastRerouteDropReason;
+    private float? lastRerouteAnchorDistance;
 
     public Navigation(ILogger<Navigation> logger,
         CancellationTokenSource<GoapAgent> cts,
@@ -1060,7 +1070,29 @@ public sealed partial class Navigation : IDisposable
             FrontBypassAttemptCount: 0,
             RepeatedFrontBypassCount: 0,
             RepeatedFrontBypassNoProgressCount: 0,
-            RepeatedHazardDetourCount: 0);
+            RepeatedHazardDetourCount: 0,
+            RerouteTriggerCount: rerouteTriggerCount,
+            RerouteApplyCount: rerouteApplyCount,
+            RerouteDropCount: rerouteDropCount,
+            LastRerouteDropReason: lastRerouteDropReason,
+            LastRerouteAnchorDistance: lastRerouteAnchorDistance);
+    }
+
+    public NavigationRerouteRuntimeSnapshot GetRerouteRuntimeSnapshot()
+    {
+        RerouteInfo? active = routeRerouter?.GetActiveReroute();
+        return new NavigationRerouteRuntimeSnapshot(
+            RerouteTriggerCount: rerouteTriggerCount,
+            RerouteApplyCount: rerouteApplyCount,
+            RerouteDropCount: rerouteDropCount,
+            DetourOnlyCollapseCount: detourOnlyCollapseCount,
+            LastRerouteDropReason: lastRerouteDropReason,
+            LastRerouteAnchorDistance: lastRerouteAnchorDistance,
+            HasActiveReroute: active != null,
+            ActiveRerouteId: active?.Id,
+            ActiveRerouteStartedAt: active?.StartedAt,
+            ActiveRerouteOriginalTarget: active?.OriginalTarget,
+            ActiveRerouteWaypointCount: active?.DetourWaypoints.Length ?? 0);
     }
 
 

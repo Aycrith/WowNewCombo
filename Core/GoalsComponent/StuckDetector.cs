@@ -96,6 +96,7 @@ public sealed class StuckDetector : IGoapEventListener
     private Vector3 lastStuckTriggerPosition = Vector3.Zero;
     private DateTime lastStuckTriggerUtc = DateTime.MinValue;
     private int repeatedHotspotCount;
+    private DateTime breadcrumbBacktrackDisabledUntilUtc = DateTime.MinValue;
     private StuckTriggerReason? lastTriggerReason;
     private DateTime? lastTriggerUtc;
     private readonly Queue<StuckTriggerSample> recentTriggers = new();
@@ -562,7 +563,10 @@ public sealed class StuckDetector : IGoapEventListener
 
         if (repeatedHotspotCount >= 2 && IsEnhancedRecoveryAvailable)
         {
-            return UnstuckState.BreadcrumbBacktrack;
+            return ResolveReverseEscalationState(
+                enhancedRecoveryAvailable: true,
+                nowUtc: now,
+                breadcrumbBacktrackDisabledUntilUtc: breadcrumbBacktrackDisabledUntilUtc);
         }
 
         if (repeatedHotspotCount >= 1)
@@ -673,5 +677,80 @@ public sealed class StuckDetector : IGoapEventListener
             LastTriggerUtc: lastTriggerUtc,
             LastPredictiveRisk: null,
             RecentTriggers: recentTriggers.ToArray());
+    }
+
+    internal static UnstuckState ResolveReverseEscalationState(
+        bool enhancedRecoveryAvailable,
+        DateTime nowUtc,
+        DateTime breadcrumbBacktrackDisabledUntilUtc)
+    {
+        return enhancedRecoveryAvailable && nowUtc >= breadcrumbBacktrackDisabledUntilUtc
+            ? UnstuckState.BreadcrumbBacktrack
+            : UnstuckState.PathClearAttempt;
+    }
+
+    internal static bool TrySelectBacktrackTarget(
+        IReadOnlyList<BreadcrumbEntry> trail,
+        Vector3 currentPosition,
+        int preferredSteps,
+        int alternateSteps,
+        float minDistance,
+        out Vector3 targetPosition)
+    {
+        targetPosition = default;
+        if (trail.Count == 0)
+        {
+            return false;
+        }
+
+        if (TrySelectBacktrackTargetBySteps(trail, currentPosition, preferredSteps, minDistance, out targetPosition))
+        {
+            return true;
+        }
+
+        if (TrySelectBacktrackTargetBySteps(trail, currentPosition, alternateSteps, minDistance, out targetPosition))
+        {
+            return true;
+        }
+
+        float bestDistance = minDistance;
+        bool foundFallback = false;
+        for (int i = 0; i < trail.Count; i++)
+        {
+            Vector3 candidate = trail[i].Position;
+            float distance = currentPosition.WorldDistanceXYTo(candidate);
+            if (distance > bestDistance)
+            {
+                bestDistance = distance;
+                targetPosition = candidate;
+                foundFallback = true;
+            }
+        }
+
+        return foundFallback;
+    }
+
+    private static bool TrySelectBacktrackTargetBySteps(
+        IReadOnlyList<BreadcrumbEntry> trail,
+        Vector3 currentPosition,
+        int stepsBack,
+        float minDistance,
+        out Vector3 targetPosition)
+    {
+        targetPosition = default;
+        if (stepsBack < 1 || stepsBack > trail.Count)
+        {
+            return false;
+        }
+
+        int index = trail.Count - stepsBack;
+        Vector3 candidate = trail[index].Position;
+        if (currentPosition.WorldDistanceXYTo(candidate) <= minDistance)
+        {
+            return false;
+        }
+
+        targetPosition = candidate;
+        return true;
     }
 }
