@@ -102,6 +102,8 @@ public sealed class DiagnosticsControllerSlashFixTests
             systemDiagnostics: null!,
             startupOptions: Options.Create(new StartupOptions()),
             navSoakMetricsService: navSoakMetricsService,
-            featureFlagService: null);
+            featureFlagService: null,
+            castingHandler: null,
+            goapEventHistory: null);
     }
 }

@@ -173,6 +173,7 @@ public class DiagnosticsController : ControllerBase
     private readonly Core.Navigation.NavSoakMetricsService? navSoakMetricsService;
     private readonly FeatureFlagService? featureFlagService;
     private readonly CastingHandler? castingHandler;
+    private readonly Core.Diagnostics.IGoapEventHistory? goapEventHistory;
 
     private readonly StartupOptions startupOptions;
 
@@ -195,7 +196,8 @@ public class DiagnosticsController : ControllerBase
         IOptions<StartupOptions> startupOptions,
         Core.Navigation.NavSoakMetricsService? navSoakMetricsService = null,
         FeatureFlagService? featureFlagService = null,
-        CastingHandler? castingHandler = null)
+        CastingHandler? castingHandler = null,
+        Core.Diagnostics.IGoapEventHistory? goapEventHistory = null)
     {
         this.logger = logger;
         this.keyBindingsReader = keyBindingsReader;
@@ -216,6 +218,7 @@ public class DiagnosticsController : ControllerBase
         this.navSoakMetricsService = navSoakMetricsService;
         this.featureFlagService = featureFlagService;
         this.castingHandler = castingHandler;
+        this.goapEventHistory = goapEventHistory;
     }
 
     #region Diagnostic Endpoints
@@ -909,6 +912,7 @@ public class DiagnosticsController : ControllerBase
                     KeybindingsInitialized = keyBindingsReader.IsInitialized,
                     ActionBarInitialized = textureReader.IsInitialized
                 },
+                NoPlanEvents = goapEventHistory?.TotalNoPlanEvents ?? 0,
                 Timestamp = DateTime.UtcNow
             });
         }
