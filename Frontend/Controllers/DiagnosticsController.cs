@@ -14,7 +14,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Frontend.Controllers;
@@ -36,16 +35,6 @@ public record KeybindDiagnostics(
     bool IsInitialized,
     IReadOnlyCollection<BindingInfo> Bindings,
     IReadOnlyCollection<MismatchInfo> Mismatches);
-
-public record InputSecurityModeInfo(
-    string Mode,
-    bool BackgroundCompatible,
-    bool Enabled,
-    bool FocusGuard,
-    bool HybridModifiers,
-    bool EmitWmChar);
-
-public record SetInputSecurityModeRequest(bool BackgroundCompatible);
 
 public record ActionBarIssueDto(
     string SpellName,
@@ -72,20 +61,6 @@ public record DiagnosticsSummary(
     ActionBarDiagnostics? ActionBar,
     ProfileDiagnostics? Profile);
 
-public record PlaceRequest(int Slot, string Name);
-
-public record FixResult(bool Success, string Message, int ChangesApplied = 0);
-public record SlashCommandRequest(
-    string Command,
-    bool UseBackgroundCompatibleInput = false,
-    int PreDelayMs = 200,
-    int PostDelayMs = 500);
-public record SlashCommandResult(
-    bool Success,
-    string Command,
-    string DispatchPath,
-    long ElapsedMs,
-    string? Error = null);
 public record NavigationRuntimeDiagnosticsResponse(
     bool BotActive,
     string CurrentGoal,
@@ -135,20 +110,10 @@ public record BagDiagnostics(
     IReadOnlyCollection<BagItemDto> SampleItems,
     DateTime Timestamp);
 
-public record MailboxInteractDiagnostics(
-    bool MailFrameShown,
-    bool CursorFound,
-    string CursorType,
-    int CursorX,
-    int CursorY,
-    string InteractionStep,
-    int Attempts,
-    long ElapsedMs);
-
 #endregion
 
 /// <summary>
-/// API controller for diagnostic operations and automated fixes
+/// API controller for read-only and runtime diagnostics endpoints.
 /// </summary>
 [Route("api/[controller]")]
 [ApiController]
@@ -160,15 +125,8 @@ public class DiagnosticsController : ControllerBase
     private readonly ActionBarSlotValidator slotValidator;
     private readonly ActionBarTextureReader textureReader;
     private readonly IBotController botController;
-    private readonly ExecGameCommand exec;
-    private readonly AddonConfigurator addonConfigurator;
     private readonly IAddonReader addonReader;
-    private readonly WowProcessInput wowInput;
-    private readonly CursorScan cursorScan;
-    private readonly AddonBits addonBits;
     private readonly BagReader bagReader;
-    private readonly EquipmentReader equipmentReader;
-    private readonly ILoggerFactory loggerFactory;
     private readonly SystemDiagnostics systemDiagnostics;
     private readonly Core.Navigation.NavSoakMetricsService? navSoakMetricsService;
     private readonly FeatureFlagService? featureFlagService;
@@ -183,15 +141,8 @@ public class DiagnosticsController : ControllerBase
         ActionBarSlotValidator slotValidator,
         ActionBarTextureReader textureReader,
         IBotController botController,
-        ExecGameCommand exec,
-        AddonConfigurator addonConfigurator,
         IAddonReader addonReader,
-        WowProcessInput wowInput,
-        CursorScan cursorScan,
-        AddonBits addonBits,
         BagReader bagReader,
-        EquipmentReader equipmentReader,
-        ILoggerFactory loggerFactory,
         SystemDiagnostics systemDiagnostics,
         IOptions<StartupOptions> startupOptions,
         Core.Navigation.NavSoakMetricsService? navSoakMetricsService = null,
@@ -204,15 +155,8 @@ public class DiagnosticsController : ControllerBase
         this.slotValidator = slotValidator;
         this.textureReader = textureReader;
         this.botController = botController;
-        this.exec = exec;
-        this.addonConfigurator = addonConfigurator;
         this.addonReader = addonReader;
-        this.wowInput = wowInput;
-        this.cursorScan = cursorScan;
-        this.addonBits = addonBits;
         this.bagReader = bagReader;
-        this.equipmentReader = equipmentReader;
-        this.loggerFactory = loggerFactory;
         this.systemDiagnostics = systemDiagnostics;
         this.startupOptions = startupOptions.Value;
         this.navSoakMetricsService = navSoakMetricsService;
