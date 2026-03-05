@@ -48,8 +48,26 @@
 - `CS0219` (CoreUnitTests): resolved in `CoreUnitTests/Path/RouteRerouterEvidenceTests.cs`.
 - `CA1852` (CoreUnitTests): resolved in `CoreUnitTests/GoalsComponent/FollowRouteGoalRefillTests.cs`.
 
-### Remaining Deferred (Sprint 3)
-- `CS0649`, `CS0067` in navigation instrumentation fields/events.
-- `CS0162` unreachable code warnings.
-- `CA1859`, `CA1869`, `CA1866` analyzer/perf guidance.
-- `SYSLIB1045` regex migration to `[GeneratedRegex]`.
+## Sprint 3 Target
+- Reduce warning inventory to `<= 10` unique warnings with conservative Core + test changes.
+- Preserve public API behavior and keep diagnostics endpoints unchanged.
+
+## Sprint 3 Outcome (Conservative: Core + CoreUnitTests)
+- Baseline (Sprint 3 start): `20` unique warnings.
+- After Sprint 3: `1` unique warning (`38` raw lines).
+- Net change: `19` unique warnings resolved.
+- Acceptance target met: `<= 10` unique warnings.
+
+### Fixed Categories
+- `CS0649`, `CS0067` in navigation instrumentation/event tracking.
+- `CS0162` unreachable code path cleanup.
+- `CA1859` internal concrete-type refinements.
+- `CA1869` JSON serializer options reuse.
+- `CA1866` parser overload cleanup.
+
+### Publish Point
+- Sprint 3 code changes landed on `dev` at commit `3d16626d6` on 2026-03-05.
+
+### Remaining Deferred (Sprint 4)
+- `SYSLIB1045` (`[GeneratedRegex]` migration) in `Core` and `CoreUnitTests`.
+  - Rationale: broad regex migration is behavior-sensitive and should run as a dedicated batch.
