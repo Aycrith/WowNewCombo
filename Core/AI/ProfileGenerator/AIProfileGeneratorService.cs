@@ -53,6 +53,10 @@ public sealed partial class AIProfileGeneratorService
     /// </summary>
     internal const int MaxDescriptionLength = 500;
     private static readonly string[] Errors = new[] { "Failed to deserialize generated profile" };
+    private static readonly JsonSerializerOptions JsonDeserializationOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     /// <summary>
     /// Sanitizes user input for safe embedding in LLM prompts.
@@ -136,10 +140,7 @@ public sealed partial class AIProfileGeneratorService
             }
 
             // Deserialize
-            var profile = JsonSerializer.Deserialize<ClassConfiguration>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            ClassConfiguration? profile = JsonSerializer.Deserialize<ClassConfiguration>(json, JsonDeserializationOptions);
 
             if (profile == null)
             {

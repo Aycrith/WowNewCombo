@@ -53,6 +53,15 @@ public class NavSoakMetricsServiceTests
         handler?.DynamicInvoke(value);
     }
 
+    private static void RaiseNavigationEvent(Core.Goals.Navigation navigation, string eventFieldName, string value)
+    {
+        FieldInfo? field = typeof(Core.Goals.Navigation).GetField(
+            eventFieldName,
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Delegate? handler = field?.GetValue(navigation) as Delegate;
+        handler?.DynamicInvoke(value);
+    }
+
     [Fact]
     public void AttachRuntimeSources_NavigationEvents_IncrementWindowCounters()
     {
@@ -74,6 +83,27 @@ public class NavSoakMetricsServiceTests
         snapshot.CurrentRouteDeviation.Should().Be(6.5f);
         snapshot.CurrentWindowMaxRouteDeviation.Should().Be(6.5f);
         snapshot.CurrentWindowAvgRouteDeviation.Should().BeApproximately(5.0f, 0.001f);
+    }
+
+    [Fact]
+    public void AttachRuntimeSources_RerouteEvents_IncrementWindowCounters()
+    {
+        using NavSoakMetricsService service = CreateService();
+        StuckDetector stuckDetector = CreateStuckDetectorStub();
+        Core.Goals.Navigation navigation = CreateNavigationStub();
+
+        service.AttachRuntimeSources(stuckDetector, navigation);
+
+        RaiseNavigationEvent(navigation, "OnRerouteTriggered");
+        RaiseNavigationEvent(navigation, "OnRerouteApplied");
+        RaiseNavigationEvent(navigation, "OnRerouteDropped", "stale-or-target-mismatch");
+        RaiseNavigationEvent(navigation, "OnDetourOnlyCollapseDetected");
+
+        NavSoakMetricsSnapshot snapshot = service.GetSnapshot();
+        snapshot.CurrentWindowRerouteTriggerCount.Should().Be(1);
+        snapshot.CurrentWindowRerouteApplyCount.Should().Be(1);
+        snapshot.CurrentWindowRerouteDropCount.Should().Be(1);
+        snapshot.CurrentWindowDetourOnlyCollapseCount.Should().Be(1);
     }
 
     [Fact]

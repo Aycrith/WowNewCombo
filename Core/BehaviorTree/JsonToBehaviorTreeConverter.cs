@@ -41,16 +41,16 @@ public sealed class JsonToBehaviorTreeConverter
 
         // Normal rotation
         SelectorNode rotation = new("Rotation");
-        IReadOnlyList<KeyAction>? sequence = config.Combat?.Sequence;
+        KeyAction[]? sequence = config.Combat?.Sequence?.ToArray();
         if (sequence != null)
         {
             foreach (KeyAction keyAction in sequence)
             {
-                IBehaviorNode action = CreateActionWithConditions(keyAction);
+                SequenceNode action = CreateActionWithConditions(keyAction);
                 rotation.Children.Add(action);
             }
 
-            int actionCount = sequence.Count;
+            int actionCount = sequence.Length;
             logger.LogInformation("[BehaviorTreeConverter] Converted {ActionCount} actions to behavior tree", actionCount);
         }
 
@@ -97,7 +97,7 @@ public sealed class JsonToBehaviorTreeConverter
     /// <summary>
     /// Creates action node with conditions from KeyAction.
     /// </summary>
-    private IBehaviorNode CreateActionWithConditions(KeyAction keyAction)
+    private SequenceNode CreateActionWithConditions(KeyAction keyAction)
     {
         SequenceNode sequence = new(keyAction.Name);
 

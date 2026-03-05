@@ -109,7 +109,7 @@ public sealed partial class LLMResponseParser
         }
 
         // Response might be the JSON directly
-        if (response.TrimStart().StartsWith("{"))
+        if (response.TrimStart().StartsWith('{'))
         {
             return response.Trim();
         }

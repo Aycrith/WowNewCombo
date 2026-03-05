@@ -53,6 +53,10 @@ public sealed class ProfileMarketplaceService
     /// Maximum response size for downloads (10 MB).
     /// </summary>
     internal const int MaxResponseSizeBytes = 10 * 1024 * 1024;
+    private static readonly JsonSerializerOptions JsonDeserializationOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public ProfileMarketplaceService(
         HttpClient httpClient,
@@ -398,10 +402,7 @@ public sealed class ProfileMarketplaceService
             string jsonContent = Encoding.UTF8.GetString(
                 Convert.FromBase64String(response.Content));
 
-            cachedIndex = JsonSerializer.Deserialize<ProfileIndex>(jsonContent, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            cachedIndex = JsonSerializer.Deserialize<ProfileIndex>(jsonContent, JsonDeserializationOptions);
 
             if (cachedIndex == null)
             {

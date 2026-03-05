@@ -82,7 +82,7 @@ public sealed class LLMClientFactory : ILLMClientFactory
     /// <summary>
     /// Creates an OpenAI client.
     /// </summary>
-    private ILLMClient CreateOpenAIClient()
+    private OpenAIClient CreateOpenAIClient()
     {
         logger.LogInformation("[LLMClientFactry] Creating OpenAI client");
 
@@ -97,7 +97,7 @@ public sealed class LLMClientFactory : ILLMClientFactory
     /// <summary>
     /// Creates a local Llama client.
     /// </summary>
-    private ILLMClient CreateLocalLlamaClient()
+    private LocalLlamaClient CreateLocalLlamaClient()
     {
         logger.LogInformation("[LLMClientFactry] Creating LocalLlama client");
 

@@ -19,13 +19,11 @@ using System.Threading.Tasks;
 using static System.MathF;
 using static System.Diagnostics.Stopwatch;
 
-#pragma warning disable 162
-
 namespace Core.Goals;
 
 public sealed partial class Navigation : IDisposable
 {
-    private const bool debug = false;
+    private static bool DebugEnabled => false;
 
     /// <summary>Threshold for distance difference comparison (1.5f = 150%). Used to detect significant deviation from expected path.</summary>
     private const float DIFF_THRESHOLD = 1.5f;
@@ -233,9 +231,15 @@ public sealed partial class Navigation : IDisposable
             {
                 InsertDetourIntoRoute(pendingReroute.DetourWaypoints);
             }
-            else if (debug)
+            else
             {
-                LogDebug($"[HazardAvoidance] Dropping stale/mismatched reroute {pendingReroute.Id} target={pendingReroute.OriginalTarget}");
+                float anchorDistance = playerReader.WorldPos.WorldDistanceXYTo(pendingReroute.OriginalTarget);
+                RecordRerouteDropped("stale-or-target-mismatch", anchorDistance);
+
+                if (DebugEnabled)
+                {
+                    LogDebug($"[HazardAvoidance] Dropping stale/mismatched reroute {pendingReroute.Id} target={pendingReroute.OriginalTarget}");
+                }
             }
 
             ClearPendingReroute();
@@ -297,7 +301,7 @@ public sealed partial class Navigation : IDisposable
                     wayPoints.Pop();
                     UpdateTotalRoute();
 
-                    if (debug)
+                    if (DebugEnabled)
                         LogDebug($"Reached wayPoint! Distance: {worldDistance} -- Remains: {wayPoints.Count}");
 
                     OnWayPointReached?.Invoke();
@@ -374,7 +378,7 @@ public sealed partial class Navigation : IDisposable
         {
             UpdateTotalRoute();
 
-            if (debug)
+            if (DebugEnabled)
                 LogDebug($"Resume: removed {removed} waypoint!");
         }
     }
@@ -478,7 +482,7 @@ public sealed partial class Navigation : IDisposable
 
         if (distance > MaxDistance || distance > AvgDistance * 2)
         {
-            if (debug)
+            if (DebugEnabled)
                 LogDebug($"Distance: {distance} vs Avg:({AvgDistance * 2},{AvgDistance}) - TAVG: {DIFF_THRESHOLD * AvgDistance} ");
 
             // When the pathfinder repeatedly returns "no path" for the same destination,
@@ -498,7 +502,7 @@ public sealed partial class Navigation : IDisposable
         }
         else
         {
-            if (debug)
+            if (DebugEnabled)
                 LogDebug($"non pathfinder - {distance} - {playerW} -> {targetW}");
 
             routeToNextWaypoint.Push(targetW);
@@ -540,6 +544,7 @@ public sealed partial class Navigation : IDisposable
         if (result.Path.Length == 0 && !isTriviallyClose)
         {
             hadNoPathFailureSinceLastPath = true;
+            tailRecalcFailures++;
 
             // Stop forward movement immediately when no path is available.
             // Prevents continuing in stale heading into terrain/water.
@@ -600,7 +605,7 @@ public sealed partial class Navigation : IDisposable
         {
             routeToNextWaypoint.Push(wayPoints.Peek());
 
-            if (debug)
+            if (DebugEnabled)
                 LogDebug($"RefillRouteToNextWaypoint -- WayPoint reached! {wayPoints.Count}");
         }
 
@@ -863,13 +868,13 @@ public sealed partial class Navigation : IDisposable
         if (newPoint.WorldDistanceXYTo(wayPoints.Peek()) > OutDoorMinDistance)
         {
             wayPoints.Push(newPoint);
-            if (debug)
+            if (DebugEnabled)
                 LogDebug("Adjusted resume point");
 
             return false;
         }
 
-        if (debug)
+        if (DebugEnabled)
             LogDebug("Skipped next point in path");
 
         return true;
@@ -920,7 +925,7 @@ public sealed partial class Navigation : IDisposable
 
         float simplifyTolerance = bits.Indoors() ? IndoorMinDistance / 2f : OutDoorMinDistance / 2f;
         Span<Vector3> reduced = PathSimplify.Simplify(route, simplifyTolerance, HighQuality);
-        if (debug)
+        if (DebugEnabled)
             LogDebug($"{nameof(SimplifyRoutePoints)} {routeToNextWaypoint.Count} -> {reduced.Length} | HQ: {HighQuality}");
 
         routeToNextWaypoint.Clear();

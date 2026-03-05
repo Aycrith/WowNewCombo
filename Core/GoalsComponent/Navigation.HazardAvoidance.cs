@@ -34,20 +34,33 @@ public sealed partial class Navigation
             return;
         }
 
-        _ = TriggerRouteAwareRerouteAsync(rerouter, playerPosition, detourAnchor, playerReader.UIMapId.Value, token);
+        float anchorDistance = playerPosition.WorldDistanceXYTo(detourAnchor);
+        _ = TriggerRouteAwareRerouteAsync(
+            rerouter,
+            playerPosition,
+            detourAnchor,
+            anchorDistance,
+            playerReader.UIMapId.Value,
+            token);
     }
 
     private async Task TriggerRouteAwareRerouteAsync(
         IRouteRerouter rerouter,
         Vector3 playerPosition,
         Vector3 detourAnchor,
+        float anchorDistance,
         int mapId,
         CancellationToken token)
     {
         try
         {
-            await rerouter.TriggerRerouteAsync(playerPosition, detourAnchor, mapId, token)
+            bool triggered = await rerouter.TriggerRerouteAsync(playerPosition, detourAnchor, mapId, token)
                 .ConfigureAwait(false);
+
+            if (triggered)
+            {
+                RecordRerouteTriggered(anchorDistance);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -134,6 +147,38 @@ public sealed partial class Navigation
     private void ClearPendingReroute()
     {
         routeRerouter?.ClearActiveReroute();
+    }
+
+    private void RecordRerouteTriggered(float anchorDistance)
+    {
+        rerouteTriggerCount++;
+        lastRerouteAnchorDistance = anchorDistance;
+        lastRerouteDropReason = null;
+        OnRerouteTriggered?.Invoke();
+    }
+
+    private void RecordRerouteApplied()
+    {
+        rerouteApplyCount++;
+        OnRerouteApplied?.Invoke();
+    }
+
+    private void RecordRerouteDropped(string reason, float? anchorDistance = null)
+    {
+        rerouteDropCount++;
+        lastRerouteDropReason = reason;
+        if (anchorDistance.HasValue)
+        {
+            lastRerouteAnchorDistance = anchorDistance.Value;
+        }
+
+        OnRerouteDropped?.Invoke(reason);
+    }
+
+    private void RecordDetourOnlyCollapse()
+    {
+        detourOnlyCollapseCount++;
+        OnDetourOnlyCollapseDetected?.Invoke();
     }
 
     internal static Vector3[] BuildInlineDetourRoute(
@@ -243,8 +288,16 @@ public sealed partial class Navigation
             stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
         }
 
+        if (routeToNextWaypoint.Count == 0)
+        {
+            RecordDetourOnlyCollapse();
+            RecordRerouteDropped("detour-collapsed");
+            return;
+        }
+
+        RecordRerouteApplied();
         OnDynamicDetourApplied?.Invoke();
-        if (debug)
+        if (DebugEnabled)
         {
             LogDebug($"[HazardAvoidance] Inserted detour ({detourWaypoints.Length} points) into route ({preservedCount} points) => {routeToNextWaypoint.Count} points");
         }
