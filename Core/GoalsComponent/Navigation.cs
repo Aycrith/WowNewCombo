@@ -592,7 +592,7 @@ public sealed partial class Navigation : IDisposable
             }
 
             if (SimplifyRouteToWaypoint)
-                SimplyfyRouteToWaypoint();
+                SimplifyRoutePoints();
 
         }
 
@@ -902,7 +902,7 @@ public sealed partial class Navigation : IDisposable
         }
     }
 
-    private void SimplyfyRouteToWaypoint()
+    private void SimplifyRoutePoints()
     {
         const bool HighQuality = false;
         Vector3[] route = routeToNextWaypoint.ToArray();
@@ -921,7 +921,7 @@ public sealed partial class Navigation : IDisposable
         float simplifyTolerance = bits.Indoors() ? IndoorMinDistance / 2f : OutDoorMinDistance / 2f;
         Span<Vector3> reduced = PathSimplify.Simplify(route, simplifyTolerance, HighQuality);
         if (debug)
-            LogDebug($"{nameof(SimplyfyRouteToWaypoint)} {routeToNextWaypoint.Count} -> {reduced.Length} | HQ: {HighQuality}");
+            LogDebug($"{nameof(SimplifyRoutePoints)} {routeToNextWaypoint.Count} -> {reduced.Length} | HQ: {HighQuality}");
 
         routeToNextWaypoint.Clear();
         for (int i = reduced.Length - 1; i >= 0; i--)

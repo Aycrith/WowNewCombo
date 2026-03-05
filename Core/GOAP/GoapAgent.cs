@@ -388,6 +388,12 @@ public sealed partial class GoapAgent : IDisposable
         return Plan.Count > 0 ? Plan.Pop() : null;
     }
 
+    /// <summary>
+    /// Rebuilds <see cref="WorldState"/> from the current <see cref="AddonBits"/> snapshot.
+    /// Called once per GOAP tick immediately before <see cref="GoapPlanner.Plan"/>.
+    /// Upper bits (28-31) encode <see cref="PlayerReader.Form"/> so the planner cache
+    /// invalidates correctly when the player changes stance/form.
+    /// </summary>
     private void UpdateWorldState()
     {
         AddonBits b = bits;

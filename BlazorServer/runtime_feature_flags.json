@@ -69,7 +69,8 @@
         "MicroPauseIntervalSeconds": 60,
         "MicroPauseMinMs": 200,
         "MicroPauseMaxMs": 2000
-      }
+      },
+      "Description": "Mouse/keyboard timing randomization for natural-looking input. Disabled pending anti-detection review."
     },
     "AIProfileGenerator": {
       "Enabled": true,
@@ -131,7 +132,8 @@
       "EnableResourceForecasting": true,
       "EnableSwingTimerAlignment": false,
       "MetricsFlushIntervalSeconds": 30,
-      "MetricsOutputPath": "logs/rotation_metrics.json"
+      "MetricsOutputPath": "logs/rotation_metrics.json",
+      "Description": "Dynamic rotation weighting with resource forecasting. Disabled pending integration testing."
     },
     "StuckSensitivity": {
       "Enabled": true,
