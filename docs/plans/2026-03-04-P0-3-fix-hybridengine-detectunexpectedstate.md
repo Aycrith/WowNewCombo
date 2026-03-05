@@ -1,5 +1,13 @@
 # P0-3: Implement HybridDecisionEngine.DetectUnexpectedState
 
+## STATUS: COMPLETED — commit `cce5e5a78` (2026-03-05)
+
+**What was done:** `DetectUnexpectedState()` now returns `playerReader.HealthPercent() < 20 && !bits.Combat()`. `AddonBits` was injected into `HybridDecisionEngine` as parameter 6 in the constructor. DI registration updated in `Phase3ServiceCollectionExtensions.cs`.
+**Tests added:** 4 unit tests in `CoreUnitTests/AI/HybridDecisionEngineTests.cs` (low-health-out-of-combat → true; full-health → false; low-health-in-combat → false; threshold boundary).
+**Files modified:** `Core/AI/HybridDecision/HybridDecisionEngine.cs`, `Core/DependencyInjection/Phase3ServiceCollectionExtensions.cs`, new `CoreUnitTests/AI/HybridDecisionEngineTests.cs`.
+
+---
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Replace the always-`false` stub in `DetectUnexpectedState()` with real logic so the enabled `HybridLLMDecision` feature actually activates LLM decision-making for unexpected game states.

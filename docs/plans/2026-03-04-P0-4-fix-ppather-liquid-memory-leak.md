@@ -1,5 +1,13 @@
 # P0-4: Fix PPatherV2 Liquid Geometry Memory Leak
 
+## STATUS: COMPLETED — commit `6fa6e7094` (2026-03-05)
+
+**What was done:** Confirmed that `Structure terrain = new()` is scoped per tile (inside the outer x,y loop), not shared across tiles. The memory leak concern was a false alarm. Uncommented `adt.GetLiquidVertsAndTris((uint)cx, (uint)cy, terrain)` in `CoreManualTests/PPatherV2/PPatherV2.cs`. Water/ocean navigation geometry is now fully included.
+**Tests added:** 0 (manual test only — CoreManualTests are excluded from `dotnet test`).
+**Files modified:** `CoreManualTests/PPatherV2/PPatherV2.cs` (1 line uncommented).
+
+---
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Re-enable `GetLiquidVertsAndTris` in PPatherV2 by resolving the memory concern that caused it to be commented out, restoring water/ocean/liquid navigation geometry.

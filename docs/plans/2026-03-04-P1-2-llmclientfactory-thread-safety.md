@@ -15,40 +15,41 @@
 ### Current code (`Core/AI/LLM/LLMClientFactory.cs`)
 
 ```csharp
-private readonly Dictionary<string, ILLMClient> clientCache = new();
-private readonly object cacheLock = new();          // line 22
+// Lines 21-22:
+private readonly Dictionary<string, ILLMClient> clientCache = new(StringComparer.OrdinalIgnoreCase);
+private readonly object cacheLock = new();
 
 public ILLMClient CreateClient(string providerName) // lines 35-61
 {
-    // First check (outside lock) — RACE CONDITION:
-    // Thread A and Thread B both see empty cache and pass this check simultaneously
-    if (clientCache.ContainsKey(providerName))
-        return clientCache[providerName];
+    ArgumentException.ThrowIfNullOrWhiteSpace(providerName); // already present
 
+    // Lock #1: read check
     lock (cacheLock)
     {
-        // Second check (inside lock) — one thread wins the lock
-        if (clientCache.ContainsKey(providerName))
-            return clientCache[providerName];
-
-        // Both threads could reach here if they both passed the first check
-        // before either acquired the lock — but standard double-checked locking
-        // should prevent this... UNLESS the first check is on a non-volatile Dictionary
-        // which is not thread-safe for concurrent reads.
-        ILLMClient client = providerName.ToLowerInvariant() switch
-        {
-            "openai" => CreateOpenAIClient(),
-            "local" or "llama" or "local_llama" => CreateLocalLlamaClient(),
-            _ => throw new ArgumentException($"Unknown provider: {providerName}")
-        };
-
-        clientCache[providerName] = client;
-        return client;
+        if (clientCache.TryGetValue(providerName, out var cached))
+            return cached;
     }
+
+    // Client construction OUTSIDE lock — concurrent threads can both reach here,
+    // creating duplicate HttpClient instances
+    ILLMClient client = providerName.ToLowerInvariant() switch
+    {
+        "openai" => CreateOpenAIClient(),
+        "local" or "llama" or "local_llama" => CreateLocalLlamaClient(),
+        _ => throw new ArgumentException($"Unknown LLM provider: {providerName}.", nameof(providerName))
+    };
+
+    // Lock #2: write — last-write-wins; duplicate client from concurrent call is leaked
+    lock (cacheLock)
+    {
+        clientCache[providerName] = client;
+    }
+
+    return client;
 }
 ```
 
-**The actual race:** `Dictionary<TKey, TValue>` is NOT thread-safe for concurrent reads when a write is happening. The pattern is broken because Thread A could be reading `clientCache.ContainsKey()` while Thread B is writing `clientCache[providerName] = client`. This is undefined behavior in .NET.
+**The actual race:** Two threads can both pass the first lock (cache miss), both construct clients (two `HttpClient` instances created), and then both acquire the second lock sequentially — last writer wins, first writer's `HttpClient` is leaked and never disposed. `ArgumentException.ThrowIfNullOrWhiteSpace` is already present (no change needed there).
 
 **Reference:** https://andrewlock.net/making-getoradd-on-concurrentdictionary-thread-safe-using-lazy/
 

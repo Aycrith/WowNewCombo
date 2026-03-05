@@ -1,5 +1,13 @@
 # P0-1: Upgrade Pre-release NuGet Packages to Stable
 
+## STATUS: COMPLETED — commit `2e645ad02` (2026-03-05)
+
+**What was done:** `Newtonsoft.Json` 13.0.5-beta1 → 13.0.4; `Serilog.Expressions` 5.0.1-dev-00182 → 5.0.0 in `Directory.Packages.props`.
+**Tests added:** 0 (pure package version update — no behavior change).
+**Build:** Clean, 0 errors.
+
+---
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Replace `Newtonsoft.Json 13.0.5-beta1` and `Serilog.Expressions 5.0.1-dev-00182` with their latest stable equivalents in `Directory.Packages.props`.

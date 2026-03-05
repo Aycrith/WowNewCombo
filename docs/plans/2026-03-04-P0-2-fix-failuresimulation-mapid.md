@@ -1,5 +1,13 @@
 # P0-2: Fix FailureSimulationService Hardcoded MapId = 0
 
+## STATUS: COMPLETED — commit `94d3914cf` (2026-03-05)
+
+**What was done:** Added `MapId` and `UIMapId` properties to `GameStateManager`. `FailureSimulationService.SimulateStuck()` now uses `_gameState.MapId` instead of hardcoded 0.
+**Tests added:** 1 regression test in `CoreUnitTests/Integration/BotFailureScenarioTests.cs`.
+**Files modified:** `MockWoWClient/GameState/FailureSimulationService.cs`, `MockWoWClient/GameState/GameStateManager.cs`, `CoreUnitTests/Integration/BotFailureScenarioTests.cs`.
+
+---
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Replace hardcoded `MapId = 0` in `SimulateStuck()` with the actual current map ID from the injected game state, so zone-specific stuck-detection integration tests are zone-aware.

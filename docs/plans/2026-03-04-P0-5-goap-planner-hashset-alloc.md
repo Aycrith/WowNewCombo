@@ -1,5 +1,16 @@
 # P0-5: Eliminate Per-Recursion HashSet Allocation in GoapPlanner.BuildGraph
 
+## STATUS: COMPLETED — commit `81053aef0` (2026-03-05)
+
+**What was done:** `BuildGraph` now accepts `uint includeMask` instead of `HashSet<GoapGoal>`. Bit `i` set = goal `i` is still a candidate for the current recursion branch. Exclusion is `nextMask = includeMask & ~(1u << i)` — zero heap allocation per recursion. Dead `ThreadStatic` cache fields and `EnableUsableGoalCache` branch removed. Guard added: throws `InvalidOperationException` if `available.Length > 31` (current max is 28).
+**Performance impact:** ~1,600 `HashSet<GoapGoal>` allocations eliminated per `Plan()` call; at 500 Hz = ~800,000 allocs/sec eliminated.
+**Tests added:** 1 regression test `Plan_BitmaskExclusion_GoalNotUsedTwiceInPath` in `CoreUnitTests/GOAP/GoapPlannerTests.cs`.
+**Files modified:** `Core/GOAP/GoapPlanner.cs`, `CoreUnitTests/GOAP/GoapPlannerTests.cs`.
+
+**Note:** The actual commit message was `perf(goap): replace per-recursion HashSet<GoapGoal> with uint bitmask in BuildGraph (P0-5)` — slightly different from the plan's suggested message but semantically identical.
+
+---
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Replace `new HashSet<GoapGoal>(usable)` allocated on every recursive call in `BuildGraph` with a `uint` bitmask exclusion pattern — reducing GOAP planning allocations to zero per `Plan()` call.

@@ -12,7 +12,7 @@
 
 ## Context
 
-### Current code (`Core/Navigation/NavSoakMetricsService.cs:420-441`)
+### Current code (`Core/Navigation/NavSoakMetricsService.cs:433-454`)
 
 ```csharp
 private static string ResolveOutputDir(string configuredOutputDir)
@@ -140,7 +140,7 @@ dotnet test CoreUnitTests --filter "ResolveOutputDir" --verbosity detailed
 
 ## Step 2: Update ResolveOutputDir in NavSoakMetricsService.cs
 
-Replace the method body (lines 420-441):
+Replace the method body (lines 433-454). The fallback at line 453 (`return configuredOutputDir;`) is the bug — replace the entire method:
 
 ```csharp
 private static string ResolveOutputDir(string configuredOutputDir)
