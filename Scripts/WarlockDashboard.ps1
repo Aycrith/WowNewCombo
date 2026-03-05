@@ -15,14 +15,22 @@
   pwsh -File Scripts/WarlockDashboard.ps1
   pwsh -File Scripts/WarlockDashboard.ps1 -BaseUrl http://localhost:5000 -RefreshSeconds 10
 #>
-
+[CmdletBinding()]
 param(
     [string]$BaseUrl = "http://localhost:5000",
-    [int]$RefreshSeconds = 10
+    [int]$RefreshSeconds = 10,
+    [Alias("h", "?")][switch]$Help
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Continue"
+
+if ($Help)
+{
+    Write-Host "Usage: WarlockDashboard.ps1 [-BaseUrl <url>] [-RefreshSeconds <n>]" -ForegroundColor Cyan
+    Write-Host "Opens a read-only live status dashboard for warlock leveling." -ForegroundColor Gray
+    return
+}
 
 $COLOR_HEALTHY = "Green"
 $COLOR_WARNING = "Yellow"

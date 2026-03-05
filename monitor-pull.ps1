@@ -1,4 +1,16 @@
-param([int]$Bytes = 30000, [int]$Seconds = 0)
+[CmdletBinding()]
+param(
+    [int]$Bytes = 30000,
+    [int]$Seconds = 0,
+    [Alias("h", "?")][switch]$Help
+)
+
+if ($Help)
+{
+    Write-Host "Usage: monitor-pull.ps1 [-Bytes <n>] [-Seconds <n>]" -ForegroundColor Cyan
+    Write-Host "When -Seconds is 0, prints one-shot filtered log tail; otherwise runs live filtered tail for N seconds." -ForegroundColor Gray
+    return
+}
 
 $logPath = (Get-ChildItem C:\WowClassicGrindBot -Recurse -Filter "out*.log" | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
 
