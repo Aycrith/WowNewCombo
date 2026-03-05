@@ -36,7 +36,7 @@
       "MaxEventsBeforePrune": 10000,
       "ClusteringIntervalSeconds": 15,
       "SaveIntervalMinutes": 3,
-      "Description": "DISABLED: Detour algorithm replaces entire pathfinder routes with 5-point straight lines, causing stuck feedback loops. Re-enable after CalculateDetourAsync is fixed to stitch detours into existing paths."
+      "Description": "Inline detour stitching: prepends hazard-avoidance waypoints to the front of the current route without replacing it. Enable after baseline soak validation."
     },
     "Humanization": {
       "Enabled": false,
@@ -92,7 +92,7 @@
       "Description": "Community profile browser and downloader from GitHub repository"
     },
     "BehaviorTreeCombat": {
-      "Enabled": true,
+      "Enabled": false,
       "FallbackToGOAP": true,
       "EnableVisualization": false,
       "Description": "Alternative combat system using behavior trees instead of GOAP"
@@ -124,7 +124,7 @@
       "Description": "Input security hardening to reduce detection vectors (WM_CHAR, focus guard, hybrid modifiers)"
     },
     "CombatRotationOptimizer": {
-      "Enabled": true,
+      "Enabled": false,
       "FallbackToStaticPriority": true,
       "BaseWeightMultiplier": 1,
       "EnableMetrics": true,
@@ -140,7 +140,7 @@
       "EnablePredictiveDetection": false,
       "PredictiveRiskThreshold": 70,
       "ApproachTimeoutMultiplier": 2.0,
-      "Description": "Conservative stuck thresholds for nav recovery baseline. Gives heading corrections ample time to complete before triggering stuck recovery."
+      "Description": "Conservative stuck thresholds for navigation reliability. Allows turn-heavy segments and heading corrections to complete before recovery actions."
     }
   },
   "Monitoring": {

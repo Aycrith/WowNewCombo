@@ -190,3 +190,14 @@ Central package management: `Directory.Packages.props`
 
 - **ID:** `/xian55/wowclassicgrindbot`
 - **Coverage:** 282 code snippets — class profiles, GOAP, requirements
+
+## Capability Alias Router
+
+- **Registry:** `docs/ai-capability-audit/capability_alias_registry.json`
+- **Guide:** `docs/ai-capability-audit/AI_CAPABILITY_INTERNALIZATION_GUIDE.md`
+- **Invocation grammar:** `cap:<alias>`, `use capability <alias>`, `run <alias> workflow`
+- When an alias is detected:
+  - Resolve matching entry in the registry
+  - Execute `execution_pattern` using `required_tools`
+  - Preserve `status` semantics (`partial` and `external-only` must be called out explicitly)
+- Backward compatibility: natural-language requests remain fully supported.
