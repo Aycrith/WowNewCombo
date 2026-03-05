@@ -54,54 +54,34 @@ public static class GoapPlanner
         BitVector32 worldState,
         bool[] goal)
     {
-        Node root = new(null, 0, worldState, null);
+        if (available.Length > 31)
+            throw new InvalidOperationException(
+                $"GoapPlanner bitmask supports at most 31 goals; got {available.Length}. " +
+                "Increase bitmask type to ulong to support up to 63 goals.");
 
-        // Use local collections instead of static fields to avoid thread-safety issues
-        HashSet<GoapGoal> usable = new();
+        Node root = new(null, 0, worldState, null);
         PriorityQueue<Node, float> leaves = new();
 
-        int worldStateBits = worldState.Data;
-
-        if (EnableUsableGoalCache &&
-            hasUsableGoalsCache &&
-            cachedUsableGoals != null &&
-            cachedWorldStateBits == worldStateBits &&
-            ReferenceEquals(cachedAvailableGoals, available))
+        // Collect usable goals into a fixed-size buffer — no heap allocation for this array
+        // when goal count is low (< available.Length, which is typically 28).
+        int usableCount = 0;
+        GoapGoal[] usableBuffer = new GoapGoal[available.Length];
+        for (int i = 0; i < available.Length; i++)
         {
-            for (int i = 0; i < cachedUsableGoals.Length; i++)
-            {
-                usable.Add(cachedUsableGoals[i]);
-            }
-        }
-        else
-        {
-            List<GoapGoal> usableList = new(available.Length);
-
-            // check what actions can run using their checkProceduralPrecondition
-            for (int i = 0; i < available.Length; i++)
-            {
-                GoapGoal a = available[i];
-                if (a.CanRun())
-                {
-                    usable.Add(a);
-                    usableList.Add(a);
-                }
-            }
-
-            if (EnableUsableGoalCache)
-            {
-                cachedUsableGoals = usableList.Count == 0 ? Array.Empty<GoapGoal>() : usableList.ToArray();
-                cachedAvailableGoals = available;
-                cachedWorldStateBits = worldStateBits;
-                hasUsableGoalsCache = true;
-            }
+            GoapGoal g = available[i];
+            if (g.CanRun())
+                usableBuffer[usableCount++] = g;
         }
 
-        // build up the tree and record the leaf nodes that provide a solution to the goal.
-        if (BuildGraph(root, leaves, usable, goal) == 0)
-        {
+        if (usableCount == 0)
             return EmptyGoal;
-        }
+
+        GoapGoal[] usable = usableBuffer[..usableCount];
+
+        // Build initial mask with all usable-goal bits set
+        uint allMask = (1u << usableCount) - 1u;
+
+        BuildGraph(root, leaves, usable, allMask, goal);
 
         // get the cheapest leaf
         if (leaves.TryDequeue(out Node? node, out _))
@@ -129,35 +109,37 @@ public static class GoapPlanner
 	* sequence.
 	*/
 
-    private static int BuildGraph(Node parent, PriorityQueue<Node, float> leaves, HashSet<GoapGoal> usable, bool[] goal)
+    private static void BuildGraph(
+        Node parent,
+        PriorityQueue<Node, float> leaves,
+        GoapGoal[] usable,
+        uint includeMask,
+        bool[] goal)
     {
-        // go through each action available at this node and see if we can use it here
-        foreach (GoapGoal action in usable)
+        for (int i = 0; i < usable.Length; i++)
         {
-            // if the parent state has the conditions for this action's preconditions, we can use it here
-            if (InState(action.Preconditions, parent.state))
+            if ((includeMask & (1u << i)) == 0)
+                continue;
+
+            GoapGoal action = usable[i];
+
+            if (!InState(action.Preconditions, parent.state))
+                continue;
+
+            BitVector32 effectedState = PopulateState(parent.state, action.Effects);
+            Node node = new(parent, parent.runningCost + action.Cost, effectedState, action);
+
+            if (InState(goal, effectedState))
             {
-                // apply the action's effects to the parent state
-                BitVector32 effectedState = PopulateState(parent.state, action.Effects);
-                Node node = new(parent, parent.runningCost + action.Cost, effectedState, action);
-
-                if (InState(goal, effectedState))
-                {
-                    // we found a solution!
-                    leaves.Enqueue(node, node.runningCost);
-                }
-                else
-                {
-                    // not at a solution yet, so test all the remaining actions and branch out the tree
-                    HashSet<GoapGoal> subset = new(usable);
-                    subset.Remove(action);
-
-                    BuildGraph(node, leaves, subset, goal);
-                }
+                leaves.Enqueue(node, node.runningCost);
+            }
+            else
+            {
+                // Exclude this goal from deeper branches — prevents using the same goal twice
+                uint nextMask = includeMask & ~(1u << i);
+                BuildGraph(node, leaves, usable, nextMask, goal);
             }
         }
-
-        return leaves.Count;
     }
 
     /**

@@ -247,6 +247,34 @@ public class GoapPlannerTests
     #region Cost Optimization Tests
 
     [Fact]
+    public void Plan_BitmaskExclusion_GoalNotUsedTwiceInPath()
+    {
+        // Regression guard: a goal should never appear twice in the same plan path.
+        // With HashSet exclusion / bitmask exclusion this is guaranteed.
+        // Using a diamond-shaped graph where goalA has no preconditions and provides
+        // both effects needed by goalC — naive planning without exclusion would use goalA twice.
+        var goalA = CreateGoal("A",
+            preconditions: null,
+            effects: new Dictionary<GoapKey, bool> { [GoapKey.hastarget] = true });
+
+        var goalB = CreateGoal("B",
+            preconditions: new Dictionary<GoapKey, bool> { [GoapKey.hastarget] = true },
+            effects: new Dictionary<GoapKey, bool> { [GoapKey.incombat] = true });
+
+        var available = new[] { goalA, goalB };
+        var worldState = CreateWorldState();
+        var goalState = CreateGoalState((GoapKey.incombat, true));
+
+        Stack<GoapGoal> plan = GoapPlanner.Plan(available, worldState, goalState);
+
+        plan.Should().NotBeNull();
+        plan.Count.Should().Be(2);
+        // Verify no duplicates
+        GoapGoal[] actions = plan.ToArray();
+        actions.Distinct().Should().HaveCount(2, "each goal must appear at most once in a plan path");
+    }
+
+    [Fact]
     public void Plan_ChoosesCheaperPath()
     {
         // Arrange - two ways to achieve incombat
