@@ -27,6 +27,8 @@ public sealed class HybridDecisionEngine
     private readonly ILLMClientFactory llmFactory;
     private readonly CircuitBreaker<LLMDecisionResult> circuitBreaker;
     private readonly FeatureFlagsOptions flags;
+    private readonly PlayerReader playerReader;
+    private readonly AddonBits bits;
 
     private readonly HybridDecisionCache cache;
     private readonly GameStateSerializer stateSerializer;
@@ -39,12 +41,15 @@ public sealed class HybridDecisionEngine
         GoapAgent goapAgent,
         ILLMClientFactory llmFactory,
         IOptions<FeatureFlagsOptions> options,
-        PlayerReader playerReader)
+        PlayerReader playerReader,
+        AddonBits bits)
     {
         this.logger = logger;
         this.goapAgent = goapAgent;
         this.llmFactory = llmFactory;
         this.flags = options.Value;
+        this.playerReader = playerReader;
+        this.bits = bits;
 
         cache = new HybridDecisionCache();
         stateSerializer = new GameStateSerializer(playerReader);
@@ -191,17 +196,12 @@ public sealed class HybridDecisionEngine
     /// <summary>
     /// Detects situations where GOAP may not have good coverage.
     /// </summary>
-    private static bool DetectUnexpectedState()
+    private bool DetectUnexpectedState()
     {
-        // Situations GOAP wasn't designed for:
-        // 1. Large pulls (many enemies)
-        // 2. Elites or rare mobs
-        // 3. Emergency situations (very low health outside combat)
-        // 4. Complex multi-target scenarios
-
-        // TODO: Implement proper state detection
-        // For now, return false
-        return false;
+        // Unexpected = critically low health while NOT in combat.
+        // During combat, low health is expected. Outside combat it indicates
+        // fall damage, environmental hazard, or routing failure — LLM can help.
+        return playerReader.HealthPercent() < 20 && !bits.Combat();
     }
 
     /// <summary>

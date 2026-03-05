@@ -57,8 +57,9 @@ public static class Phase3ServiceCollectionExtensions
             ILLMClientFactory llmFactory = sp.GetRequiredService<ILLMClientFactory>();
             IOptions<FeatureFlagsOptions> options = sp.GetRequiredService<IOptions<FeatureFlagsOptions>>();
             PlayerReader playerReader = sp.GetRequiredService<PlayerReader>();
+            AddonBits bits = sp.GetRequiredService<AddonBits>();
 
-            return new HybridDecisionEngine(logger, goapAgent, llmFactory, options, playerReader);
+            return new HybridDecisionEngine(logger, goapAgent, llmFactory, options, playerReader, bits);
         });
 
         return services;
