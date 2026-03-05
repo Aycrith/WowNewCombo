@@ -24,6 +24,10 @@ public sealed record NavSoakMetricsSnapshot(
     int CurrentWindowStuckEvents,
     int CurrentWindowRepeatStuckCount,
     double CurrentWindowRepeatStuckRate,
+    int CurrentWindowRerouteTriggerCount,
+    int CurrentWindowRerouteApplyCount,
+    int CurrentWindowRerouteDropCount,
+    int CurrentWindowDetourOnlyCollapseCount,
     float CurrentRouteDeviation,
     float CurrentWindowMaxRouteDeviation,
     float CurrentWindowAvgRouteDeviation);
@@ -52,6 +56,10 @@ public sealed class NavSoakMetricsService : IDisposable
     private int successfulReconnects;
     private int stuckEvents;
     private int repeatStuckCount;
+    private int rerouteTriggerCount;
+    private int rerouteApplyCount;
+    private int rerouteDropCount;
+    private int detourOnlyCollapseCount;
     private DateTime windowStart;
     private Vector3 lastStuckPosition;
     private float maxDeviation;
@@ -65,6 +73,10 @@ public sealed class NavSoakMetricsService : IDisposable
     public int CurrentWindowRepeatStuckCount => repeatStuckCount;
     public double CurrentWindowRepeatStuckRate =>
         stuckEvents == 0 ? 0.0 : Math.Round((double)repeatStuckCount / stuckEvents, 4);
+    public int CurrentWindowRerouteTriggerCount => rerouteTriggerCount;
+    public int CurrentWindowRerouteApplyCount => rerouteApplyCount;
+    public int CurrentWindowRerouteDropCount => rerouteDropCount;
+    public int CurrentWindowDetourOnlyCollapseCount => detourOnlyCollapseCount;
     public float CurrentWindowMaxRouteDeviation => maxDeviation;
     public float CurrentWindowAvgRouteDeviation =>
         deviationSampleCount == 0 ? 0f : deviationSum / deviationSampleCount;
@@ -123,6 +135,10 @@ public sealed class NavSoakMetricsService : IDisposable
                 CurrentWindowStuckEvents: stuckEvents,
                 CurrentWindowRepeatStuckCount: repeatStuckCount,
                 CurrentWindowRepeatStuckRate: stuckEvents == 0 ? 0.0 : Math.Round((double)repeatStuckCount / stuckEvents, 4),
+                CurrentWindowRerouteTriggerCount: rerouteTriggerCount,
+                CurrentWindowRerouteApplyCount: rerouteApplyCount,
+                CurrentWindowRerouteDropCount: rerouteDropCount,
+                CurrentWindowDetourOnlyCollapseCount: detourOnlyCollapseCount,
                 CurrentRouteDeviation: currentDeviation,
                 CurrentWindowMaxRouteDeviation: maxDeviation,
                 CurrentWindowAvgRouteDeviation: deviationSampleCount == 0 ? 0f : deviationSum / deviationSampleCount);
@@ -166,6 +182,10 @@ public sealed class NavSoakMetricsService : IDisposable
                 sessionNavigation.OnDynamicDetourApplied += HandleDetourApplied;
                 sessionNavigation.OnSuccessfulReconnect += HandleSuccessfulReconnect;
                 sessionNavigation.OnDeviationSample += HandleDeviationSampleReceived;
+                sessionNavigation.OnRerouteTriggered += HandleRerouteTriggered;
+                sessionNavigation.OnRerouteApplied += HandleRerouteApplied;
+                sessionNavigation.OnRerouteDropped += HandleRerouteDropped;
+                sessionNavigation.OnDetourOnlyCollapseDetected += HandleDetourOnlyCollapseDetected;
                 attachedNewNavigation = true;
             }
         }
@@ -218,6 +238,12 @@ public sealed class NavSoakMetricsService : IDisposable
     {
         lock (sync)
         {
+            if (!float.IsFinite(deviation))
+            {
+                currentDeviation = 0f;
+                return;
+            }
+
             currentDeviation = deviation;
 
             if (deviation > maxDeviation)
@@ -228,6 +254,42 @@ public sealed class NavSoakMetricsService : IDisposable
             deviationSum += deviation;
             deviationSampleCount++;
         }
+    }
+
+    private void HandleRerouteTriggered()
+    {
+        lock (sync)
+        {
+            rerouteTriggerCount++;
+        }
+        MaybeCloseWindow();
+    }
+
+    private void HandleRerouteApplied()
+    {
+        lock (sync)
+        {
+            rerouteApplyCount++;
+        }
+        MaybeCloseWindow();
+    }
+
+    private void HandleRerouteDropped(string _)
+    {
+        lock (sync)
+        {
+            rerouteDropCount++;
+        }
+        MaybeCloseWindow();
+    }
+
+    private void HandleDetourOnlyCollapseDetected()
+    {
+        lock (sync)
+        {
+            detourOnlyCollapseCount++;
+        }
+        MaybeCloseWindow();
     }
 
     private void MaybeCloseWindow()
@@ -271,8 +333,14 @@ public sealed class NavSoakMetricsService : IDisposable
                 StuckEvents = stuckEvents,
                 RepeatStuckCount = repeatStuckCount,
                 TailRecalcFailures = tailRecalcFailures,
-                MaxRouteDeviation = maxDeviation,
-                AvgRouteDeviation = deviationSampleCount > 0 ? deviationSum / deviationSampleCount : 0f
+                MaxRouteDeviation = SanitizeFloat(maxDeviation),
+                AvgRouteDeviation = deviationSampleCount > 0
+                    ? SanitizeFloat(deviationSum / deviationSampleCount)
+                    : 0f,
+                RerouteTriggerCount = rerouteTriggerCount,
+                RerouteApplyCount = rerouteApplyCount,
+                RerouteDropCount = rerouteDropCount,
+                DetourOnlyCollapseCount = detourOnlyCollapseCount
             };
             completedWindows.Add(window);
 
@@ -280,6 +348,10 @@ public sealed class NavSoakMetricsService : IDisposable
             successfulReconnects = 0;
             stuckEvents = 0;
             repeatStuckCount = 0;
+            rerouteTriggerCount = 0;
+            rerouteApplyCount = 0;
+            rerouteDropCount = 0;
+            detourOnlyCollapseCount = 0;
             maxDeviation = 0f;
             deviationSum = 0f;
             deviationSampleCount = 0;
@@ -288,11 +360,14 @@ public sealed class NavSoakMetricsService : IDisposable
         }
 
         logger.LogInformation(
-            "[NavSoakMetrics ] Window closed: Bypass={Bypass} Reconnects={Reconnects} Stuck={Stuck} RepeatRate={Rate:F4}",
+            "[NavSoakMetrics ] Window closed: Bypass={Bypass} Reconnects={Reconnects} Stuck={Stuck} RepeatRate={Rate:F4} Reroute(T/A/D)={Trigger}/{Apply}/{Drop}",
             window!.FrontBypassActivations,
             window.SuccessfulReconnects,
             window.StuckEvents,
-            window.RepeatStuckRate);
+            window.RepeatStuckRate,
+            window.RerouteTriggerCount,
+            window.RerouteApplyCount,
+            window.RerouteDropCount);
     }
 
     private async Task WriteArtifactAsync(CancellationToken cancellationToken)
@@ -339,11 +414,20 @@ public sealed class NavSoakMetricsService : IDisposable
         successfulReconnects = 0;
         stuckEvents = 0;
         repeatStuckCount = 0;
+        rerouteTriggerCount = 0;
+        rerouteApplyCount = 0;
+        rerouteDropCount = 0;
+        detourOnlyCollapseCount = 0;
         lastStuckPosition = default;
         maxDeviation = 0f;
         deviationSum = 0f;
         deviationSampleCount = 0;
         currentDeviation = 0f;
+    }
+
+    private static float SanitizeFloat(float value)
+    {
+        return float.IsFinite(value) ? value : 0f;
     }
 
     private static string ResolveOutputDir(string configuredOutputDir)
@@ -382,6 +466,10 @@ public sealed class NavSoakMetricsService : IDisposable
             nav.OnDynamicDetourApplied -= HandleDetourApplied;
             nav.OnSuccessfulReconnect -= HandleSuccessfulReconnect;
             nav.OnDeviationSample -= HandleDeviationSampleReceived;
+            nav.OnRerouteTriggered -= HandleRerouteTriggered;
+            nav.OnRerouteApplied -= HandleRerouteApplied;
+            nav.OnRerouteDropped -= HandleRerouteDropped;
+            nav.OnDetourOnlyCollapseDetected -= HandleDetourOnlyCollapseDetected;
         }
 
         attachedNavigations.Clear();

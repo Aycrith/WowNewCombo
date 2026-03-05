@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace Core;
 
 public enum StuckTriggerReason
 {
     TimeoutNoProgress,
+    ShortNoProgress,
     SpinDetected,
     PredictiveRisk,
     ExternalOscillationNotify
@@ -52,4 +54,43 @@ public sealed record NavigationRuntimeSnapshot(
     int FrontBypassAttemptCount,
     int RepeatedFrontBypassCount,
     int RepeatedFrontBypassNoProgressCount,
-    int RepeatedHazardDetourCount);
+    int RepeatedHazardDetourCount,
+    int RerouteTriggerCount,
+    int RerouteApplyCount,
+    int RerouteDropCount,
+    string? LastRerouteDropReason,
+    float? LastRerouteAnchorDistance);
+
+public sealed record NavigationRerouteRuntimeSnapshot(
+    int RerouteTriggerCount,
+    int RerouteApplyCount,
+    int RerouteDropCount,
+    int DetourOnlyCollapseCount,
+    string? LastRerouteDropReason,
+    float? LastRerouteAnchorDistance,
+    bool HasActiveReroute,
+    Guid? ActiveRerouteId,
+    DateTime? ActiveRerouteStartedAt,
+    Vector3? ActiveRerouteOriginalTarget,
+    int ActiveRerouteWaypointCount);
+
+public sealed record CastingRuntimeSnapshot(
+    int CurrentActionNotDetectedCountWindow,
+    int UIFeedbackNotDetectedCountWindow,
+    int AmbiguousCastResolvedCountWindow,
+    int InterruptedRetrySuppressedCountWindow,
+    int WindowSeconds);
+
+public sealed record CombatRuntimeSnapshot(
+    int LostTargetCountWindow,
+    int LostTargetBurstCountWindow,
+    int LostTargetReacquireAttemptCountWindow,
+    int LostTargetReacquireSuccessCountWindow,
+    int TargetlessCombatGraceUsedCountWindow,
+    int ReacquireFallbackAttemptCountWindow,
+    int ReacquireFallbackSuccessCountWindow,
+    int WindowSeconds);
+
+public sealed record PullRuntimeSnapshot(
+    int PullFailureSoftRetryCountWindow,
+    int WindowSeconds);

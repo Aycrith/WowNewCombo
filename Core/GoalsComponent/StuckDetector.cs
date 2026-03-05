@@ -59,12 +59,11 @@ public sealed class StuckDetector : IGoapEventListener
     private const double DEFAULT_UNSTUCK_AFTER_MS = 2000;
     private const double DEFAULT_ACTION_STUCK_TIME = 3000;
 
-    private const double SPIN_CHECK_INTERVAL_MS = 500;
-    private const float SPIN_THRESHOLD_RADIANS = 2.0f;
-    private const int SPIN_DETECTION_COUNT = 3;
-    private const int HEADING_HISTORY_SIZE = 10;
     private const float RepeatHotspotRadius = 10f;
     private static readonly TimeSpan RepeatHotspotWindow = TimeSpan.FromSeconds(120);
+    private const int BreadcrumbBacktrackDisableSeconds = 45;
+    private const int RepeatHotspotPathClearThreshold = 6;
+    private const double ShortNoProgressTriggerMs = 1500;
 
     private static readonly Dictionary<UnstuckState, double> StateTimeouts = new()
     {
@@ -91,12 +90,7 @@ public sealed class StuckDetector : IGoapEventListener
     private long startTime;
     private long attemptTime;
     private long lastJumpTime;
-
-    private float prevDirection;
-    private float accumulatedRotationDelta;
-    private long lastDirectionCheckTime;
-    private int spinDetectionCounter;
-    private readonly Queue<float> headingHistory = new(HEADING_HISTORY_SIZE);
+    private long shortNoProgressStartTime;
 
     private UnstuckState currentUnstuckState = UnstuckState.None;
     private long unstuckStateEnterTime;
@@ -105,10 +99,10 @@ public sealed class StuckDetector : IGoapEventListener
     private DateTime stuckDetectedTimestamp;
     private Vector3 lastStuckTriggerPosition = Vector3.Zero;
     private DateTime lastStuckTriggerUtc = DateTime.MinValue;
+    private DateTime breadcrumbBacktrackDisabledUntilUtc = DateTime.MinValue;
     private int repeatedHotspotCount;
     private StuckTriggerReason? lastTriggerReason;
     private DateTime? lastTriggerUtc;
-    private int? lastPredictiveRisk;
     private readonly Queue<StuckTriggerSample> recentTriggers = new();
     private const int RecentTriggerHistoryLimit = 20;
 
@@ -119,10 +113,8 @@ public sealed class StuckDetector : IGoapEventListener
     public double CurrentUnstuckDurationMs => UnstuckMs;
     public UnstuckState CurrentState => currentUnstuckState;
     public bool IsCurrentlyStuck => currentUnstuckState != UnstuckState.None;
-    public bool IsSpinningDetected => spinDetectionCounter >= SPIN_DETECTION_COUNT;
     public StuckTriggerReason? LastTriggerReason => lastTriggerReason;
     public DateTime? LastTriggerUtc => lastTriggerUtc;
-    public int? LastPredictiveRisk => lastPredictiveRisk;
 
     /// <summary>
     /// Indicates whether enhanced stuck recovery (breadcrumb backtracking) is available.
@@ -172,23 +164,14 @@ public sealed class StuckDetector : IGoapEventListener
         attemptTime = GetTimestamp();
         startTime = GetTimestamp();
         lastJumpTime = 0;
+        shortNoProgressStartTime = 0;
         prevDistance = MAX_RANGE;
-        prevDirection = playerReader.Direction;
-        accumulatedRotationDelta = 0;
-        spinDetectionCounter = 0;
-        headingHistory.Clear();
         currentUnstuckState = UnstuckState.None;
         unstuckAttemptCount = 0;
         lastAttemptPosition = null;
-        lastPredictiveRisk = null;
     }
 
     public void Update(CancellationToken token = default)
-    {
-        Update(token, null);
-    }
-
-    public void Update(CancellationToken token, StuckTriggerReason? externalTriggerHint)
     {
         if (bits.Falling())
             return;
@@ -199,10 +182,8 @@ public sealed class StuckDetector : IGoapEventListener
             breadcrumbTracker!.RecordPosition(playerReader.WorldPos);
         }
 
-        UpdateSpinDetection();
-
         if (debug)
-            logger.LogDebug($"[StuckDetector] Duration: {ActionDurationMs:F0}ms, Unstuck: {UnstuckMs:F0}ms ago, State: {currentUnstuckState}, Spinning: {IsSpinningDetected}");
+            logger.LogDebug($"[StuckDetector] Duration: {ActionDurationMs:F0}ms, Unstuck: {UnstuckMs:F0}ms ago, State: {currentUnstuckState}");
 
         if (currentUnstuckState != UnstuckState.None)
         {
@@ -210,90 +191,16 @@ public sealed class StuckDetector : IGoapEventListener
             return;
         }
 
-        bool predictiveTriggered = IsPredictiveStuckRiskTriggered();
-        bool shouldTriggerUnstuck;
-        StuckTriggerReason? triggerReason = null;
-
-        if (externalTriggerHint == StuckTriggerReason.ExternalOscillationNotify)
+        if (HasShortNoProgress())
         {
-            shouldTriggerUnstuck = true;
-            triggerReason = StuckTriggerReason.ExternalOscillationNotify;
-        }
-        else if (predictiveTriggered)
-        {
-            shouldTriggerUnstuck = true;
-            triggerReason = StuckTriggerReason.PredictiveRisk;
-        }
-        else if (IsSpinningDetected)
-        {
-            shouldTriggerUnstuck = true;
-            triggerReason = StuckTriggerReason.SpinDetected;
-        }
-        else if (UnstuckMs > GetUnstuckAfterMsThreshold())
-        {
-            shouldTriggerUnstuck = true;
-            triggerReason = StuckTriggerReason.TimeoutNoProgress;
-        }
-        else
-        {
-            shouldTriggerUnstuck = false;
-        }
-
-        if (shouldTriggerUnstuck)
-        {
-            if (predictiveTriggered)
-            {
-                logger.LogWarning(
-                    "[StuckDetector] Predictive stuck risk exceeded threshold; forcing recovery early.");
-            }
-
-            TriggerUnstuck(token, triggerReason ?? StuckTriggerReason.TimeoutNoProgress);
-        }
-    }
-
-    private void UpdateSpinDetection()
-    {
-        double elapsed = GetElapsedTime(lastDirectionCheckTime).TotalMilliseconds;
-        if (elapsed < SPIN_CHECK_INTERVAL_MS)
+            TriggerUnstuck(token, StuckTriggerReason.ShortNoProgress);
             return;
-
-        float currentDir = playerReader.Direction;
-        float delta = MathF.Abs(currentDir - prevDirection);
-
-        if (delta > MathF.PI)
-            delta = 2 * MathF.PI - delta;
-
-        accumulatedRotationDelta += delta;
-
-        headingHistory.Enqueue(currentDir);
-        if (headingHistory.Count > HEADING_HISTORY_SIZE)
-            headingHistory.Dequeue();
-
-        float distance = playerReader.WorldPos.WorldDistanceXYTo(worldTarget);
-        bool positionChanged = MathF.Abs(distance - prevDistance) > GetMinDistanceThreshold();
-
-        if (accumulatedRotationDelta > SPIN_THRESHOLD_RADIANS && !positionChanged)
-        {
-            spinDetectionCounter++;
-
-            if (spinDetectionCounter == SPIN_DETECTION_COUNT)
-            {
-                logger.LogWarning($"[StuckDetector] SPINNING DETECTED! Rotation delta: {accumulatedRotationDelta:F2} rad, Position unchanged");
-                CollectStuckData("Spinning detected - high rotation without movement");
-            }
-        }
-        else if (positionChanged)
-        {
-            if (spinDetectionCounter > 0)
-            {
-                logger.LogDebug($"[StuckDetector] Reset spin detection - position changed");
-            }
-            spinDetectionCounter = 0;
-            accumulatedRotationDelta = 0;
         }
 
-        prevDirection = currentDir;
-        lastDirectionCheckTime = GetTimestamp();
+        if (UnstuckMs > GetUnstuckAfterMsThreshold())
+        {
+            TriggerUnstuck(token, StuckTriggerReason.TimeoutNoProgress);
+        }
     }
 
     private void ProcessActiveUnstuckState(CancellationToken token)
@@ -330,7 +237,7 @@ public sealed class StuckDetector : IGoapEventListener
             currentUnstuckState,
             unstuckAttemptCount,
             repeatedHotspotCount,
-            IsSpinningDetected);
+            false);
 
         CollectStuckData($"Unstuck triggered - {currentUnstuckState}");
         ExecuteUnstuckState(token);
@@ -347,7 +254,7 @@ public sealed class StuckDetector : IGoapEventListener
             Reason: triggerReason,
             ActionDurationMs: ActionDurationMs,
             State: currentUnstuckState,
-            PredictiveRisk: lastPredictiveRisk));
+            PredictiveRisk: null));
 
         while (recentTriggers.Count > RecentTriggerHistoryLimit)
         {
@@ -357,15 +264,17 @@ public sealed class StuckDetector : IGoapEventListener
 
     private void EscalateUnstuckState(CancellationToken token)
     {
+        DateTime nowUtc = DateTime.UtcNow;
         currentUnstuckState = currentUnstuckState switch
         {
             UnstuckState.None => UnstuckState.InitialAttempt,
             UnstuckState.InitialAttempt => UnstuckState.StrafeAttempt,
             UnstuckState.StrafeAttempt => UnstuckState.ReverseAttempt,
             // Use breadcrumb backtracking if available, otherwise skip to path clear
-            UnstuckState.ReverseAttempt => IsEnhancedRecoveryAvailable
-                ? UnstuckState.BreadcrumbBacktrack
-                : UnstuckState.PathClearAttempt,
+            UnstuckState.ReverseAttempt => ResolveReverseEscalationState(
+                enhancedRecoveryAvailable: IsEnhancedRecoveryAvailable,
+                nowUtc: nowUtc,
+                breadcrumbBacktrackDisabledUntilUtc: breadcrumbBacktrackDisabledUntilUtc),
             UnstuckState.BreadcrumbBacktrack => UnstuckState.PathClearAttempt,
             UnstuckState.PathClearAttempt => UnstuckState.EmergencyEscape,
             _ => UnstuckState.EmergencyEscape
@@ -421,30 +330,34 @@ public sealed class StuckDetector : IGoapEventListener
         if (breadcrumbTracker == null)
         {
             logger.LogWarning("[StuckDetector] Breadcrumb backtrack requested but tracker unavailable");
+            DisableBreadcrumbBacktrackAndEscalate(token, "tracker unavailable");
             return;
         }
 
         stopMoving.Stop();
 
-        // Try to find a position to backtrack to (3-5 steps back along the trail)
+        // Try to find a meaningful position to backtrack to.
         int preferredSteps = GetBacktrackSteps();
-        BreadcrumbEntry? backtrackEntry = breadcrumbTracker.GetBacktrackPosition(preferredSteps);
-        if (backtrackEntry == null)
-            backtrackEntry = breadcrumbTracker.GetBacktrackPosition(preferredSteps + 2);
+        IReadOnlyList<BreadcrumbEntry> trail = breadcrumbTracker.GetTrail();
+        bool hasTarget = TrySelectBacktrackTarget(
+            trail,
+            playerReader.WorldPos,
+            preferredSteps,
+            preferredSteps + 2,
+            GetRangeDiffThreshold(),
+            out Vector3 targetPos);
 
-        if (backtrackEntry == null)
+        if (!hasTarget)
         {
             logger.LogInformation("[StuckDetector] No valid backtrack position found in breadcrumb trail");
+            DisableBreadcrumbBacktrackAndEscalate(token, "no valid breadcrumb backtrack target");
             return;
         }
 
         logger.LogInformation(
             "[StuckDetector] Breadcrumb backtrack: Walking to {Target} ({Distance}y away)",
-            backtrackEntry.Value.Position,
-            playerReader.WorldPos.WorldDistanceXYTo(backtrackEntry.Value.Position));
-
-        // Turn toward the backtrack position
-        Vector3 targetPos = backtrackEntry.Value.Position;
+            targetPos,
+            playerReader.WorldPos.WorldDistanceXYTo(targetPos));
 
         // Use map coordinates for heading calculation
         Vector3 playerM = WorldMapAreaDB.ToMap_FlipXY(playerReader.WorldPos, playerReader.WorldMapArea);
@@ -471,9 +384,6 @@ public sealed class StuckDetector : IGoapEventListener
 
         logger.LogInformation("[StuckDetector] Breadcrumb backtrack: Walking for {Duration}ms", walkDuration);
         input.PressFixed(input.ForwardKey, walkDuration, token);
-
-        // Clear the breadcrumb trail since we've backtracked
-        breadcrumbTracker.Clear();
     }
 
     private void ExecuteInitialUnstuck(CancellationToken token)
@@ -599,7 +509,7 @@ public sealed class StuckDetector : IGoapEventListener
                 Direction = playerReader.Direction,
                 State = currentUnstuckState,
                 DurationMs = ActionDurationMs,
-                IsSpinning = IsSpinningDetected,
+                IsSpinning = false,
                 AttemptCount = unstuckAttemptCount,
                 Timestamp = DateTime.UtcNow,
                 TriggerReason = lastTriggerReason,
@@ -633,6 +543,23 @@ public sealed class StuckDetector : IGoapEventListener
             return true;
         }
 
+        if (bits.Moving() && distance > GetMinDistanceThreshold() * 4f)
+        {
+            if (shortNoProgressStartTime == 0)
+            {
+                shortNoProgressStartTime = GetTimestamp();
+            }
+        }
+        else
+        {
+            shortNoProgressStartTime = 0;
+        }
+
+        if (HasShortNoProgress())
+        {
+            return false;
+        }
+
         return ActionDurationMs < GetActionStuckTimeThreshold();
     }
 
@@ -650,60 +577,22 @@ public sealed class StuckDetector : IGoapEventListener
             return true;
         }
 
+        if (!bits.Moving())
+        {
+            shortNoProgressStartTime = 0;
+        }
+
         return ActionDurationMs < GetActionStuckTimeThreshold();
     }
 
-    public bool IsOscillating()
+    private bool HasShortNoProgress()
     {
-        if (headingHistory.Count < HEADING_HISTORY_SIZE)
-            return false;
-
-        int directionChanges = 0;
-        float prevDelta = 0;
-
-        var headings = headingHistory.ToArray();
-        for (int i = 1; i < headings.Length; i++)
-        {
-            float delta = headings[i] - headings[i - 1];
-
-            if (prevDelta != 0 && Math.Sign(delta) != Math.Sign(prevDelta) && Math.Abs(delta) > 0.1f)
-            {
-                directionChanges++;
-            }
-            prevDelta = delta;
-        }
-
-        return directionChanges > 5;
-    }
-
-    private bool IsPredictiveStuckRiskTriggered()
-    {
-        if (breadcrumbTracker == null || featureFlagService == null)
-        {
-            lastPredictiveRisk = null;
-            return false;
-        }
-
-        FeatureFlagsOptions currentFlags = featureFlagService.Current;
-        StuckSensitivityOptions options = currentFlags.StuckSensitivity;
-
-        if (!options.Enabled || !options.EnablePredictiveDetection || breadcrumbTracker.Count < 6)
-        {
-            lastPredictiveRisk = null;
-            return false;
-        }
-
-        int threshold = Math.Clamp(options.PredictiveRiskThreshold, 20, 95);
-        int risk = breadcrumbTracker.CalculateStuckRisk();
-        lastPredictiveRisk = risk;
-
-        // Avoid firing predictive recovery instantly after a reset.
-        if (UnstuckMs < GetUnstuckAfterMsThreshold() * 0.5)
+        if (shortNoProgressStartTime == 0 || !bits.Moving())
         {
             return false;
         }
 
-        return risk >= threshold;
+        return GetElapsedTime(shortNoProgressStartTime).TotalMilliseconds >= ShortNoProgressTriggerMs;
     }
 
     private UnstuckState GetInitialUnstuckState(Vector3 currentPosition)
@@ -718,9 +607,28 @@ public sealed class StuckDetector : IGoapEventListener
         lastStuckTriggerPosition = currentPosition;
         lastStuckTriggerUtc = now;
 
-        if (repeatedHotspotCount >= 2 && IsEnhancedRecoveryAvailable)
+        bool breadcrumbBacktrackAvailable = IsBreadcrumbBacktrackAvailable(now);
+
+        if (repeatedHotspotCount >= RepeatHotspotPathClearThreshold)
+        {
+            if (breadcrumbBacktrackAvailable)
+            {
+                // Breadcrumb trail can become contaminated around walls/buildings and ping-pong
+                // between two nearby points; disable it briefly and force a wider escape.
+                breadcrumbBacktrackDisabledUntilUtc = now.AddSeconds(BreadcrumbBacktrackDisableSeconds);
+            }
+
+            return UnstuckState.PathClearAttempt;
+        }
+
+        if (repeatedHotspotCount >= 2 && breadcrumbBacktrackAvailable)
         {
             return UnstuckState.BreadcrumbBacktrack;
+        }
+
+        if (repeatedHotspotCount >= 2 && now < breadcrumbBacktrackDisabledUntilUtc)
+        {
+            return UnstuckState.PathClearAttempt;
         }
 
         if (repeatedHotspotCount >= 1)
@@ -729,6 +637,97 @@ public sealed class StuckDetector : IGoapEventListener
         }
 
         return UnstuckState.InitialAttempt;
+    }
+
+    private bool IsBreadcrumbBacktrackAvailable(DateTime nowUtc)
+    {
+        return IsEnhancedRecoveryAvailable && nowUtc >= breadcrumbBacktrackDisabledUntilUtc;
+    }
+
+    private void DisableBreadcrumbBacktrackAndEscalate(CancellationToken token, string reason)
+    {
+        breadcrumbBacktrackDisabledUntilUtc = DateTime.UtcNow.AddSeconds(BreadcrumbBacktrackDisableSeconds);
+        logger.LogWarning(
+            "[StuckDetector] Breadcrumb backtrack disabled for {CooldownSeconds}s ({Reason})",
+            BreadcrumbBacktrackDisableSeconds,
+            reason);
+
+        EscalateUnstuckState(token);
+    }
+
+    internal static UnstuckState ResolveReverseEscalationState(
+        bool enhancedRecoveryAvailable,
+        DateTime nowUtc,
+        DateTime breadcrumbBacktrackDisabledUntilUtc)
+    {
+        return enhancedRecoveryAvailable && nowUtc >= breadcrumbBacktrackDisabledUntilUtc
+            ? UnstuckState.BreadcrumbBacktrack
+            : UnstuckState.PathClearAttempt;
+    }
+
+    internal static bool TrySelectBacktrackTarget(
+        IReadOnlyList<BreadcrumbEntry> trail,
+        Vector3 currentPosition,
+        int preferredSteps,
+        int alternateSteps,
+        float minDistance,
+        out Vector3 targetPosition)
+    {
+        targetPosition = default;
+        if (trail.Count == 0)
+        {
+            return false;
+        }
+
+        if (TrySelectBacktrackTargetBySteps(trail, currentPosition, preferredSteps, minDistance, out targetPosition))
+        {
+            return true;
+        }
+
+        if (TrySelectBacktrackTargetBySteps(trail, currentPosition, alternateSteps, minDistance, out targetPosition))
+        {
+            return true;
+        }
+
+        float bestDistance = minDistance;
+        bool foundFallback = false;
+        for (int i = 0; i < trail.Count; i++)
+        {
+            Vector3 candidate = trail[i].Position;
+            float distance = currentPosition.WorldDistanceXYTo(candidate);
+            if (distance > bestDistance)
+            {
+                bestDistance = distance;
+                targetPosition = candidate;
+                foundFallback = true;
+            }
+        }
+
+        return foundFallback;
+    }
+
+    private static bool TrySelectBacktrackTargetBySteps(
+        IReadOnlyList<BreadcrumbEntry> trail,
+        Vector3 currentPosition,
+        int stepsBack,
+        float minDistance,
+        out Vector3 targetPosition)
+    {
+        targetPosition = default;
+        if (stepsBack < 1 || stepsBack > trail.Count)
+        {
+            return false;
+        }
+
+        int index = trail.Count - stepsBack;
+        Vector3 candidate = trail[index].Position;
+        if (currentPosition.WorldDistanceXYTo(candidate) <= minDistance)
+        {
+            return false;
+        }
+
+        targetPosition = candidate;
+        return true;
     }
 
     private static float WorldDistanceXY(Vector3 a, Vector3 b)
@@ -822,14 +821,14 @@ public sealed class StuckDetector : IGoapEventListener
             IsCurrentlyStuck: IsCurrentlyStuck,
             ActionDurationMs: ActionDurationMs,
             UnstuckMs: CurrentUnstuckDurationMs,
-            IsSpinningDetected: IsSpinningDetected,
+            IsSpinningDetected: false,
             RangeDiffThreshold: GetRangeDiffThreshold(),
             MinDistanceThreshold: GetMinDistanceThreshold(),
             UnstuckAfterMsThreshold: GetUnstuckAfterMsThreshold(),
             ActionStuckTimeThreshold: GetActionStuckTimeThreshold(),
             LastTriggerReason: lastTriggerReason,
             LastTriggerUtc: lastTriggerUtc,
-            LastPredictiveRisk: lastPredictiveRisk,
+            LastPredictiveRisk: null,
             RecentTriggers: recentTriggers.ToArray());
     }
 }

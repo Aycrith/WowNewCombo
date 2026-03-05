@@ -1,57 +1,62 @@
 using Core.Navigation;
+
 using FluentAssertions;
+
 using Xunit;
 
 namespace CoreUnitTests.Navigation;
 
-/// <summary>
-/// Tests that NavSoakWindow carries deviation fields and that
-/// deviation accumulation math is correct.
-/// </summary>
 public class NavSoakDeviationTests
 {
     [Fact]
     public void NavSoakWindow_HasDeviationFields()
     {
-        var window = new NavSoakWindow
+        NavSoakWindow window = new()
         {
-            MaxRouteDeviation = 5.5f,
-            AvgRouteDeviation = 2.3f
+            MaxRouteDeviation = 15.0f,
+            AvgRouteDeviation = 8.5f
         };
 
-        window.MaxRouteDeviation.Should().BeApproximately(5.5f, 0.001f);
-        window.AvgRouteDeviation.Should().BeApproximately(2.3f, 0.001f);
+        window.MaxRouteDeviation.Should().Be(15.0f);
+        window.AvgRouteDeviation.Should().Be(8.5f);
     }
 
     [Fact]
     public void NavSoakWindow_DefaultDeviation_IsZero()
     {
-        var window = new NavSoakWindow();
-        window.MaxRouteDeviation.Should().Be(0f);
-        window.AvgRouteDeviation.Should().Be(0f);
+        NavSoakWindow window = new();
+
+        window.MaxRouteDeviation.Should().Be(0f, "default max deviation should be zero, not NaN");
+        window.AvgRouteDeviation.Should().Be(0f, "default avg deviation should be zero, not NaN");
     }
 
     [Theory]
-    [InlineData(new float[] { 1f, 2f, 3f }, 3f, 2f)]       // max=3, avg=2
-    [InlineData(new float[] { 5f, 5f, 5f }, 5f, 5f)]       // all same
-    [InlineData(new float[] { 0f, 0f, 10f }, 10f, 10f / 3f)] // one spike
+    [InlineData(new float[] { 5f }, 5f, 5f)]
+    [InlineData(new float[] { 2f, 8f, 5f }, 8f, 5f)]
+    [InlineData(new float[] { 1f, 1f, 1f, 1f }, 1f, 1f)]
     public void DeviationAccumulation_MatchesExpected(float[] samples, float expectedMax, float expectedAvg)
     {
+        // Simulate what NavSoakMetricsService does: track max and running average
         float max = 0f;
         float sum = 0f;
-        foreach (float s in samples)
-        {
-            if (s > max)
-            {
-                max = s;
-            }
+        int count = 0;
 
-            sum += s;
+        foreach (float sample in samples)
+        {
+            if (sample > max) max = sample;
+            sum += sample;
+            count++;
         }
 
-        float avg = sum / samples.Length;
+        float avg = count > 0 ? sum / count : 0f;
 
-        max.Should().BeApproximately(expectedMax, 0.001f);
-        avg.Should().BeApproximately(expectedAvg, 0.001f);
+        NavSoakWindow window = new()
+        {
+            MaxRouteDeviation = max,
+            AvgRouteDeviation = avg
+        };
+
+        window.MaxRouteDeviation.Should().BeApproximately(expectedMax, 0.001f);
+        window.AvgRouteDeviation.Should().BeApproximately(expectedAvg, 0.001f);
     }
 }

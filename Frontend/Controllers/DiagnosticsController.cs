@@ -92,6 +92,16 @@ public record NavigationRuntimeDiagnosticsResponse(
     NavigationRuntimeSnapshot? Navigation,
     StuckDetectorRuntimeSnapshot? StuckDetector,
     Core.Navigation.NavSoakMetricsSnapshot? Soak,
+    CombatRuntimeSnapshot? Combat,
+    PullRuntimeSnapshot? Pull,
+    CastingRuntimeSnapshot Casting,
+    object? FeatureFlags);
+
+public record NavigationRerouteDiagnosticsResponse(
+    bool BotActive,
+    string CurrentGoal,
+    NavigationRerouteRuntimeSnapshot? Reroute,
+    Core.Navigation.NavSoakMetricsSnapshot? Soak,
     object? FeatureFlags);
 
 public record BagMetaDto(
@@ -144,6 +154,7 @@ public record MailboxInteractDiagnostics(
 [ApiController]
 public class DiagnosticsController : ControllerBase
 {
+    private const int DefaultRuntimeMetricsWindowSeconds = 10 * 60;
     private readonly ILogger<DiagnosticsController> logger;
     private readonly KeyBindingsReader keyBindingsReader;
     private readonly ActionBarSlotValidator slotValidator;
@@ -161,6 +172,7 @@ public class DiagnosticsController : ControllerBase
     private readonly SystemDiagnostics systemDiagnostics;
     private readonly Core.Navigation.NavSoakMetricsService? navSoakMetricsService;
     private readonly FeatureFlagService? featureFlagService;
+    private readonly CastingHandler? castingHandler;
 
     private readonly StartupOptions startupOptions;
 
@@ -182,7 +194,8 @@ public class DiagnosticsController : ControllerBase
         SystemDiagnostics systemDiagnostics,
         IOptions<StartupOptions> startupOptions,
         Core.Navigation.NavSoakMetricsService? navSoakMetricsService = null,
-        FeatureFlagService? featureFlagService = null)
+        FeatureFlagService? featureFlagService = null,
+        CastingHandler? castingHandler = null)
     {
         this.logger = logger;
         this.keyBindingsReader = keyBindingsReader;
@@ -202,6 +215,7 @@ public class DiagnosticsController : ControllerBase
         this.startupOptions = startupOptions.Value;
         this.navSoakMetricsService = navSoakMetricsService;
         this.featureFlagService = featureFlagService;
+        this.castingHandler = castingHandler;
     }
 
     #region Diagnostic Endpoints
@@ -359,12 +373,22 @@ public class DiagnosticsController : ControllerBase
                     flags.InputSecurity
                 };
 
+            Core.GOAP.GoapAgent? goapAgent = botController.GoapAgent;
+            CombatGoal? combatGoal = goapAgent?.AvailableGoals.OfType<CombatGoal>().FirstOrDefault();
+            PullTargetGoal? pullGoal = goapAgent?.AvailableGoals.OfType<PullTargetGoal>().FirstOrDefault();
+            CastingRuntimeSnapshot castingSnapshot = ResolveCastingSnapshot(
+                castingHandler?.GetRuntimeSnapshot(),
+                combatGoal?.GetCastingRuntimeSnapshot());
+
             NavigationRuntimeDiagnosticsResponse response = new(
                 BotActive: botController.IsBotActive,
                 CurrentGoal: TryGetCurrentGoalLabel(),
                 Navigation: navigation.GetRuntimeSnapshot(),
                 StuckDetector: stuckDetector.GetRuntimeSnapshot(),
                 Soak: navSoakMetricsService.GetSnapshot(),
+                Combat: combatGoal?.GetRuntimeSnapshot(),
+                Pull: pullGoal?.GetRuntimeSnapshot(),
+                Casting: castingSnapshot,
                 FeatureFlags: featureFlagSubset);
 
             return Ok(response);
@@ -372,6 +396,67 @@ public class DiagnosticsController : ControllerBase
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get navigation runtime diagnostics");
+            return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    public static CastingRuntimeSnapshot ResolveCastingSnapshot(
+        CastingRuntimeSnapshot? liveSnapshot,
+        CastingRuntimeSnapshot? combatSnapshot)
+    {
+        return liveSnapshot ??
+            combatSnapshot ??
+            new CastingRuntimeSnapshot(
+                CurrentActionNotDetectedCountWindow: 0,
+                UIFeedbackNotDetectedCountWindow: 0,
+                AmbiguousCastResolvedCountWindow: 0,
+                InterruptedRetrySuppressedCountWindow: 0,
+                WindowSeconds: DefaultRuntimeMetricsWindowSeconds);
+    }
+
+    /// <summary>
+    /// GET /api/diagnostics/navigation/reroute
+    /// Returns focused reroute lifecycle diagnostics for hazard detour triage.
+    /// </summary>
+    [HttpGet("navigation/reroute")]
+    public IActionResult GetNavigationReroute()
+    {
+        try
+        {
+            if (navSoakMetricsService == null)
+            {
+                return StatusCode(503, new { Error = "NavSoakMetricsService is not available in the current runtime." });
+            }
+
+            if (!navSoakMetricsService.TryGetRuntimeSources(out StuckDetector? _, out Core.Goals.Navigation? navigation) ||
+                navigation == null)
+            {
+                return StatusCode(503, new { Error = "Active navigation runtime sources are not attached yet." });
+            }
+
+            FeatureFlagsOptions? flags = featureFlagService?.Current;
+            object? featureFlagSubset = flags == null
+                ? null
+                : new
+                {
+                    flags.StuckSensitivity,
+                    flags.HazardAvoidance,
+                    flags.PathSmoothing,
+                    flags.InputSecurity
+                };
+
+            NavigationRerouteDiagnosticsResponse response = new(
+                BotActive: botController.IsBotActive,
+                CurrentGoal: TryGetCurrentGoalLabel(),
+                Reroute: navigation.GetRerouteRuntimeSnapshot(),
+                Soak: navSoakMetricsService.GetSnapshot(),
+                FeatureFlags: featureFlagSubset);
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get navigation reroute diagnostics");
             return StatusCode(500, new { Error = ex.Message });
         }
     }

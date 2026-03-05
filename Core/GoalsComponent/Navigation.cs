@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading;
+using System.Threading.Tasks;
 
 using static System.MathF;
 using static System.Diagnostics.Stopwatch;
@@ -80,9 +81,11 @@ public sealed partial class Navigation : IDisposable
     public event Action? OnNoPathFound;
     public event Action? OnDynamicDetourApplied;
     public event Action? OnSuccessfulReconnect;
-    /// <summary>Fired each Update() tick with the perpendicular distance from
-    /// the player to the current route segment. Used for route-adherence telemetry.</summary>
     public event Action<float>? OnDeviationSample;
+    public event Action? OnRerouteTriggered;
+    public event Action? OnRerouteApplied;
+    public event Action<string>? OnRerouteDropped;
+    public event Action? OnDetourOnlyCollapseDetected;
 
     public bool SimplifyRouteToWaypoint { get; set; } = true;
 
@@ -103,34 +106,6 @@ public sealed partial class Navigation : IDisposable
 
     private const int NoPathBackoffMs = 1500;
     private const double DefaultRouteResetTimeoutMs = 8_000;
-    private static readonly TimeSpan DynamicDetourCooldown = TimeSpan.FromSeconds(2);
-    private static readonly TimeSpan FrontBypassCooldown = TimeSpan.FromSeconds(1.5);
-    private static readonly TimeSpan FrontBypassRepeatWindow = TimeSpan.FromSeconds(12);
-    private static readonly TimeSpan FrontBypassBreakerCooldown = TimeSpan.FromSeconds(18);
-    private static readonly TimeSpan FrontBypassClusterWindow = TimeSpan.FromSeconds(16);
-    private static readonly TimeSpan FrontBypassNoProgressWindow = TimeSpan.FromSeconds(16);
-    private static readonly TimeSpan HazardDetourRepeatWindow = TimeSpan.FromSeconds(12);
-    private static readonly TimeSpan HazardDetourBreakerCooldown = TimeSpan.FromSeconds(12);
-    private static readonly TimeSpan CorpseRecoveryHazardSuppressGrace = TimeSpan.FromSeconds(20);
-    private static readonly TimeSpan FailedReconnectCooldown = TimeSpan.FromSeconds(35);
-    private static readonly TimeSpan FailedReconnectClusterWindow = TimeSpan.FromSeconds(40);
-    private const int MinRouteWaypointsForDynamicDetour = 1;
-    private const float DynamicReconnectDuplicateDistance = 1.0f;
-    private const float FailedReconnectDuplicateDistance = 8.0f;
-    private const float FrontBypassRepeatDistance = 15.0f;
-    private const int FrontBypassRepeatLimit = 4;
-    private const float FrontBypassClusterDistance = 24.0f;
-    private const int FrontBypassClusterLimit = 4;
-    private const int FrontBypassNoProgressRepeatLimit = 3;
-    private const int FrontBypassNoProgressMaxRouteDelta = 1;
-    private const float HazardDetourRepeatDistance = 20.0f;
-    private const int HazardDetourRepeatLimit = 3;
-    private const float FailedReconnectClusterDistance = 18.0f;
-    private const int FailedReconnectClusterSkipThreshold = 2;
-    private const float HazardDetourMaxAdditionalDistance = 80.0f;
-    private const float HazardDetourMaxLengthRatio = 1.75f;
-    private const float HazardDetourHardMaxAdditionalDistance = 120.0f;
-    private const float CorpseTargetMatchDistance = 8.0f;
     private const float PrecisionVerticalZDelta = 0.9f;
     private const float PrecisionReachedDistanceMin = 0.9f;
     private const float PrecisionReachedDistanceScale = 0.45f;
@@ -139,33 +114,32 @@ public sealed partial class Navigation : IDisposable
     private const float TightTurnPrecisionRadians = PI / 5f;
     private const float SimplifyPreserveVerticalZDelta = 0.75f;
     private const float SimplifyPreserveTurnRadians = PI / 6f;
+    private const float SimplifyPreserveIndoorTurnRadians = PI / 9f; // 20 degrees
+    private const float DetourDuplicateDistance = 1.0f;
+    private const float DetourReconnectDistance = 2.0f;
+    private const int RouteAwareDetourLookaheadPoints = 4;
+    private const float RouteAwareDetourMinAnchorDistance = 8.0f;
+    private const int PendingRerouteMaxAgeSeconds = 15;
+    private const float PendingRerouteTargetMatchDistance = 4.0f;
+    private const int SoftNoProgressStopCooldownMs = 1200;
+    private const float SoftNoProgressDistanceEpsilon = 0.08f;
     private const int TurnInPlaceStuckGraceMs = 1200;
     private const int SharpTurnStuckGraceMs = 1800;
-
-    private DateTime lastDynamicDetourAttemptUtc = DateTime.MinValue;
-    private DateTime lastFrontBypassUtc = DateTime.MinValue;
-    private DateTime hazardDetourBreakerUntilUtc = DateTime.MinValue;
-    private DateTime lastHazardDetourRepeatUtc = DateTime.MinValue;
-    private DateTime lastCorpseRecoveryContextUtc = DateTime.MinValue;
-    private DateTime frontBypassBreakerUntilUtc = DateTime.MinValue;
-    private DateTime lastFrontBypassRepeatUtc = DateTime.MinValue;
-    private DateTime lastFrontBypassNoProgressUtc = DateTime.MinValue;
-    private DateTime lastFailedReconnectUtc = DateTime.MinValue;
-    private DateTime turnStuckGraceUntilUtc = DateTime.MinValue;
-    private DateTime lastSuppressedTurnStuckRecoveryUtc = DateTime.MinValue;
-    private int frontBypassAttemptCount;
-    private int repeatedHazardDetourCount;
-    private int repeatedFrontBypassCount;
-    private int repeatedFrontBypassNoProgressCount;
     private int tailRecalcFailures;
-    private int suppressedTurnStuckRecoveryCount;
     private float lastHeadingDiffRadians;
-    private Vector3 lastHazardDetourRepeatPoint;
-    private Vector3 lastFrontBypassRepeatPoint;
-    private Vector3 lastFrontBypassNoProgressPoint;
-    private Vector3 lastFailedReconnectPoint;
-    private readonly Queue<ReconnectSample> recentFrontBypassReconnects = new();
-    private readonly Queue<ReconnectSample> recentFailedReconnects = new();
+    private DateTime turnStuckGraceUntilUtc = DateTime.MinValue;
+    private DateTime? lastSuppressedTurnStuckRecoveryUtc;
+    private int suppressedTurnStuckRecoveryCount;
+    private bool hadNoPathFailureSinceLastPath;
+    private int rerouteTriggerCount;
+    private int rerouteApplyCount;
+    private int rerouteDropCount;
+    private int detourOnlyCollapseCount;
+    private float? lastRerouteAnchorDistance;
+    private string? lastRerouteDropReason;
+    private long lastSoftNoProgressStopTick;
+    private int routeAwareRerouteContextVersion;
+    private int routeAwareRerouteScheduleInFlight;
 
     public Navigation(ILogger<Navigation> logger,
         CancellationTokenSource<GoapAgent> cts,
@@ -231,7 +205,6 @@ public sealed partial class Navigation : IDisposable
     public void Update(CancellationToken token)
     {
         active = true;
-        TrackCorpseRecoveryContext(DateTime.UtcNow);
 
         if (wayPoints.Count == 0 && routeToNextWaypoint.Count == 0)
         {
@@ -255,6 +228,34 @@ public sealed partial class Navigation : IDisposable
             return;
         }
 
+        // Apply any pending hazard-avoidance detour inline (feature-flag gated)
+        if (routeRerouter != null &&
+            featureFlagService?.Current.HazardAvoidance.Enabled == true &&
+            routeRerouter.GetActiveReroute() is { } pendingReroute)
+        {
+            DateTime nowUtc = DateTime.UtcNow;
+            Vector3[] routeSnapshot = routeToNextWaypoint.ToArray();
+            string? dropReason = GetPendingRerouteDropReason(pendingReroute, routeSnapshot, nowUtc);
+            if (dropReason == null)
+            {
+                InsertDetourIntoRoute(pendingReroute.DetourWaypoints);
+                Interlocked.Increment(ref rerouteApplyCount);
+                OnRerouteApplied?.Invoke();
+            }
+            else
+            {
+                Interlocked.Increment(ref rerouteDropCount);
+                lastRerouteDropReason = dropReason;
+                OnRerouteDropped?.Invoke(dropReason);
+                if (debug)
+                {
+                    LogDebug($"[HazardAvoidance] Dropping reroute {pendingReroute.Id}: {dropReason} target={pendingReroute.OriginalTarget}");
+                }
+            }
+
+            ClearPendingReroute();
+        }
+
         LastActive = DateTime.UtcNow;
         input.StartForward(true);
 
@@ -263,15 +264,17 @@ public sealed partial class Navigation : IDisposable
         playerWorldPos = playerW;
         Vector3 targetW = routeToNextWaypoint.Peek();
         float worldDistance = playerW.WorldDistanceXYTo(targetW);
+        TryScheduleRouteAwareReroute(playerW, token);
 
-        // Sample route deviation for telemetry (fires each active tick)
         if (routeToNextWaypoint.Count >= 2 &&
-            TryGetUpcomingRoutePoints(out Vector3 deviationCurr, out Vector3 deviationNext))
+            TryGetUpcomingRoutePoints(out Vector3 current, out Vector3 next))
         {
             Vector2 playerXY = new(playerW.X, playerW.Y);
-            Vector2 closestOnSeg = VectorExt.GetClosestPointOnLineSegment(
-                deviationCurr.AsVector2(), deviationNext.AsVector2(), playerXY);
-            float deviation = Vector2.Distance(playerXY, closestOnSeg);
+            Vector2 closestPoint = VectorExt.GetClosestPointOnLineSegment(
+                current.AsVector2(),
+                next.AsVector2(),
+                playerXY);
+            float deviation = Vector2.Distance(playerXY, closestPoint);
             OnDeviationSample?.Invoke(deviation);
         }
 
@@ -338,17 +341,13 @@ public sealed partial class Navigation : IDisposable
             }
             else
             {
-                if (ShouldSuppressStuckRecoveryForIntentionalTurn(DateTime.UtcNow))
+                DateTime now = DateTime.UtcNow;
+                if (ShouldSuppressStuckRecoveryForIntentionalTurn(now))
                 {
                     suppressedTurnStuckRecoveryCount++;
-                    lastSuppressedTurnStuckRecoveryUtc = DateTime.UtcNow;
+                    lastSuppressedTurnStuckRecoveryUtc = now;
                     AdjustHeading(heading, steeringIgnoreDistance, token);
                     lastWorldDistance = worldDistance;
-                    return;
-                }
-
-                if (TryApplyDynamicHazardDetour(token))
-                {
                     return;
                 }
 
@@ -357,23 +356,25 @@ public sealed partial class Navigation : IDisposable
                     if (mountHandler.IsMounted())
                         mountHandler.Dismount();
 
-                    if (IsLikelyCorpseRecoveryContext())
-                    {
-                        logger.LogWarning(
-                            "[Navigation       ] Corpse run route cleared after {ElapsedMs:F0}ms stuck (route had {Count} remaining points, target={Target})",
-                            stuckDetector.ActionDurationMs,
-                            routeToNextWaypoint.Count,
-                            routeToNextWaypoint.Count > 0 ? routeToNextWaypoint.Peek() : default);
-                    }
-
+                    stopMoving.Stop();
                     LogClearRouteToWaypointStuck(logger, stuckDetector.ActionDurationMs);
                     stuckDetector.Reset();
                     routeToNextWaypoint.Clear();
+                    ClearPendingReroute(invalidateRouteAwareContext: true);
                     return;
                 }
 
                 if (HasBeenActiveRecently())
                 {
+                    long nowTick = Environment.TickCount64;
+                    if (bits.Moving() &&
+                        worldDistance + SoftNoProgressDistanceEpsilon >= lastWorldDistance &&
+                        (nowTick - lastSoftNoProgressStopTick) >= SoftNoProgressStopCooldownMs)
+                    {
+                        stopMoving.StopForward();
+                        lastSoftNoProgressStopTick = nowTick;
+                    }
+
                     stuckDetector.Update(token);
                     worldDistance = playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek());
                 }
@@ -409,6 +410,8 @@ public sealed partial class Navigation : IDisposable
 
         wayPoints.Clear();
         routeToNextWaypoint.Clear();
+        ClearPendingReroute(invalidateRouteAwareContext: true);
+        hadNoPathFailureSinceLastPath = false;
 
         ResetStuckParameters();
     }
@@ -437,6 +440,8 @@ public sealed partial class Navigation : IDisposable
     {
         wayPoints.Clear();
         routeToNextWaypoint.Clear();
+        ClearPendingReroute(invalidateRouteAwareContext: true);
+        hadNoPathFailureSinceLastPath = false;
 
         float mapDistanceXY = 0;
         WorldMapArea wma = playerReader.WorldMapArea;
@@ -472,11 +477,13 @@ public sealed partial class Navigation : IDisposable
     public void ResetStuckParameters()
     {
         stuckDetector.Reset();
+        turnStuckGraceUntilUtc = DateTime.MinValue;
     }
 
     private void RefillRouteToNextWaypoint(CancellationToken token)
     {
         routeToNextWaypoint.Clear();
+        ClearPendingReroute(invalidateRouteAwareContext: true);
 
         Vector3 playerW = playerReader.WorldPos;
         if (playerW.Z == 0 && areaDB.CurrentArea != null)
@@ -558,6 +565,8 @@ public sealed partial class Navigation : IDisposable
 
         if (result.Path.Length == 0 && !isTriviallyClose)
         {
+            hadNoPathFailureSinceLastPath = true;
+
             // Stop forward movement immediately when no path is available.
             // Prevents continuing in stale heading into terrain/water.
             stopMoving.Stop();
@@ -592,52 +601,17 @@ public sealed partial class Navigation : IDisposable
             return;
         }
 
+        bool recoveredFromNoPath = hadNoPathFailureSinceLastPath;
+        hadNoPathFailureSinceLastPath = false;
         failedAttempt = 0;
         lastNoPathUtc = default;
 
         // Log pathfinder success and populate route
         {
             Vector3[] pathToApply = result.Path;
-            DateTime now = DateTime.UtcNow;
-            if (routeRerouter?.IsEnabled == true &&
-                result.Path.Length >= 2 &&
-                CanUseHazardDetours(now, result.EndW))
-            {
-                try
-                {
-                    Vector3[]? detour = routeRerouter.CalculateDetourAsync(
-                        result.Path,
-                        playerReader.MapId,
-                        token).GetAwaiter().GetResult();
-
-                    if (detour is { Length: >= 2 })
-                    {
-                        if (IsExcessiveHazardDetour(result.Path, detour))
-                        {
-                            logger.LogDebug(
-                                "[Navigation       ] Skipping excessive hazard detour on path apply ({OriginalCount} -> {DetourCount})",
-                                result.Path.Length,
-                                detour.Length);
-                        }
-                        else
-                        {
-                        pathToApply = detour;
-                        logger.LogInformation(
-                            "[Navigation       ] Applied hazard detour ({OriginalCount} -> {DetourCount} waypoints)",
-                            result.Path.Length,
-                            detour.Length);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "[Navigation       ] Hazard detour calculation failed");
-                }
-            }
 
             LogPathfinderSuccess(logger, result.Distance, result.StartW, result.EndW, result.ElapsedMs);
 
-            int rawPathPointCount = pathToApply.Length;
             for (int i = pathToApply.Length - 1; i >= 0; i--)
             {
                 routeToNextWaypoint.Push(pathToApply[i]);
@@ -646,14 +620,6 @@ public sealed partial class Navigation : IDisposable
             if (SimplifyRouteToWaypoint)
                 SimplyfyRouteToWaypoint();
 
-            if (IsLikelyCorpseRecoveryContext())
-            {
-                logger.LogInformation(
-                    "[Navigation       ] Corpse run path: {RawCount} raw -> {FinalCount} final points, distance={Distance:F1}",
-                    rawPathPointCount,
-                    routeToNextWaypoint.Count,
-                    result.Distance);
-            }
         }
 
         if (routeToNextWaypoint.Count == 0)
@@ -666,6 +632,11 @@ public sealed partial class Navigation : IDisposable
 
         stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
         UpdateTotalRoute();
+
+        if (recoveredFromNoPath)
+        {
+            OnSuccessfulReconnect?.Invoke();
+        }
 
         OnPathCalculated?.Invoke();
     }
@@ -837,8 +808,6 @@ public sealed partial class Navigation : IDisposable
         // conditions and created sluggish steering. Just turn if needed.
         if (diff > minAngleToTurn)
         {
-            // Any meaningful turn correction can temporarily look like "no progress" to the stuck detector,
-            // especially on tight route segments. Refresh a bounded grace window before turning.
             SetTurnStuckGraceWindow(now);
 
             if (diff > minAngleToStopBeforeTurn)
@@ -848,168 +817,6 @@ public sealed partial class Navigation : IDisposable
 
             playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), steeringIgnoreDistance, token);
         }
-    }
-
-    private bool AdjustNextWaypointPointToClosest()
-    {
-        if (wayPoints.Count < 2) { return false; }
-
-        Vector3 A = wayPoints.Pop();
-        Vector3 B = wayPoints.Peek();
-        Vector2 result = VectorExt.GetClosestPointOnLineSegment(A.AsVector2(), B.AsVector2(), playerReader.WorldPos.AsVector2());
-        Vector3 newPoint = new(result.X, result.Y, playerReader.WorldPosZ);
-
-        if (newPoint.WorldDistanceXYTo(wayPoints.Peek()) > OutDoorMinDistance)
-        {
-            wayPoints.Push(newPoint);
-            if (debug)
-                LogDebug("Adjusted resume point");
-
-            return false;
-        }
-
-        if (debug)
-            LogDebug("Skipped next point in path");
-
-        return true;
-    }
-
-    private void V1_AttemptToKeepRouteToWaypoint()
-    {
-        float totalDistance = VectorExt.TotalDistance<Vector3>(TotalRoute, VectorExt.WorldDistanceXY);
-        if (totalDistance > MaxDistance / 2)
-        {
-            Vector3 playerW = playerReader.WorldPos;
-            float distanceToRoute = playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek());
-            float distanceToPrevLoc = playerW.WorldDistanceXYTo(playerWorldPos);
-            if (distanceToRoute > 2 * MinDistanceMount &&
-                distanceToPrevLoc > 2 * MinDistanceMount)
-            {
-                LogV1ClearRouteToWaypoint(logger, patherName, distanceToRoute);
-                routeToNextWaypoint.Clear();
-            }
-            else
-            {
-                LogV1KeepRouteToWaypoint(logger, patherName, distanceToRoute);
-                ResetStuckParameters();
-            }
-        }
-        else
-        {
-            LogV1ClearRouteToWaypointTooFar(logger, patherName, totalDistance, MaxDistance / 2);
-            routeToNextWaypoint.Clear();
-        }
-    }
-
-    private void SimplyfyRouteToWaypoint()
-    {
-        const bool HighQuality = false;
-        Vector3[] route = routeToNextWaypoint.ToArray();
-        if (ShouldPreserveDetailedRoute(route))
-        {
-            if (route.Length > LongRoutePreserveThreshold)
-            {
-                logger.LogDebug(
-                    "[Navigation       ] Preserving detailed route ({Count} points, long-path or terrain feature detected)",
-                    route.Length);
-            }
-
-            return;
-        }
-
-        Span<Vector3> reduced = PathSimplify.Simplify(route, OutDoorMinDistance / 2, HighQuality);
-        if (debug)
-            LogDebug($"{nameof(SimplyfyRouteToWaypoint)} {routeToNextWaypoint.Count} -> {reduced.Length} | HQ: {HighQuality}");
-
-        routeToNextWaypoint.Clear();
-        for (int i = reduced.Length - 1; i >= 0; i--)
-        {
-            routeToNextWaypoint.Push(reduced[i]);
-        }
-    }
-
-    /// <summary>
-    /// Long paths (e.g. corpse runs) from the pathfinder with Catmull-Rom smoothing
-    /// already have reasonable point spacing. Simplification of these removes critical
-    /// terrain-following detail, creating straight-line segments that cross impassable
-    /// terrain and cause stuck → repath → backtrack loops.
-    /// </summary>
-    private const int LongRoutePreserveThreshold = 40;
-
-    private bool ShouldPreserveDetailedRoute(Vector3[] route)
-    {
-        if (route.Length < 3)
-        {
-            return false;
-        }
-
-        // Long paths from the pathfinder (e.g. corpse runs spanning 200+ yards) should
-        // always preserve detail. The Catmull-Rom smoothed path already has reasonable
-        // point spacing, and aggressive simplification (RDP) creates long straight-line
-        // segments that frequently cross terrain the bot cannot traverse, causing
-        // stuck → repath → backtrack oscillation.
-        if (route.Length > LongRoutePreserveThreshold)
-        {
-            return true;
-        }
-
-        // Inspect the ENTIRE route for terrain features, not just the first few points.
-        // Previously capped at 12 — this missed sharp turns and elevation changes deeper
-        // in the path, allowing simplification to destroy critical waypoints.
-        int inspectCount = route.Length;
-
-        // Only check vertical terrain when not mounted (Z changes irrelevant at mount speed)
-        if (!mountHandler.IsMounted())
-        {
-            for (int i = 1; i < inspectCount; i++)
-            {
-                if (Abs(route[i].Z - route[i - 1].Z) >= SimplifyPreserveVerticalZDelta)
-                {
-                    return true;
-                }
-            }
-        }
-
-        // Always preserve sharp turns regardless of mount status
-        for (int i = 0; i < inspectCount - 2; i++)
-        {
-            if (IsSharpTurn(route[i], route[i + 1], route[i + 2], SimplifyPreserveTurnRadians))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    internal static bool IsSharpTurn(Vector3 from, Vector3 via, Vector3 to, float minTurnRadians)
-    {
-        Vector2 incoming = new(via.X - from.X, via.Y - from.Y);
-        Vector2 outgoing = new(to.X - via.X, to.Y - via.Y);
-
-        if (incoming.LengthSquared() < 0.01f || outgoing.LengthSquared() < 0.01f)
-        {
-            return false;
-        }
-
-        incoming = Vector2.Normalize(incoming);
-        outgoing = Vector2.Normalize(outgoing);
-
-        float dot = Math.Clamp(Vector2.Dot(incoming, outgoing), -1f, 1f);
-        float angle = MathF.Acos(dot);
-        return angle >= minTurnRadians;
-    }
-
-    private void UpdateTotalRoute()
-    {
-        TotalRoute = new Vector3[routeToNextWaypoint.Count + wayPoints.Count];
-        routeToNextWaypoint.CopyTo(TotalRoute, 0);
-        wayPoints.CopyTo(TotalRoute, routeToNextWaypoint.Count);
-    }
-
-    private bool HasBeenActiveRecently()
-    {
-        return (DateTime.UtcNow - LastActive).TotalSeconds < 2;
     }
 
     private void SetTurnStuckGraceWindow(DateTime now)
@@ -1067,680 +874,176 @@ public sealed partial class Navigation : IDisposable
             return false;
         }
 
-        if (lastHeadingDiffRadians <= minAngleToTurn)
+        return lastHeadingDiffRadians > minAngleToTurn;
+    }
+
+    private bool AdjustNextWaypointPointToClosest()
+    {
+        if (wayPoints.Count < 2) { return false; }
+
+        Vector3 A = wayPoints.Pop();
+        Vector3 B = wayPoints.Peek();
+        Vector2 result = VectorExt.GetClosestPointOnLineSegment(A.AsVector2(), B.AsVector2(), playerReader.WorldPos.AsVector2());
+        Vector3 newPoint = new(result.X, result.Y, playerReader.WorldPosZ);
+
+        if (newPoint.WorldDistanceXYTo(wayPoints.Peek()) > OutDoorMinDistance)
         {
+            wayPoints.Push(newPoint);
+            if (debug)
+                LogDebug("Adjusted resume point");
+
             return false;
         }
 
-        // Once a stop-before-turn grace window is active, keep suppression in place
-        // for the remainder of that bounded window even if movement bits flicker.
+        if (debug)
+            LogDebug("Skipped next point in path");
+
         return true;
     }
 
-    private bool TryApplyDynamicHazardDetour(CancellationToken token)
+    private void V1_AttemptToKeepRouteToWaypoint()
     {
-        // DISABLED for nav recovery baseline: The dual detour system
-        // (hazard + front-bypass) with independent loop breakers produces
-        // movement chaos. Re-enable incrementally after baseline stability.
-        return false;
-
-        if (routeToNextWaypoint.Count < MinRouteWaypointsForDynamicDetour)
+        float totalDistance = VectorExt.TotalDistance<Vector3>(TotalRoute, VectorExt.WorldDistanceXY);
+        if (totalDistance > MaxDistance / 2)
         {
-            return false;
-        }
-
-        DateTime now = DateTime.UtcNow;
-        if ((now - lastDynamicDetourAttemptUtc) < DynamicDetourCooldown)
-        {
-            return false;
-        }
-
-        // Wait for sustained non-progress before rebuilding the active segment.
-        if (stuckDetector.ActionDurationMs < GetRouteResetTimeoutMs() * 0.2)
-        {
-            return false;
-        }
-
-        lastDynamicDetourAttemptUtc = now;
-
-        Vector3[] remainingPath = routeToNextWaypoint.ToArray();
-        if (remainingPath.Length < MinRouteWaypointsForDynamicDetour)
-        {
-            return false;
-        }
-
-        Vector3 playerPosition = playerReader.WorldPos;
-        Vector3 nextWaypoint = remainingPath[0];
-        Vector3[] localSegment = [playerPosition, nextWaypoint];
-
-        if (routeRerouter?.IsEnabled == true && CanUseHazardDetours(now, nextWaypoint))
-        {
-            try
+            Vector3 playerW = playerReader.WorldPos;
+            float distanceToRoute = playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek());
+            float distanceToPrevLoc = playerW.WorldDistanceXYTo(playerWorldPos);
+            if (distanceToRoute > 2 * MinDistanceMount &&
+                distanceToPrevLoc > 2 * MinDistanceMount)
             {
-                Vector3[]? detour = routeRerouter.CalculateDetourAsync(
-                    localSegment,
-                    playerReader.MapId,
-                    token).GetAwaiter().GetResult();
-
-                if (IsMeaningfulDynamicDetour(localSegment, detour))
-                {
-                    if (IsExcessiveHazardDetour(localSegment, detour!))
-                    {
-                        logger.LogDebug(
-                            "[Navigation       ] Skipping excessive dynamic hazard detour while stalled ({OriginalCount} -> {DetourCount})",
-                            localSegment.Length,
-                            detour!.Length);
-                    }
-                    else
-                    {
-                    Vector3 hazardReconnectPoint = detour![^1];
-                    if (ShouldBreakHazardDetourLoop(hazardReconnectPoint, now))
-                    {
-                        routeToNextWaypoint.Clear();
-                        logger.LogWarning(
-                            "[Navigation       ] Hazard-detour loop detected near {Reconnect}; clearing active route and suppressing hazard detours for {Cooldown}s",
-                            hazardReconnectPoint,
-                            HazardDetourBreakerCooldown.TotalSeconds);
-                        return true;
-                    }
-
-                    Vector3 reconnectPoint = hazardReconnectPoint;
-                    if (ShouldSkipReconnectPoint(reconnectPoint, now))
-                    {
-                        logger.LogDebug(
-                            "[Navigation       ] Skipping hazard detour reconnect near recent tail-recalc failure ({Reconnect})",
-                            reconnectPoint);
-                        return false;
-                    }
-
-                    Vector3[] integratedRoute = BuildIntegratedDynamicRoute(detour!, remainingPath);
-                    ApplyDynamicRoute(integratedRoute);
-                    OnDynamicDetourApplied?.Invoke();
-
-                    logger.LogInformation(
-                        "[Navigation       ] Dynamic hazard detour applied while stalled ({OriginalCount} -> {DetourCount} waypoints, reconnect={Reconnect})",
-                        remainingPath.Length,
-                        integratedRoute.Length,
-                        nextWaypoint);
-
-                    return true;
-                    }
-                }
+                LogV1ClearRouteToWaypoint(logger, patherName, distanceToRoute);
+                routeToNextWaypoint.Clear();
+                ClearPendingReroute(invalidateRouteAwareContext: true);
             }
-            catch (Exception ex)
+            else
             {
-                logger.LogWarning(ex, "[Navigation       ] Dynamic hazard detour attempt failed");
+                LogV1KeepRouteToWaypoint(logger, patherName, distanceToRoute);
+                ResetStuckParameters();
             }
         }
-
-        // Fallback when no hazard-driven detour is available yet:
-        // synthesize a short side-step route around a likely obstacle directly in front,
-        // then reconnect to the intended next waypoint and keep the remaining route.
-        if (goapCurrentGoalState?.IsCurrentGoal(nameof(WalkToCorpseGoal)) == true)
+        else
         {
-            return false;
-        }
-
-        if (now < frontBypassBreakerUntilUtc)
-        {
-            return false;
-        }
-
-        if ((now - lastFrontBypassUtc) < FrontBypassCooldown)
-        {
-            return false;
-        }
-
-        frontBypassAttemptCount++;
-        lastFrontBypassUtc = now;
-
-        Vector3[]? bypassPath = BuildFrontObstacleBypassPath(playerPosition, nextWaypoint, frontBypassAttemptCount);
-        if (bypassPath is null)
-        {
-            return false;
-        }
-
-        if (ShouldBreakFrontBypassLoop(bypassPath[^1], now))
-        {
+            LogV1ClearRouteToWaypointTooFar(logger, patherName, totalDistance, MaxDistance / 2);
             routeToNextWaypoint.Clear();
-            PrimeFailedReconnectCluster(bypassPath[^1], now);
-            logger.LogWarning(
-                "[Navigation       ] Front-bypass loop detected near {Reconnect}; clearing active route and suspending bypass for {Cooldown}s",
-                bypassPath[^1],
-                FrontBypassBreakerCooldown.TotalSeconds);
-            return true;
-        }
-
-        Vector3[] integratedBypassRoute = BuildIntegratedDynamicRoute(bypassPath, remainingPath);
-        if (ShouldBreakFrontBypassNoProgressLoop(remainingPath.Length, integratedBypassRoute.Length, bypassPath[^1], now))
-        {
-            routeToNextWaypoint.Clear();
-            PrimeFailedReconnectCluster(bypassPath[^1], now);
-            logger.LogWarning(
-                "[Navigation       ] Front-bypass no-progress loop detected near {Reconnect} ({RemainingCount}->{BypassCount}); clearing active route and suspending bypass for {Cooldown}s",
-                bypassPath[^1],
-                remainingPath.Length,
-                integratedBypassRoute.Length,
-                FrontBypassBreakerCooldown.TotalSeconds);
-            return true;
-        }
-
-        ApplyDynamicRoute(integratedBypassRoute);
-        OnDynamicDetourApplied?.Invoke();
-
-        logger.LogInformation(
-            "[Navigation       ] Dynamic front-obstacle bypass applied ({OriginalCount} -> {BypassCount} waypoints, reconnect={Reconnect}, side={Side})",
-            remainingPath.Length,
-            integratedBypassRoute.Length,
-            nextWaypoint,
-            (frontBypassAttemptCount & 1) == 0 ? "left" : "right");
-
-        return true;
-    }
-
-    private void PrimeFailedReconnectCluster(Vector3 reconnectPoint, DateTime now)
-    {
-        lastFailedReconnectPoint = reconnectPoint;
-        lastFailedReconnectUtc = now;
-        TrackFailedReconnectSample(reconnectPoint, now);
-    }
-
-    private void TrackCorpseRecoveryContext(DateTime now)
-    {
-        if (IsLikelyCorpseRecoveryContext())
-        {
-            lastCorpseRecoveryContextUtc = now;
+            ClearPendingReroute(invalidateRouteAwareContext: true);
         }
     }
 
-    private bool CanUseHazardDetours(DateTime now, Vector3? targetWorld = null)
+    private void SimplyfyRouteToWaypoint()
     {
-        if (now < hazardDetourBreakerUntilUtc)
+        const bool HighQuality = false;
+        Vector3[] route = routeToNextWaypoint.ToArray();
+        if (ShouldPreserveDetailedRoute(route))
         {
-            return false;
-        }
-
-        if (IsLikelyCorpseRecoveryContext())
-        {
-            lastCorpseRecoveryContextUtc = now;
-            return false;
-        }
-
-        if (lastCorpseRecoveryContextUtc != DateTime.MinValue &&
-            (now - lastCorpseRecoveryContextUtc) < CorpseRecoveryHazardSuppressGrace)
-        {
-            return false;
-        }
-
-        if (targetWorld.HasValue && IsCorpseRecoveryTarget(targetWorld.Value))
-        {
-            lastCorpseRecoveryContextUtc = now;
-            return false;
-        }
-
-        return true;
-    }
-
-    private bool IsCorpseRecoveryTarget(Vector3 targetWorld)
-    {
-        if (!TryGetCorpseWorldPos(out Vector3 corpseWorld))
-        {
-            return false;
-        }
-
-        return Vector3.Distance(targetWorld, corpseWorld) <= CorpseTargetMatchDistance;
-    }
-
-    private bool IsLikelyCorpseRecoveryContext()
-    {
-        if (goapCurrentGoalState?.IsCurrentGoal(nameof(WalkToCorpseGoal)) == true)
-        {
-            return true;
-        }
-
-        if (bits.Dead() || bits.CorpseInRange())
-        {
-            return true;
-        }
-
-        // Do NOT use CorpseMapX/Y — those remain non-zero for the entire ghost run
-        // and would suppress hazard detours even during normal FollowRouteGoal navigation.
-        return false;
-    }
-
-    private bool TryGetCorpseWorldPos(out Vector3 corpseWorld)
-    {
-        corpseWorld = default;
-
-        if (playerReader.CorpseMapX == 0f && playerReader.CorpseMapY == 0f)
-        {
-            return false;
-        }
-
-        corpseWorld = WorldMapAreaDB.ToWorld_FlipXY(playerReader.CorpseMapPos, playerReader.WorldMapArea);
-        return true;
-    }
-
-    private static bool IsExcessiveHazardDetour(Vector3[] originalPath, Vector3[] detourPath)
-    {
-        if (originalPath.Length < 2 || detourPath.Length < 2)
-        {
-            return false;
-        }
-
-        float originalDistance = VectorExt.TotalDistance<Vector3>(originalPath, VectorExt.WorldDistanceXY);
-        float detourDistance = VectorExt.TotalDistance<Vector3>(detourPath, VectorExt.WorldDistanceXY);
-
-        if (originalDistance <= 0.01f || detourDistance <= originalDistance)
-        {
-            return false;
-        }
-
-        float additionalDistance = detourDistance - originalDistance;
-        float ratio = detourDistance / originalDistance;
-
-        if (additionalDistance >= HazardDetourHardMaxAdditionalDistance)
-        {
-            return true;
-        }
-
-        return additionalDistance >= HazardDetourMaxAdditionalDistance &&
-            ratio >= HazardDetourMaxLengthRatio;
-    }
-
-    private bool ShouldBreakHazardDetourLoop(Vector3 reconnectPoint, DateTime now)
-    {
-        if (lastHazardDetourRepeatUtc == DateTime.MinValue ||
-            (now - lastHazardDetourRepeatUtc) > HazardDetourRepeatWindow ||
-            Vector3.Distance(reconnectPoint, lastHazardDetourRepeatPoint) > HazardDetourRepeatDistance)
-        {
-            repeatedHazardDetourCount = 1;
-            lastHazardDetourRepeatPoint = reconnectPoint;
-            lastHazardDetourRepeatUtc = now;
-            return false;
-        }
-
-        repeatedHazardDetourCount++;
-        lastHazardDetourRepeatPoint = reconnectPoint;
-        lastHazardDetourRepeatUtc = now;
-
-        if (repeatedHazardDetourCount < HazardDetourRepeatLimit)
-        {
-            return false;
-        }
-
-        repeatedHazardDetourCount = 0;
-        hazardDetourBreakerUntilUtc = now + HazardDetourBreakerCooldown;
-        return true;
-    }
-
-    private bool ShouldBreakFrontBypassLoop(Vector3 reconnectPoint, DateTime now)
-    {
-        TrackFrontBypassReconnectSample(reconnectPoint, now);
-
-        if (lastFrontBypassRepeatUtc == DateTime.MinValue ||
-            (now - lastFrontBypassRepeatUtc) > FrontBypassRepeatWindow ||
-            Vector3.Distance(reconnectPoint, lastFrontBypassRepeatPoint) > FrontBypassRepeatDistance)
-        {
-            repeatedFrontBypassCount = 1;
-            lastFrontBypassRepeatPoint = reconnectPoint;
-            lastFrontBypassRepeatUtc = now;
-            return false;
-        }
-
-        repeatedFrontBypassCount++;
-        lastFrontBypassRepeatPoint = reconnectPoint;
-        lastFrontBypassRepeatUtc = now;
-
-        if (repeatedFrontBypassCount < FrontBypassRepeatLimit)
-        {
-            int nearbyReconnects = CountNearbyReconnectSamples(recentFrontBypassReconnects, reconnectPoint, FrontBypassClusterDistance);
-            if (nearbyReconnects < FrontBypassClusterLimit)
+            if (route.Length > LongRoutePreserveThreshold)
             {
-                return false;
-            }
-        }
-
-        repeatedFrontBypassCount = 0;
-        frontBypassBreakerUntilUtc = now + FrontBypassBreakerCooldown;
-        return true;
-    }
-
-    private bool ShouldBreakFrontBypassNoProgressLoop(int remainingCount, int bypassCount, Vector3 reconnectPoint, DateTime now)
-    {
-        if (Math.Abs(bypassCount - remainingCount) > FrontBypassNoProgressMaxRouteDelta)
-        {
-            repeatedFrontBypassNoProgressCount = 0;
-            return false;
-        }
-
-        if (lastFrontBypassNoProgressUtc == DateTime.MinValue ||
-            (now - lastFrontBypassNoProgressUtc) > FrontBypassNoProgressWindow ||
-            Vector3.Distance(reconnectPoint, lastFrontBypassNoProgressPoint) > FrontBypassClusterDistance)
-        {
-            repeatedFrontBypassNoProgressCount = 1;
-            lastFrontBypassNoProgressPoint = reconnectPoint;
-            lastFrontBypassNoProgressUtc = now;
-            return false;
-        }
-
-        repeatedFrontBypassNoProgressCount++;
-        lastFrontBypassNoProgressPoint = reconnectPoint;
-        lastFrontBypassNoProgressUtc = now;
-
-        if (repeatedFrontBypassNoProgressCount < FrontBypassNoProgressRepeatLimit)
-        {
-            return false;
-        }
-
-        repeatedFrontBypassNoProgressCount = 0;
-        frontBypassBreakerUntilUtc = now + FrontBypassBreakerCooldown;
-        return true;
-    }
-
-    private void TrackFrontBypassReconnectSample(Vector3 reconnectPoint, DateTime now)
-    {
-        PruneReconnectSamples(recentFrontBypassReconnects, now, FrontBypassClusterWindow);
-        recentFrontBypassReconnects.Enqueue(new ReconnectSample(now, reconnectPoint));
-    }
-
-    private void TrackFailedReconnectSample(Vector3 reconnectPoint, DateTime now)
-    {
-        PruneReconnectSamples(recentFailedReconnects, now, FailedReconnectClusterWindow);
-        recentFailedReconnects.Enqueue(new ReconnectSample(now, reconnectPoint));
-    }
-
-    private static void PruneReconnectSamples(Queue<ReconnectSample> samples, DateTime now, TimeSpan window)
-    {
-        while (samples.Count > 0 && (now - samples.Peek().TimestampUtc) > window)
-        {
-            samples.Dequeue();
-        }
-    }
-
-    private static int CountNearbyReconnectSamples(Queue<ReconnectSample> samples, Vector3 point, float maxDistance)
-    {
-        int count = 0;
-        foreach (ReconnectSample sample in samples)
-        {
-            if (Vector3.Distance(sample.Point, point) <= maxDistance)
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private readonly record struct ReconnectSample(DateTime TimestampUtc, Vector3 Point);
-
-    internal static bool IsMeaningfulDynamicDetour(Vector3[] originalPath, Vector3[]? detour)
-    {
-        if (detour is not { Length: >= 2 })
-        {
-            return false;
-        }
-
-        if (detour.Length > originalPath.Length)
-        {
-            return true;
-        }
-
-        int compareCount = Math.Min(originalPath.Length, detour.Length);
-        float accumulatedDelta = 0f;
-
-        for (int i = 1; i < compareCount; i++)
-        {
-            accumulatedDelta += Vector3.Distance(originalPath[i], detour[i]);
-        }
-
-        return accumulatedDelta >= 2.5f;
-    }
-
-    internal static Vector3[] StitchDetourWithRemainingPath(
-        Vector3[] detourPath,
-        Vector3[] remainingPath,
-        float duplicateDistance = 1.0f)
-    {
-        if (remainingPath.Length == 0)
-        {
-            return Array.Empty<Vector3>();
-        }
-
-        if (detourPath.Length < 2)
-        {
-            return remainingPath;
-        }
-
-        List<Vector3> stitched = new(detourPath.Length + remainingPath.Length);
-
-        static void AddIfDistinct(List<Vector3> points, Vector3 candidate, float minDistance)
-        {
-            if (points.Count > 0 &&
-                Vector3.Distance(points[points.Count - 1], candidate) <= minDistance)
-            {
-                return;
+                logger.LogDebug(
+                    "[Navigation       ] Preserving detailed route ({Count} points, long-path or terrain feature detected)",
+                    route.Length);
             }
 
-            points.Add(candidate);
+            return;
         }
 
-        // Skip index 0 because it is the current position.
-        for (int i = 1; i < detourPath.Length; i++)
-        {
-            AddIfDistinct(stitched, detourPath[i], duplicateDistance);
-        }
+        float simplifyTolerance = bits.Indoors() ? IndoorMinDistance / 2f : OutDoorMinDistance / 2f;
+        Span<Vector3> reduced = PathSimplify.Simplify(route, simplifyTolerance, HighQuality);
+        if (debug)
+            LogDebug($"{nameof(SimplyfyRouteToWaypoint)} {routeToNextWaypoint.Count} -> {reduced.Length} | HQ: {HighQuality}");
 
-        for (int i = 1; i < remainingPath.Length; i++)
-        {
-            AddIfDistinct(stitched, remainingPath[i], duplicateDistance);
-        }
-
-        return stitched.ToArray();
-    }
-
-    internal static Vector3[] MergeRouteSegments(
-        Vector3[] firstSegment,
-        Vector3[] secondSegment,
-        float duplicateDistance = 1.0f)
-    {
-        if (firstSegment.Length == 0)
-        {
-            return secondSegment;
-        }
-
-        if (secondSegment.Length == 0)
-        {
-            return firstSegment;
-        }
-
-        List<Vector3> merged = new(firstSegment.Length + secondSegment.Length);
-
-        static void AddIfDistinct(List<Vector3> points, Vector3 candidate, float minDistance)
-        {
-            if (points.Count > 0 &&
-                Vector3.Distance(points[points.Count - 1], candidate) <= minDistance)
-            {
-                return;
-            }
-
-            points.Add(candidate);
-        }
-
-        for (int i = 0; i < firstSegment.Length; i++)
-        {
-            AddIfDistinct(merged, firstSegment[i], duplicateDistance);
-        }
-
-        for (int i = 0; i < secondSegment.Length; i++)
-        {
-            AddIfDistinct(merged, secondSegment[i], duplicateDistance);
-        }
-
-        return merged.ToArray();
-    }
-
-    internal static Vector3[]? BuildFrontObstacleBypassPath(Vector3 start, Vector3 nextWaypoint, int attemptIndex)
-    {
-        Vector3 toTarget = nextWaypoint - start;
-        toTarget.Z = 0;
-
-        float distance = toTarget.Length();
-        if (distance < 1.5f)
-        {
-            return null;
-        }
-
-        Vector3 direction = Vector3.Normalize(toTarget);
-        Vector3 perpendicular = Vector3.Normalize(new Vector3(-direction.Y, direction.X, 0));
-
-        float sideSign = (attemptIndex & 1) == 0 ? 1f : -1f;
-        float lateralDistance = Math.Clamp(distance * 0.5f, 3.0f, 7.5f);
-        float forwardDistance = Math.Clamp(distance * 0.45f, 2.5f, 9.0f);
-
-        Vector3 bypass = start + (direction * forwardDistance) + (perpendicular * lateralDistance * sideSign);
-        bypass.Z = nextWaypoint.Z != 0 ? nextWaypoint.Z : start.Z;
-
-        return [start, bypass, nextWaypoint];
-    }
-
-    private Vector3[] BuildIntegratedDynamicRoute(Vector3[] localDetour, Vector3[] remainingPath)
-    {
-        Vector3[]? recalculatedTail = TryRecalculateTailRoute(localDetour[^1]);
-        if (recalculatedTail is { Length: >= 2 })
-        {
-            Vector3[] merged = MergeRouteSegments(localDetour, recalculatedTail, DynamicReconnectDuplicateDistance);
-
-            if (merged.Length >= 2)
-            {
-                logger.LogInformation(
-                    "[Navigation       ] Dynamic route recalculated from reconnect ({LocalCount} + {TailCount} -> {MergedCount})",
-                    localDetour.Length,
-                    recalculatedTail.Length,
-                    merged.Length);
-
-                OnSuccessfulReconnect?.Invoke();
-
-                // ApplyDynamicRoute expects route waypoints without current player position at index 0.
-                // localDetour starts at player, so strip only that first point.
-                if (merged.Length > 1 && Vector3.Distance(merged[0], playerReader.WorldPos) <= DynamicReconnectDuplicateDistance)
-                {
-                    Vector3[] trimmed = new Vector3[merged.Length - 1];
-                    Array.Copy(merged, 1, trimmed, 0, trimmed.Length);
-                    return trimmed;
-                }
-
-                return merged;
-            }
-        }
-
-        Interlocked.Increment(ref tailRecalcFailures);
-        lastFailedReconnectPoint = localDetour[^1];
-        lastFailedReconnectUtc = DateTime.UtcNow;
-        TrackFailedReconnectSample(localDetour[^1], lastFailedReconnectUtc);
-        logger.LogWarning(
-            "[Navigation       ] Tail recalc unavailable - pather returned no usable path (failures: {FailureCount}, reconnect={Reconnect}); using stitched fallback",
-            tailRecalcFailures,
-            localDetour[^1]);
-        return StitchDetourWithRemainingPath(localDetour, remainingPath, DynamicReconnectDuplicateDistance);
-    }
-
-    private bool ShouldSkipReconnectPoint(Vector3 reconnectPoint, DateTime now)
-    {
-        if (lastFailedReconnectUtc == DateTime.MinValue)
-        {
-            return false;
-        }
-
-        if ((now - lastFailedReconnectUtc) > FailedReconnectCooldown)
-        {
-            return false;
-        }
-
-        if (Vector3.Distance(reconnectPoint, lastFailedReconnectPoint) <= FailedReconnectDuplicateDistance)
-        {
-            return true;
-        }
-
-        PruneReconnectSamples(recentFailedReconnects, now, FailedReconnectClusterWindow);
-        int nearbyFailures = CountNearbyReconnectSamples(recentFailedReconnects, reconnectPoint, FailedReconnectClusterDistance);
-        if (nearbyFailures >= FailedReconnectClusterSkipThreshold)
-        {
-            logger.LogDebug(
-                "[Navigation       ] Skipping reconnect near repeated tail-recalc failure cluster ({Reconnect}, nearbyFailures={NearbyFailures})",
-                reconnectPoint,
-                nearbyFailures);
-            return true;
-        }
-
-        return false;
-    }
-
-    private Vector3[]? TryRecalculateTailRoute(Vector3 reconnectPoint)
-    {
-        if (wayPoints.Count == 0)
-        {
-            return null;
-        }
-
-        Vector3 destination = wayPoints.Peek();
-        if (Vector3.Distance(reconnectPoint, destination) <= OutDoorMinDistance)
-        {
-            return [reconnectPoint, destination];
-        }
-
-        Vector3[] refreshed = pather.FindWorldRoute(
-            playerReader.UIMapId.Value,
-            bits.Indoors(),
-            reconnectPoint,
-            destination);
-
-        if (refreshed.Length < 2)
-        {
-            return null;
-        }
-
-        // Optionally re-apply hazard detour on the refreshed tail for consistent global avoidance.
-        if (routeRerouter?.IsEnabled == true && CanUseHazardDetours(DateTime.UtcNow, destination))
-        {
-            try
-            {
-                Vector3[]? hazardTail = routeRerouter.CalculateDetourAsync(
-                    refreshed,
-                    playerReader.MapId,
-                    token).GetAwaiter().GetResult();
-
-                if (hazardTail is { Length: >= 2 } &&
-                    IsMeaningfulDynamicDetour(refreshed, hazardTail) &&
-                    !IsExcessiveHazardDetour(refreshed, hazardTail))
-                {
-                    return hazardTail;
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogDebug(ex, "[Navigation       ] Tail hazard detour recalculation skipped due to error");
-            }
-        }
-
-        return refreshed;
-    }
-
-    private void ApplyDynamicRoute(Vector3[] route)
-    {
         routeToNextWaypoint.Clear();
-
-        for (int i = route.Length - 1; i >= 0; i--)
+        for (int i = reduced.Length - 1; i >= 0; i--)
         {
-            routeToNextWaypoint.Push(route[i]);
+            routeToNextWaypoint.Push(reduced[i]);
+        }
+    }
+
+    /// <summary>
+    /// Long paths (e.g. corpse runs) from the pathfinder with Catmull-Rom smoothing
+    /// already have reasonable point spacing. Simplification of these removes critical
+    /// terrain-following detail, creating straight-line segments that cross impassable
+    /// terrain and cause stuck → repath → backtrack loops.
+    /// </summary>
+    private const int LongRoutePreserveThreshold = 40;
+
+    private bool ShouldPreserveDetailedRoute(Vector3[] route)
+    {
+        if (route.Length < 3)
+        {
+            return false;
         }
 
-        if (routeToNextWaypoint.Count > 0)
+        // Long paths from the pathfinder (e.g. corpse runs spanning 200+ yards) should
+        // always preserve detail. The Catmull-Rom smoothed path already has reasonable
+        // point spacing, and aggressive simplification (RDP) creates long straight-line
+        // segments that frequently cross terrain the bot cannot traverse, causing
+        // stuck → repath → backtrack oscillation.
+        if (route.Length > LongRoutePreserveThreshold)
         {
-            stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
+            return true;
         }
 
-        UpdateTotalRoute();
+        // Inspect the ENTIRE route for terrain features, not just the first few points.
+        // Previously capped at 12 — this missed sharp turns and elevation changes deeper
+        // in the path, allowing simplification to destroy critical waypoints.
+        int inspectCount = route.Length;
+
+        // Only check vertical terrain when not mounted (Z changes irrelevant at mount speed)
+        if (!mountHandler.IsMounted())
+        {
+            for (int i = 1; i < inspectCount; i++)
+            {
+                if (Abs(route[i].Z - route[i - 1].Z) >= SimplifyPreserveVerticalZDelta)
+                {
+                    return true;
+                }
+            }
+        }
+
+        // Always preserve sharp turns regardless of mount status.
+        // Use a tighter threshold indoors to catch moderate corridor bends (≥20°).
+        float preserveTurnThreshold = bits.Indoors()
+            ? SimplifyPreserveIndoorTurnRadians  // 20°
+            : SimplifyPreserveTurnRadians;       // 30°
+        for (int i = 0; i < inspectCount - 2; i++)
+        {
+            if (IsSharpTurn(route[i], route[i + 1], route[i + 2], preserveTurnThreshold))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal static bool IsSharpTurn(Vector3 from, Vector3 via, Vector3 to, float minTurnRadians)
+    {
+        Vector2 incoming = new(via.X - from.X, via.Y - from.Y);
+        Vector2 outgoing = new(to.X - via.X, to.Y - via.Y);
+
+        if (incoming.LengthSquared() < 0.01f || outgoing.LengthSquared() < 0.01f)
+        {
+            return false;
+        }
+
+        incoming = Vector2.Normalize(incoming);
+        outgoing = Vector2.Normalize(outgoing);
+
+        float dot = Math.Clamp(Vector2.Dot(incoming, outgoing), -1f, 1f);
+        float angle = MathF.Acos(dot);
+        return angle >= minTurnRadians;
+    }
+
+    private void UpdateTotalRoute()
+    {
+        TotalRoute = new Vector3[routeToNextWaypoint.Count + wayPoints.Count];
+        routeToNextWaypoint.CopyTo(TotalRoute, 0);
+        wayPoints.CopyTo(TotalRoute, routeToNextWaypoint.Count);
+    }
+
+    private bool HasBeenActiveRecently()
+    {
+        return (DateTime.UtcNow - LastActive).TotalSeconds < 2;
     }
 
     private double GetRouteResetTimeoutMs()
@@ -1764,15 +1067,17 @@ public sealed partial class Navigation : IDisposable
 
     public NavigationRuntimeSnapshot GetRuntimeSnapshot()
     {
-        DateTime now = DateTime.UtcNow;
-        bool frontBreakerActive = now < frontBypassBreakerUntilUtc;
-        bool hazardBreakerActive = now < hazardDetourBreakerUntilUtc;
-
         float? distanceToNextWaypoint = null;
         if (routeToNextWaypoint.Count > 0)
         {
             distanceToNextWaypoint = playerReader.WorldPos.WorldDistanceXYTo(routeToNextWaypoint.Peek());
         }
+
+        DateTime now = DateTime.UtcNow;
+        bool turnStuckGraceActive = now < turnStuckGraceUntilUtc;
+        int turnStuckGraceRemainingMs = turnStuckGraceActive
+            ? (int)Math.Ceiling((turnStuckGraceUntilUtc - now).TotalMilliseconds)
+            : 0;
 
         return new NavigationRuntimeSnapshot(
             RouteToNextWaypointCount: routeToNextWaypoint.Count,
@@ -1782,26 +1087,40 @@ public sealed partial class Navigation : IDisposable
             LastHeadingDiffRadians: lastHeadingDiffRadians,
             OscillationDetected: false,
             OscillationCount: 0,
-            TurnStuckGraceActive: now < turnStuckGraceUntilUtc,
-            TurnStuckGraceRemainingMs: now < turnStuckGraceUntilUtc
-                ? Math.Max(0, (int)Math.Ceiling((turnStuckGraceUntilUtc - now).TotalMilliseconds))
-                : 0,
+            TurnStuckGraceActive: turnStuckGraceActive,
+            TurnStuckGraceRemainingMs: turnStuckGraceRemainingMs,
             SuppressedTurnStuckRecoveryCount: suppressedTurnStuckRecoveryCount,
-            LastSuppressedTurnStuckRecoveryUtc: lastSuppressedTurnStuckRecoveryUtc == DateTime.MinValue
-                ? null
-                : lastSuppressedTurnStuckRecoveryUtc,
-            FrontBypassBreakerActive: frontBreakerActive,
-            FrontBypassBreakerRemainingMs: frontBreakerActive
-                ? Math.Max(0, (int)Math.Ceiling((frontBypassBreakerUntilUtc - now).TotalMilliseconds))
-                : 0,
-            HazardDetourBreakerActive: hazardBreakerActive,
-            HazardDetourBreakerRemainingMs: hazardBreakerActive
-                ? Math.Max(0, (int)Math.Ceiling((hazardDetourBreakerUntilUtc - now).TotalMilliseconds))
-                : 0,
-            FrontBypassAttemptCount: frontBypassAttemptCount,
-            RepeatedFrontBypassCount: repeatedFrontBypassCount,
-            RepeatedFrontBypassNoProgressCount: repeatedFrontBypassNoProgressCount,
-            RepeatedHazardDetourCount: repeatedHazardDetourCount);
+            LastSuppressedTurnStuckRecoveryUtc: lastSuppressedTurnStuckRecoveryUtc,
+            FrontBypassBreakerActive: false,
+            FrontBypassBreakerRemainingMs: 0,
+            HazardDetourBreakerActive: false,
+            HazardDetourBreakerRemainingMs: 0,
+            FrontBypassAttemptCount: 0,
+            RepeatedFrontBypassCount: 0,
+            RepeatedFrontBypassNoProgressCount: 0,
+            RepeatedHazardDetourCount: 0,
+            RerouteTriggerCount: rerouteTriggerCount,
+            RerouteApplyCount: rerouteApplyCount,
+            RerouteDropCount: rerouteDropCount,
+            LastRerouteDropReason: lastRerouteDropReason,
+            LastRerouteAnchorDistance: lastRerouteAnchorDistance);
+    }
+
+    public NavigationRerouteRuntimeSnapshot GetRerouteRuntimeSnapshot()
+    {
+        RerouteInfo? activeReroute = routeRerouter?.GetActiveReroute();
+        return new NavigationRerouteRuntimeSnapshot(
+            RerouteTriggerCount: rerouteTriggerCount,
+            RerouteApplyCount: rerouteApplyCount,
+            RerouteDropCount: rerouteDropCount,
+            DetourOnlyCollapseCount: detourOnlyCollapseCount,
+            LastRerouteDropReason: lastRerouteDropReason,
+            LastRerouteAnchorDistance: lastRerouteAnchorDistance,
+            HasActiveReroute: activeReroute != null,
+            ActiveRerouteId: activeReroute?.Id,
+            ActiveRerouteStartedAt: activeReroute?.StartedAt,
+            ActiveRerouteOriginalTarget: activeReroute?.OriginalTarget,
+            ActiveRerouteWaypointCount: activeReroute?.DetourWaypoints.Length ?? 0);
     }
 
 
@@ -1851,6 +1170,337 @@ public sealed partial class Navigation : IDisposable
     #endregion
 
     #region Humanization
+
+    #endregion
+
+    #region HazardAvoidance
+
+    private void TryScheduleRouteAwareReroute(Vector3 playerPosition, CancellationToken token)
+    {
+        IRouteRerouter? rerouter = routeRerouter;
+        if (rerouter == null ||
+            featureFlagService?.Current.HazardAvoidance.Enabled != true ||
+            routeToNextWaypoint.Count < 2 ||
+            rerouter.GetActiveReroute() != null)
+        {
+            return;
+        }
+
+        Vector3[] routeSnapshot = routeToNextWaypoint.ToArray();
+        if (!TrySelectDetourAnchor(routeSnapshot, playerPosition, out Vector3 detourAnchor))
+        {
+            return;
+        }
+
+        float anchorDistance = playerPosition.WorldDistanceXYTo(detourAnchor);
+        lastRerouteAnchorDistance = anchorDistance;
+        if (!TryAcquireRouteAwareRerouteGate(ref routeAwareRerouteScheduleInFlight))
+        {
+            return;
+        }
+
+        int scheduledRouteContextVersion =
+            Interlocked.CompareExchange(ref routeAwareRerouteContextVersion, 0, 0);
+        _ = TriggerRouteAwareRerouteAsync(
+            rerouter,
+            playerPosition,
+            detourAnchor,
+            anchorDistance,
+            playerReader.UIMapId.Value,
+            scheduledRouteContextVersion,
+            token);
+    }
+
+    private async Task TriggerRouteAwareRerouteAsync(
+        IRouteRerouter rerouter,
+        Vector3 playerPosition,
+        Vector3 detourAnchor,
+        float detourAnchorDistance,
+        int mapId,
+        int scheduledRouteContextVersion,
+        CancellationToken token)
+    {
+        try
+        {
+            bool triggered = await rerouter
+                .TriggerRerouteAsync(playerPosition, detourAnchor, mapId, token)
+                .ConfigureAwait(false);
+
+            int currentRouteContextVersion =
+                Interlocked.CompareExchange(ref routeAwareRerouteContextVersion, 0, 0);
+            (bool commit, bool clearActiveReroute) = DecideRouteAwareRerouteCompletion(
+                triggered,
+                token.IsCancellationRequested,
+                scheduledRouteContextVersion,
+                currentRouteContextVersion);
+            if (clearActiveReroute)
+            {
+                ClearPendingReroute();
+                return;
+            }
+
+            if (commit)
+            {
+                Interlocked.Increment(ref rerouteTriggerCount);
+                lastRerouteAnchorDistance = detourAnchorDistance;
+                OnRerouteTriggered?.Invoke();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "[Navigation       ] Route-aware reroute scheduling failed");
+        }
+        finally
+        {
+            ReleaseRouteAwareRerouteGate(ref routeAwareRerouteScheduleInFlight);
+        }
+    }
+
+    internal static bool TryAcquireRouteAwareRerouteGate(ref int gateState)
+    {
+        return Interlocked.CompareExchange(ref gateState, 1, 0) == 0;
+    }
+
+    internal static void ReleaseRouteAwareRerouteGate(ref int gateState)
+    {
+        Interlocked.Exchange(ref gateState, 0);
+    }
+
+    internal static (bool Commit, bool ClearActiveReroute) DecideRouteAwareRerouteCompletion(
+        bool triggered,
+        bool tokenCancelled,
+        int scheduledContextVersion,
+        int currentContextVersion)
+    {
+        if (!triggered)
+        {
+            return (false, false);
+        }
+
+        bool staleCompletion =
+            tokenCancelled ||
+            scheduledContextVersion != currentContextVersion;
+        if (staleCompletion)
+        {
+            return (false, true);
+        }
+
+        return (true, false);
+    }
+
+    internal static bool TrySelectDetourAnchor(
+        IReadOnlyList<Vector3> routeTopFirst,
+        Vector3 playerPosition,
+        out Vector3 detourAnchor,
+        int lookaheadPoints = RouteAwareDetourLookaheadPoints,
+        float minAnchorDistance = RouteAwareDetourMinAnchorDistance)
+    {
+        detourAnchor = default;
+        if (routeTopFirst.Count == 0)
+        {
+            return false;
+        }
+
+        int inspectCount = Math.Min(Math.Max(1, routeTopFirst.Count - 1), Math.Max(1, lookaheadPoints));
+        float furthestDistance = -1f;
+        Vector3 furthestPoint = default;
+
+        for (int i = 0; i < inspectCount; i++)
+        {
+            Vector3 candidate = routeTopFirst[i];
+            float distance = playerPosition.WorldDistanceXYTo(candidate);
+
+            if (distance > furthestDistance)
+            {
+                furthestDistance = distance;
+                furthestPoint = candidate;
+            }
+
+            if (distance >= minAnchorDistance)
+            {
+                detourAnchor = candidate;
+                return true;
+            }
+        }
+
+        if (furthestDistance <= 0.01f)
+        {
+            return false;
+        }
+
+        detourAnchor = furthestPoint;
+        return true;
+    }
+
+    internal static bool ShouldApplyPendingReroute(
+        RerouteInfo pendingReroute,
+        IReadOnlyList<Vector3> routeTopFirst,
+        DateTime nowUtc,
+        int maxAgeSeconds = PendingRerouteMaxAgeSeconds,
+        float targetMatchDistance = PendingRerouteTargetMatchDistance)
+        => GetPendingRerouteDropReason(pendingReroute, routeTopFirst, nowUtc, maxAgeSeconds, targetMatchDistance) == null;
+
+    internal static string? GetPendingRerouteDropReason(
+        RerouteInfo pendingReroute,
+        IReadOnlyList<Vector3> routeTopFirst,
+        DateTime nowUtc,
+        int maxAgeSeconds = PendingRerouteMaxAgeSeconds,
+        float targetMatchDistance = PendingRerouteTargetMatchDistance)
+    {
+        if (routeTopFirst.Count == 0)
+        {
+            return "RouteEmpty";
+        }
+
+        TimeSpan age = nowUtc - pendingReroute.StartedAt;
+        if (age < TimeSpan.Zero || age > TimeSpan.FromSeconds(maxAgeSeconds))
+        {
+            return "RerouteExpired";
+        }
+
+        for (int i = 0; i < routeTopFirst.Count; i++)
+        {
+            if (routeTopFirst[i].WorldDistanceXYTo(pendingReroute.OriginalTarget) <= targetMatchDistance)
+            {
+                return null;
+            }
+        }
+
+        return "TargetMismatch";
+    }
+
+    private void ClearPendingReroute(bool invalidateRouteAwareContext = false)
+    {
+        routeRerouter?.ClearActiveReroute();
+        if (invalidateRouteAwareContext)
+        {
+            Interlocked.Increment(ref routeAwareRerouteContextVersion);
+            ReleaseRouteAwareRerouteGate(ref routeAwareRerouteScheduleInFlight);
+        }
+    }
+
+    internal static Vector3[] BuildInlineDetourRoute(
+        Vector3[] detourWaypoints,
+        IReadOnlyList<Vector3> preservedRouteTopFirst,
+        Vector3 playerPosition,
+        float reconnectDistance = DetourReconnectDistance,
+        float duplicateDistance = DetourDuplicateDistance)
+    {
+        _ = playerPosition;
+        int continuationStartIndex = 0;
+        if (detourWaypoints.Length > 0 && preservedRouteTopFirst.Count > 0)
+        {
+            Vector3 reconnectPoint = detourWaypoints[^1];
+            int reconnectIndex = -1;
+            float bestDistance = float.MaxValue;
+
+            for (int i = 0; i < preservedRouteTopFirst.Count; i++)
+            {
+                float distance = preservedRouteTopFirst[i].WorldDistanceXYTo(reconnectPoint);
+                if (distance <= reconnectDistance &&
+                    (distance < bestDistance || (Abs(distance - bestDistance) <= 0.001f && i > reconnectIndex)))
+                {
+                    reconnectIndex = i;
+                    bestDistance = distance;
+                }
+            }
+
+            if (reconnectIndex >= 0)
+            {
+                continuationStartIndex = reconnectIndex + 1;
+            }
+            else
+            {
+                int destinationIndex = preservedRouteTopFirst.Count - 1;
+                if (preservedRouteTopFirst[destinationIndex].WorldDistanceXYTo(reconnectPoint) <= reconnectDistance * 4f)
+                {
+                    continuationStartIndex = preservedRouteTopFirst.Count;
+                }
+            }
+        }
+
+        List<Vector3> mergedTopFirst = new(detourWaypoints.Length + Math.Max(0, preservedRouteTopFirst.Count - continuationStartIndex));
+
+        static void AddIfDistinct(List<Vector3> points, Vector3 candidate, float minDistance)
+        {
+            if (points.Count > 0 &&
+                Vector3.Distance(points[points.Count - 1], candidate) <= minDistance)
+            {
+                return;
+            }
+
+            points.Add(candidate);
+        }
+
+        for (int i = 0; i < detourWaypoints.Length; i++)
+        {
+            if (i == 0)
+            {
+                continue;
+            }
+
+            Vector3 candidate = detourWaypoints[i];
+            AddIfDistinct(mergedTopFirst, candidate, duplicateDistance);
+        }
+
+        for (int i = continuationStartIndex; i < preservedRouteTopFirst.Count; i++)
+        {
+            AddIfDistinct(mergedTopFirst, preservedRouteTopFirst[i], duplicateDistance);
+        }
+
+        return mergedTopFirst.ToArray();
+    }
+
+    /// <summary>
+    /// Prepends detour waypoints to the front of the current route without replacing it.
+    /// After the detour is traversed, normal route progression resumes.
+    /// </summary>
+    private void InsertDetourIntoRoute(Vector3[] detourWaypoints)
+    {
+        if (detourWaypoints.Length == 0)
+        {
+            return;
+        }
+
+        // Drain current route into a temporary list (stack order: top-first = nearest-first)
+        List<Vector3> preserved = new(routeToNextWaypoint.Count);
+        int preservedCount = routeToNextWaypoint.Count;
+        while (routeToNextWaypoint.Count > 0)
+        {
+            preserved.Add(routeToNextWaypoint.Pop());
+        }
+
+        Vector3[] mergedRoute = BuildInlineDetourRoute(
+            detourWaypoints,
+            preserved,
+            playerReader.WorldPos);
+
+        if (preservedCount > 0 && mergedRoute.Length <= detourWaypoints.Length)
+        {
+            Interlocked.Increment(ref detourOnlyCollapseCount);
+            OnDetourOnlyCollapseDetected?.Invoke();
+        }
+
+        for (int i = mergedRoute.Length - 1; i >= 0; i--)
+        {
+            routeToNextWaypoint.Push(mergedRoute[i]);
+        }
+
+        stuckDetector.Reset();
+        if (routeToNextWaypoint.Count > 0)
+        {
+            stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
+        }
+
+        OnDynamicDetourApplied?.Invoke();
+        if (debug)
+        {
+            LogDebug($"[HazardAvoidance] Inserted detour ({detourWaypoints.Length} points) into route ({preservedCount} points) => {routeToNextWaypoint.Count} points");
+        }
+    }
 
     #endregion
 }

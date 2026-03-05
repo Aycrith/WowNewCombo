@@ -1,5 +1,10 @@
+using Core;
+using Core.Goals;
+using NavigationGoal = Core.Goals.Navigation;
+
 using FluentAssertions;
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Xunit;
 
@@ -206,6 +211,418 @@ public class NavigationHelperTests
         float minTurnRadians = MathF.PI / 6f; // 30 degrees
         bool result = IsSharpTurn(from, via, to, minTurnRadians);
         result.Should().BeFalse("15 degree turn should not be detected as sharp (< 30 degrees)");
+    }
+
+    // ---- Detour stitching ----
+
+    /// <summary>
+    /// When detour ends at the same destination as the preserved route, the replayed
+    /// original prefix must be dropped to avoid backtracking loops.
+    /// </summary>
+    [Fact]
+    public void BuildInlineDetourRoute_ReconnectsAtDestination_DropsReplayedPrefix()
+    {
+        Vector3 player = new(0, 0, 0);
+        List<Vector3> preservedTopFirst =
+        [
+            new(10, 0, 0),
+            new(20, 0, 0),
+            new(30, 0, 0),
+            new(40, 0, 0) // destination already on preserved route
+        ];
+        Vector3[] detour =
+        [
+            player,            // current position anchor; should be skipped
+            new(8, 6, 0),
+            new(22, 7, 0),
+            new(40, 0, 0)      // reconnect at destination
+        ];
+
+        Vector3[] merged = NavigationGoal.BuildInlineDetourRoute(
+            detour,
+            preservedTopFirst,
+            player,
+            reconnectDistance: 1f,
+            duplicateDistance: 1f);
+
+        merged.Should().Equal(
+            new Vector3(8, 6, 0),
+            new Vector3(22, 7, 0),
+            new Vector3(40, 0, 0));
+    }
+
+    [Fact]
+    public void BuildInlineDetourRoute_ReconnectsMidRoute_PreservesTailOnly()
+    {
+        Vector3 player = new(0, 0, 0);
+        List<Vector3> preservedTopFirst =
+        [
+            new(10, 0, 0),
+            new(20, 0, 0),
+            new(30, 0, 0), // reconnect point
+            new(40, 0, 0),
+            new(50, 0, 0)
+        ];
+        Vector3[] detour =
+        [
+            player,
+            new(12, 8, 0),
+            new(24, 8, 0),
+            new(30, 0, 0)
+        ];
+
+        Vector3[] merged = NavigationGoal.BuildInlineDetourRoute(
+            detour,
+            preservedTopFirst,
+            player,
+            reconnectDistance: 1f,
+            duplicateDistance: 1f);
+
+        merged.Should().Equal(
+            new Vector3(12, 8, 0),
+            new Vector3(24, 8, 0),
+            new Vector3(30, 0, 0),
+            new Vector3(40, 0, 0),
+            new Vector3(50, 0, 0));
+    }
+
+    [Fact]
+    public void BuildInlineDetourRoute_WithoutReconnect_KeepsPreservedRouteAfterDetour()
+    {
+        Vector3 player = new(0, 0, 0);
+        List<Vector3> preservedTopFirst =
+        [
+            new(10, 0, 0),
+            new(20, 0, 0),
+            new(30, 0, 0)
+        ];
+        Vector3[] detour =
+        [
+            player,
+            new(5, 6, 0),
+            new(6, 7, 0)
+        ];
+
+        Vector3[] merged = NavigationGoal.BuildInlineDetourRoute(
+            detour,
+            preservedTopFirst,
+            player,
+            reconnectDistance: 1f,
+            duplicateDistance: 1f);
+
+        merged.Should().Equal(
+            new Vector3(5, 6, 0),
+            new Vector3(6, 7, 0),
+            new Vector3(10, 0, 0),
+            new Vector3(20, 0, 0),
+            new Vector3(30, 0, 0));
+    }
+
+    [Fact]
+    public void BuildInlineDetourRoute_MidRouteReconnect_KeepsRemainingTail()
+    {
+        Vector3 player = new(0, 0, 0);
+        List<Vector3> preservedTopFirst =
+        [
+            new(10, 0, 0),
+            new(20, 0, 0), // reconnect point
+            new(30, 0, 0),
+            new(40, 0, 0),
+            new(50, 0, 0)
+        ];
+        Vector3[] detour =
+        [
+            player,
+            new(9, 5, 0),
+            new(18, 4, 0),
+            new(20, 0, 0)
+        ];
+
+        Vector3[] merged = NavigationGoal.BuildInlineDetourRoute(
+            detour,
+            preservedTopFirst,
+            player,
+            reconnectDistance: 1f,
+            duplicateDistance: 1f);
+
+        merged.Should().Equal(
+            new Vector3(9, 5, 0),
+            new Vector3(18, 4, 0),
+            new Vector3(20, 0, 0),
+            new Vector3(30, 0, 0),
+            new Vector3(40, 0, 0),
+            new Vector3(50, 0, 0));
+    }
+
+    [Fact]
+    public void BuildInlineDetourRoute_DropsStaleTriggerOrigin_WhenPlayerMoved()
+    {
+        Vector3 playerNow = new(50, 50, 0);
+        List<Vector3> preservedTopFirst =
+        [
+            new(60, 50, 0),
+            new(70, 50, 0)
+        ];
+        Vector3[] detour =
+        [
+            new(0, 0, 0), // stale trigger-time origin; should always be discarded
+            new(55, 52, 0),
+            new(60, 50, 0)
+        ];
+
+        Vector3[] merged = NavigationGoal.BuildInlineDetourRoute(
+            detour,
+            preservedTopFirst,
+            playerNow,
+            reconnectDistance: 1f,
+            duplicateDistance: 1f);
+
+        merged.Should().Equal(
+            new Vector3(55, 52, 0),
+            new Vector3(60, 50, 0),
+            new Vector3(70, 50, 0));
+    }
+
+    // ---- Reroute single-flight gate ----
+
+    [Fact]
+    public void RouteAwareRerouteGate_AcquireDenyReleaseReacquire_Works()
+    {
+        int gateState = 0;
+
+        bool firstAcquire = NavigationGoal.TryAcquireRouteAwareRerouteGate(ref gateState);
+        bool secondAcquire = NavigationGoal.TryAcquireRouteAwareRerouteGate(ref gateState);
+        NavigationGoal.ReleaseRouteAwareRerouteGate(ref gateState);
+        bool thirdAcquire = NavigationGoal.TryAcquireRouteAwareRerouteGate(ref gateState);
+
+        firstAcquire.Should().BeTrue();
+        secondAcquire.Should().BeFalse();
+        thirdAcquire.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DecideRouteAwareRerouteCompletion_WhenContextMatches_CommitsWithoutClear()
+    {
+        (bool commit, bool clearActiveReroute) = NavigationGoal.DecideRouteAwareRerouteCompletion(
+            triggered: true,
+            tokenCancelled: false,
+            scheduledContextVersion: 5,
+            currentContextVersion: 5);
+
+        commit.Should().BeTrue();
+        clearActiveReroute.Should().BeFalse();
+    }
+
+    [Fact]
+    public void DecideRouteAwareRerouteCompletion_WhenContextMismatches_DropsAndClears()
+    {
+        (bool commit, bool clearActiveReroute) = NavigationGoal.DecideRouteAwareRerouteCompletion(
+            triggered: true,
+            tokenCancelled: false,
+            scheduledContextVersion: 4,
+            currentContextVersion: 5);
+
+        commit.Should().BeFalse();
+        clearActiveReroute.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DecideRouteAwareRerouteCompletion_WhenTokenCancelled_DropsAndClears()
+    {
+        (bool commit, bool clearActiveReroute) = NavigationGoal.DecideRouteAwareRerouteCompletion(
+            triggered: true,
+            tokenCancelled: true,
+            scheduledContextVersion: 5,
+            currentContextVersion: 5);
+
+        commit.Should().BeFalse();
+        clearActiveReroute.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DecideRouteAwareRerouteCompletion_WhenNotTriggered_DropsWithoutClear()
+    {
+        (bool commit, bool clearActiveReroute) = NavigationGoal.DecideRouteAwareRerouteCompletion(
+            triggered: false,
+            tokenCancelled: false,
+            scheduledContextVersion: 5,
+            currentContextVersion: 5);
+
+        commit.Should().BeFalse();
+        clearActiveReroute.Should().BeFalse();
+    }
+
+    // ---- Route-aware detour anchor selection ----
+
+    [Fact]
+    public void TrySelectDetourAnchor_LongRoute_SelectsFirstPointBeyondMinDistance()
+    {
+        Vector3 player = new(0, 0, 0);
+        Vector3[] routeTopFirst =
+        [
+            new(3, 0, 0),
+            new(7, 0, 0),
+            new(12, 0, 0), // first >= 8f within lookahead
+            new(20, 0, 0),
+            new(40, 0, 0)
+        ];
+
+        bool selected = NavigationGoal.TrySelectDetourAnchor(
+            routeTopFirst,
+            player,
+            out Vector3 anchor,
+            lookaheadPoints: 4,
+            minAnchorDistance: 8f);
+
+        selected.Should().BeTrue();
+        anchor.Should().Be(new Vector3(12, 0, 0));
+    }
+
+    [Fact]
+    public void TrySelectDetourAnchor_AllTooClose_FallsBackToFurthestInLookahead()
+    {
+        Vector3 player = new(0, 0, 0);
+        Vector3[] routeTopFirst =
+        [
+            new(1, 0, 0),
+            new(2, 0, 0),
+            new(3, 0, 0),
+            new(4, 0, 0),
+            new(20, 0, 0)
+        ];
+
+        bool selected = NavigationGoal.TrySelectDetourAnchor(
+            routeTopFirst,
+            player,
+            out Vector3 anchor,
+            lookaheadPoints: 4,
+            minAnchorDistance: 8f);
+
+        selected.Should().BeTrue();
+        anchor.Should().Be(new Vector3(4, 0, 0), "fallback should pick furthest point in the inspected lookahead window");
+    }
+
+    [Fact]
+    public void TrySelectDetourAnchor_NoViableDistance_ReturnsFalse()
+    {
+        Vector3 player = new(0, 0, 0);
+        Vector3[] routeTopFirst =
+        [
+            new(0, 0, 0),
+            new(0, 0, 0),
+            new(0, 0, 0)
+        ];
+
+        bool selected = NavigationGoal.TrySelectDetourAnchor(
+            routeTopFirst,
+            player,
+            out _,
+            lookaheadPoints: 4,
+            minAnchorDistance: 8f);
+
+        selected.Should().BeFalse();
+    }
+
+    // ---- Pending reroute guards ----
+
+    [Fact]
+    public void ShouldApplyPendingReroute_TargetMissingFromRoute_ReturnsFalse()
+    {
+        RerouteInfo pending = new()
+        {
+            StartedAt = DateTime.UtcNow,
+            OriginalTarget = new Vector3(200, 200, 0),
+            DetourWaypoints = [new Vector3(0, 0, 0), new Vector3(10, 10, 0)]
+        };
+        Vector3[] routeTopFirst =
+        [
+            new(10, 0, 0),
+            new(20, 0, 0),
+            new(30, 0, 0)
+        ];
+
+        bool shouldApply = NavigationGoal.ShouldApplyPendingReroute(
+            pending,
+            routeTopFirst,
+            DateTime.UtcNow,
+            maxAgeSeconds: 15,
+            targetMatchDistance: 4f);
+
+        shouldApply.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldApplyPendingReroute_StaleReroute_ReturnsFalse()
+    {
+        DateTime now = DateTime.UtcNow;
+        RerouteInfo pending = new()
+        {
+            StartedAt = now.AddSeconds(-20),
+            OriginalTarget = new Vector3(20, 0, 0),
+            DetourWaypoints = [new Vector3(0, 0, 0), new Vector3(10, 10, 0)]
+        };
+        Vector3[] routeTopFirst =
+        [
+            new(10, 0, 0),
+            new(20, 0, 0),
+            new(30, 0, 0)
+        ];
+
+        bool shouldApply = NavigationGoal.ShouldApplyPendingReroute(
+            pending,
+            routeTopFirst,
+            now,
+            maxAgeSeconds: 15,
+            targetMatchDistance: 4f);
+
+        shouldApply.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldApplyPendingReroute_FreshAndOnRoute_ReturnsTrue()
+    {
+        DateTime now = DateTime.UtcNow;
+        RerouteInfo pending = new()
+        {
+            StartedAt = now.AddSeconds(-5),
+            OriginalTarget = new Vector3(20, 1, 0), // within 4f of route point (20,0,0)
+            DetourWaypoints = [new Vector3(0, 0, 0), new Vector3(10, 10, 0)]
+        };
+        Vector3[] routeTopFirst =
+        [
+            new(10, 0, 0),
+            new(20, 0, 0),
+            new(30, 0, 0)
+        ];
+
+        bool shouldApply = NavigationGoal.ShouldApplyPendingReroute(
+            pending,
+            routeTopFirst,
+            now,
+            maxAgeSeconds: 15,
+            targetMatchDistance: 4f);
+
+        shouldApply.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsSharpTurn_IndoorThreshold_DetectsBendMissedByOutdoorThreshold()
+    {
+        // 20° bend is below the outdoor 30° preserve threshold but meets the indoor 20° threshold.
+        // This is the key scenario: a corridor angle that RDP would cut outdoors but must preserve indoors.
+        float angle20 = 20f * MathF.PI / 180f;
+        Vector3 from = new(0, 0, 0);
+        Vector3 via  = new(10, 0, 0);
+        Vector3 to   = new(via.X + MathF.Cos(angle20) * 10f,
+                           via.Y + MathF.Sin(angle20) * 10f, 0);
+
+        float indoorThreshold  = MathF.PI / 9f;  // 20°
+        float outdoorThreshold = MathF.PI / 6f;  // 30°
+
+        IsSharpTurn(from, via, to, indoorThreshold).Should()
+            .BeTrue("20° meets the indoor 20° preservation threshold");
+        IsSharpTurn(from, via, to, outdoorThreshold).Should()
+            .BeFalse("20° is below the outdoor 30° preservation threshold");
     }
 
     [Fact]

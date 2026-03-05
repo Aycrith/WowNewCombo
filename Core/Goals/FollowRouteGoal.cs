@@ -30,8 +30,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private const float RefillOrientationFlipPenalty = 1f;
     private const float RefillBackwardSegmentPenalty = 2f;
     private const int RefillBackwardSegmentGrace = 1;
-    private const float RefillAnchorTeleportResetDistance = 20f;
-    private const int RefillSameSegmentLoopLimit = 5;
+    private const float RefillAnchorTeleportResetDistance = 40f;
+    private const int RefillSameSegmentLoopLimit = 3;
     private const float RefillTurnaroundDistanceTolerance = 0.75f;
     private static readonly TimeSpan RefillSameSegmentLoopWindow = TimeSpan.FromSeconds(5);
 

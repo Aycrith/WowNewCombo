@@ -85,6 +85,106 @@ public sealed class StuckDetectorBreadcrumbTests
         Assert.Equal(UnstuckState.StrafeAttempt, third);
     }
 
+    [Fact]
+    public void GetInitialUnstuckState_RepeatedHotspot_WhenBreadcrumbTemporarilyDisabled_UsesPathClear()
+    {
+        FeatureFlagService featureFlags = CreateFeatureFlagService(enabled: true);
+        BreadcrumbTracker tracker = new();
+        StuckDetector detector = CreateDetector(tracker, featureFlags);
+        SetField(detector, "breadcrumbBacktrackDisabledUntilUtc", DateTime.UtcNow.AddSeconds(30));
+
+        Vector3 hotspot = new(75f, 75f, 0f);
+
+        UnstuckState first = InvokeInitialState(detector, hotspot);
+        UnstuckState second = InvokeInitialState(detector, hotspot);
+        UnstuckState third = InvokeInitialState(detector, hotspot);
+
+        Assert.Equal(UnstuckState.InitialAttempt, first);
+        Assert.Equal(UnstuckState.StrafeAttempt, second);
+        Assert.Equal(UnstuckState.PathClearAttempt, third);
+    }
+
+    [Fact]
+    public void TrySelectBacktrackTarget_FallsBackToFarthestTrailPoint_WhenStepTargetsUnavailable()
+    {
+        BreadcrumbEntry[] trail =
+        [
+            new BreadcrumbEntry(new Vector3(2f, 0f, 0f), 1, DateTime.UtcNow),
+            new BreadcrumbEntry(new Vector3(6f, 0f, 0f), 1, DateTime.UtcNow),
+            new BreadcrumbEntry(new Vector3(14f, 0f, 0f), 1, DateTime.UtcNow)
+        ];
+
+        bool selected = StuckDetector.TrySelectBacktrackTarget(
+            trail,
+            currentPosition: new Vector3(0f, 0f, 0f),
+            preferredSteps: 8,
+            alternateSteps: 10,
+            minDistance: 1f,
+            out Vector3 target);
+
+        Assert.True(selected);
+        Assert.Equal(new Vector3(14f, 0f, 0f), target);
+    }
+
+    [Fact]
+    public void TrySelectBacktrackTarget_NoPointBeyondMinDistance_ReturnsFalse()
+    {
+        BreadcrumbEntry[] trail =
+        [
+            new BreadcrumbEntry(new Vector3(0.2f, 0f, 0f), 1, DateTime.UtcNow),
+            new BreadcrumbEntry(new Vector3(0.4f, 0f, 0f), 1, DateTime.UtcNow)
+        ];
+
+        bool selected = StuckDetector.TrySelectBacktrackTarget(
+            trail,
+            currentPosition: Vector3.Zero,
+            preferredSteps: 1,
+            alternateSteps: 2,
+            minDistance: 1f,
+            out _);
+
+        Assert.False(selected);
+    }
+
+    [Fact]
+    public void ResolveReverseEscalationState_WhenCooldownActive_ReturnsPathClearAttempt()
+    {
+        DateTime nowUtc = DateTime.UtcNow;
+
+        UnstuckState next = StuckDetector.ResolveReverseEscalationState(
+            enhancedRecoveryAvailable: true,
+            nowUtc: nowUtc,
+            breadcrumbBacktrackDisabledUntilUtc: nowUtc.AddSeconds(30));
+
+        Assert.Equal(UnstuckState.PathClearAttempt, next);
+    }
+
+    [Fact]
+    public void ResolveReverseEscalationState_WhenCooldownElapsed_ReturnsBreadcrumbBacktrack()
+    {
+        DateTime nowUtc = DateTime.UtcNow;
+
+        UnstuckState next = StuckDetector.ResolveReverseEscalationState(
+            enhancedRecoveryAvailable: true,
+            nowUtc: nowUtc,
+            breadcrumbBacktrackDisabledUntilUtc: nowUtc.AddSeconds(-1));
+
+        Assert.Equal(UnstuckState.BreadcrumbBacktrack, next);
+    }
+
+    [Fact]
+    public void ResolveReverseEscalationState_WhenEnhancedRecoveryDisabled_ReturnsPathClearAttempt()
+    {
+        DateTime nowUtc = DateTime.UtcNow;
+
+        UnstuckState next = StuckDetector.ResolveReverseEscalationState(
+            enhancedRecoveryAvailable: false,
+            nowUtc: nowUtc,
+            breadcrumbBacktrackDisabledUntilUtc: nowUtc.AddSeconds(-1));
+
+        Assert.Equal(UnstuckState.PathClearAttempt, next);
+    }
+
     private static StuckDetector CreateDetector(BreadcrumbTracker? tracker, FeatureFlagService? featureFlags)
     {
         // Constructor bypass keeps this focused on feature-flag wiring; private field names are intentionally asserted below.
