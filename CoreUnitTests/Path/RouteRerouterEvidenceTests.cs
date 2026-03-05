@@ -124,7 +124,6 @@ public sealed class RouteRerouterEvidenceTests : IDisposable
         var lockObj = new object();
 
         // Create a mock active reroute by calling methods that set internal state
-        int mapId = 1;
         Vector3[] waypoints = [
             new Vector3(0, 0, 0),
             new Vector3(25, 0, 0),

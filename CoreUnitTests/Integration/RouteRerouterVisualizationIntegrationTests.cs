@@ -44,7 +44,7 @@ public sealed class RouteRerouterVisualizationIntegrationTests : IntegrationTest
         _featureFlags = new FeatureFlagService(
             NullLogger<FeatureFlagService>.Instance,
             monitor,
-            Options.Create(new FeatureFlagServiceOptions { ConfigFilePath = null }));
+            Options.Create(new FeatureFlagServiceOptions { ConfigFilePath = "test.json" }));
 
         _hazardStore = new HazardZoneStore(
             NullLogger<HazardZoneStore>.Instance,

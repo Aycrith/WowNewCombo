@@ -172,7 +172,7 @@ public sealed class NoPlanRecoveryServiceTests
 
         public T CurrentValue => _currentValue;
 
-        public T Get(string name) => _currentValue;
+        public T Get(string? name) => _currentValue;
 
         public IDisposable OnChange(Action<T, string> listener) => new TestDisposable();
 

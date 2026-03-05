@@ -200,6 +200,7 @@ public sealed class BotFailureScenarioTests : IntegrationTestBase
 
         // Assert
         backtrackPos.Should().NotBeNull();
+        Assert.True(backtrackPos.HasValue);
         BreadcrumbEntry pos = backtrackPos.Value;
         pos.Position.Should().Be(stuckPosition + new Vector3(10f, 0f, 0f));
     }

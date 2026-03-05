@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -85,10 +86,10 @@ public sealed class LLMClientFactory : ILLMClientFactory
     {
         logger.LogInformation("[LLMClientFactry] Creating OpenAI client");
 
-        var httpClient = new HttpClient();
-        var openaiLogger = (ILogger<OpenAIClient>)serviceProvider.GetService(typeof(ILogger<OpenAIClient>))
+        HttpClient httpClient = new();
+        ILogger<OpenAIClient> openaiLogger = serviceProvider.GetService<ILogger<OpenAIClient>>()
             ?? throw new InvalidOperationException("ILogger<OpenAIClient> not registered");
-        var options = Microsoft.Extensions.Options.Options.Create(this.options);
+        IOptions<AIProfileGeneratorOptions> options = Microsoft.Extensions.Options.Options.Create(this.options);
 
         return new OpenAIClient(httpClient, openaiLogger, options);
     }
@@ -100,10 +101,10 @@ public sealed class LLMClientFactory : ILLMClientFactory
     {
         logger.LogInformation("[LLMClientFactry] Creating LocalLlama client");
 
-        var httpClient = new HttpClient();
-        var llamaLogger = (ILogger<LocalLlamaClient>)serviceProvider.GetService(typeof(ILogger<LocalLlamaClient>))
+        HttpClient httpClient = new();
+        ILogger<LocalLlamaClient> llamaLogger = serviceProvider.GetService<ILogger<LocalLlamaClient>>()
             ?? throw new InvalidOperationException("ILogger<LocalLlamaClient> not registered");
-        var options = Microsoft.Extensions.Options.Options.Create(this.options);
+        IOptions<AIProfileGeneratorOptions> options = Microsoft.Extensions.Options.Options.Create(this.options);
 
         return new LocalLlamaClient(httpClient, llamaLogger, options);
     }

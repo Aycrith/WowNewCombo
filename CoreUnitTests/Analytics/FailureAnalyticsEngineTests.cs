@@ -298,7 +298,7 @@ public sealed class FailureAnalyticsEngineTests
         };
 
         var monitor = new FixedOptionsMonitor<FeatureFlagsOptions>(featureFlags);
-        var serviceOptions = Options.Create(new FeatureFlagServiceOptions { ConfigFilePath = null });
+        var serviceOptions = Options.Create(new FeatureFlagServiceOptions { ConfigFilePath = "test.json" });
 
         return new FeatureFlagService(
             NullLogger<FeatureFlagService>.Instance,

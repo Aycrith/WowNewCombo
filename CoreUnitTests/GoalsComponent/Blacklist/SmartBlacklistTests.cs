@@ -103,7 +103,9 @@ public sealed class SmartBlacklistTests : IDisposable
         _blacklist.Add(guid, "TestMob", BlacklistSeverity.Permanent, "Test", Vector3.Zero, 1);
 
         Assert.True(_blacklist.Is(guid));
-        Assert.Null(_blacklist.GetEntries().Find(e => e.TargetGuid == guid).ExpiresAt);
+        var entry = _blacklist.GetEntries().Find(e => e.TargetGuid == guid);
+        Assert.NotNull(entry);
+        Assert.Null(entry!.ExpiresAt);
     }
 
     [Fact]
@@ -115,7 +117,8 @@ public sealed class SmartBlacklistTests : IDisposable
         _blacklist.Add(guid, "TestMob", BlacklistSeverity.Temporary, "Test", Vector3.Zero, 1);
 
         var entry = _blacklist.GetEntries().Find(e => e.TargetGuid == guid);
-        Assert.Equal(2, entry.HitCount);
+        Assert.NotNull(entry);
+        Assert.Equal(2, entry!.HitCount);
     }
 
     [Fact]
@@ -127,7 +130,8 @@ public sealed class SmartBlacklistTests : IDisposable
         _blacklist.Add(guid, "TestMob", BlacklistSeverity.Medium, "Upgraded", Vector3.Zero, 1);
 
         var entry = _blacklist.GetEntries().Find(e => e.TargetGuid == guid);
-        Assert.Equal(BlacklistSeverity.Medium, entry.Severity);
+        Assert.NotNull(entry);
+        Assert.Equal(BlacklistSeverity.Medium, entry!.Severity);
     }
 
     [Fact]
@@ -220,7 +224,8 @@ public sealed class SmartBlacklistTests : IDisposable
 
         Assert.True(newBlacklist.Is(guid));
         var entry = newBlacklist.GetEntries().Find(e => e.TargetGuid == guid);
-        Assert.Equal(name, entry.TargetName);
+        Assert.NotNull(entry);
+        Assert.Equal(name, entry!.TargetName);
 
         newBlacklist.Dispose();
     }

@@ -26,7 +26,7 @@ public class FollowRouteGoalRefillTests
     private static readonly int BackwardSegmentGrace = 1;
     private static readonly int SameSegmentLoopLimit = 5;
 
-    private record RefillCandidate(int SegmentStartIndex, Vector3 MapClosestPoint, float DistanceToRoute);
+    private sealed record RefillCandidate(int SegmentStartIndex, Vector3 MapClosestPoint, float DistanceToRoute);
 
     private static Vector2 GetClosestPointOnLineSegment(Vector2 a, Vector2 b, Vector2 p)
     {

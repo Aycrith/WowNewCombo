@@ -12,6 +12,9 @@
 - Removed nullable-context annotation warning in `PPather/Search/PPatherService.cs` (`CS8632`).
 - Removed explicit default initializers and activated existing player-state event flow in `MockWoWClient/GameState/GameStateManager.cs` (`CA1805`, `CS0067`).
 
+## Publish Point
+- Sprint 1 baseline and audit/hardening batch published to `origin/dev` at commit `fa8b642de` on 2026-03-05.
+
 ## Deferred Backlog (Sprint 2+)
 - `Core.csproj` nullability: `CS8600` in `LLMClientFactory`.
   - Rationale: requires contract-level nullability decisions around factory return paths.
@@ -27,3 +30,26 @@
 ## Sprint 2 Target
 - Prioritize nullable warnings with runtime risk (`CS860x`) before style/perf analyzers.
 - Keep diagnostics route behavior unchanged and run full test gate after each batch.
+
+## Sprint 2 Outcome (Conservative: Core + CoreUnitTests)
+- Baseline (Sprint 2 start): `32` unique warnings.
+- After Sprint 2: `20` unique warnings.
+- Net change: `12` unique warnings resolved.
+- Acceptance target met: `<= 20` unique warnings.
+
+### Fixed Categories
+- `CS8600` (Core): resolved in `Core/AI/LLM/LLMClientFactory.cs`.
+- `CS8602` (CoreUnitTests): resolved in `CoreUnitTests/GoalsComponent/Blacklist/SmartBlacklistTests.cs`.
+- `CS8625` (CoreUnitTests): resolved in
+  - `CoreUnitTests/Analytics/FailureAnalyticsEngineTests.cs`
+  - `CoreUnitTests/Integration/RouteRerouterVisualizationIntegrationTests.cs`
+- `CS8629` (CoreUnitTests): resolved in `CoreUnitTests/Integration/BotFailureScenarioTests.cs`.
+- `CS8767` (CoreUnitTests): resolved in `CoreUnitTests/Recovery/NoPlanRecoveryServiceTests.cs`.
+- `CS0219` (CoreUnitTests): resolved in `CoreUnitTests/Path/RouteRerouterEvidenceTests.cs`.
+- `CA1852` (CoreUnitTests): resolved in `CoreUnitTests/GoalsComponent/FollowRouteGoalRefillTests.cs`.
+
+### Remaining Deferred (Sprint 3)
+- `CS0649`, `CS0067` in navigation instrumentation fields/events.
+- `CS0162` unreachable code warnings.
+- `CA1859`, `CA1869`, `CA1866` analyzer/perf guidance.
+- `SYSLIB1045` regex migration to `[GeneratedRegex]`.
