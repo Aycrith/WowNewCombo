@@ -1,7 +1,7 @@
 # WowClassicGrindBot Improvement Plans — Master Index
 
 **Date:** 2026-03-04 | **Updated:** 2026-03-05
-**Final Baseline:** 1813/1816 CoreUnitTests (3 skipped) + 43/43 FrontendUnitTests
+**Final Baseline:** 1831/1834 CoreUnitTests (3 skipped) + 58/58 FrontendUnitTests
 **Branch:** dev
 
 > **Status: ALL P0–P3 TASKS COMPLETE ✅ (including P3-5)**
@@ -114,12 +114,12 @@ COMPLETE: P3-5 (DiagnosticsController split)
 ## Final Verification (All Complete)
 
 ```bash
-# Clean build — 0 errors (warnings remain in baseline)
+# Clean build — 0 errors, 0 warnings
 dotnet build MasterOfPuppets.sln --nologo -v quiet
 
 # Full test suite
 dotnet test --nologo -v quiet
-# Result: 1813/1816 CoreUnitTests (3 skipped) + 43/43 FrontendUnitTests
+# Result: 1831/1834 CoreUnitTests (3 skipped) + 58/58 FrontendUnitTests
 
 # No pre-release packages
 dotnet list package --include-prerelease | grep -iE "preview|beta|alpha|dev-|rc\."

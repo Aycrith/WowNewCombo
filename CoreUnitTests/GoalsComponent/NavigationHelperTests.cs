@@ -37,6 +37,32 @@ public class NavigationHelperTests
 
     private const float SimplifyPreserveTurnRadians = MathF.PI / 6f; // 30 deg
     private const float TightTurnPrecisionRadians = MathF.PI / 5f;   // 36 deg
+    private const float MinDistanceMount = 10f;
+
+    private static float GetMountedReachedDistance(Vector3 playerW, params Vector3[] routeTopFirst)
+    {
+        const float MountedSharpTurnScale = 1.5f;
+        const float MountedStraightScale = 0.6f;
+
+        if (routeTopFirst.Length < 2)
+        {
+            return MinDistanceMount;
+        }
+
+        Vector3 current = routeTopFirst[0];
+        Vector3 next = routeTopFirst[1];
+        if (!IsSharpTurn(playerW, current, next, SimplifyPreserveTurnRadians))
+        {
+            return MinDistanceMount * MountedStraightScale;
+        }
+
+        if (IsSharpTurn(playerW, current, next, TightTurnPrecisionRadians))
+        {
+            return MinDistanceMount * MountedSharpTurnScale;
+        }
+
+        return MinDistanceMount;
+    }
 
     // ---- IsSharpTurn Tests ----
 
@@ -101,6 +127,54 @@ public class NavigationHelperTests
         bool result = IsSharpTurn(from, via, to, SimplifyPreserveTurnRadians);
         result.Should().BeTrue("confirms the geometry inversion when player overshoots via");
         // The production code guards against this by requiring playerW > OutDoorMinDistance from curr
+    }
+
+    [Fact]
+    public void GetMountedReachedDistance_WithoutUpcomingPoints_ReturnsBaseline()
+    {
+        float reached = GetMountedReachedDistance(new Vector3(0, 0, 0));
+        reached.Should().Be(MinDistanceMount);
+    }
+
+    [Fact]
+    public void GetMountedReachedDistance_StraightSegment_TightensThreshold()
+    {
+        Vector3 player = new(0, 0, 0);
+        Vector3 current = new(10, 0, 0);
+        Vector3 next = new(20, 0, 0);
+
+        float reached = GetMountedReachedDistance(player, current, next);
+        reached.Should().BeApproximately(6f, 0.001f);
+    }
+
+    [Fact]
+    public void GetMountedReachedDistance_ModerateTurn_UsesBaselineThreshold()
+    {
+        float angle32 = 32f * MathF.PI / 180f;
+        Vector3 player = new(0, 0, 0);
+        Vector3 current = new(10, 0, 0);
+        Vector3 next = new(
+            current.X + MathF.Cos(angle32) * 10f,
+            current.Y + MathF.Sin(angle32) * 10f,
+            0);
+
+        float reached = GetMountedReachedDistance(player, current, next);
+        reached.Should().BeApproximately(MinDistanceMount, 0.001f);
+    }
+
+    [Fact]
+    public void GetMountedReachedDistance_SharpTurn_ExpandsThreshold()
+    {
+        float angle45 = 45f * MathF.PI / 180f;
+        Vector3 player = new(0, 0, 0);
+        Vector3 current = new(10, 0, 0);
+        Vector3 next = new(
+            current.X + MathF.Cos(angle45) * 10f,
+            current.Y + MathF.Sin(angle45) * 10f,
+            0);
+
+        float reached = GetMountedReachedDistance(player, current, next);
+        reached.Should().BeApproximately(15f, 0.001f);
     }
 
     // ---- IsExcessiveHazardDetour mirror ----

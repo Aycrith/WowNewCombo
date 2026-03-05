@@ -650,9 +650,35 @@ public sealed partial class Navigation : IDisposable
                 : minDistance;
     }
 
+    private float GetMountedReachedDistance(Vector3 playerW)
+    {
+        const float MountedSharpTurnScale = 1.5f;
+        const float MountedStraightScale = 0.6f;
+
+        if (!TryGetUpcomingRoutePoints(out Vector3 current, out Vector3 next))
+        {
+            return MinDistanceMount;
+        }
+
+        if (!IsSharpTurn(playerW, current, next, SimplifyPreserveTurnRadians))
+        {
+            return MinDistanceMount * MountedStraightScale;
+        }
+
+        if (IsSharpTurn(playerW, current, next, TightTurnPrecisionRadians))
+        {
+            return MinDistanceMount * MountedSharpTurnScale;
+        }
+
+        return MinDistanceMount;
+    }
+
     private float GetActiveReachedDistance(Vector3 playerW, Vector3 targetW, float worldDistance)
     {
-        float baseDistance = ReachedDistance(OutDoorMinDistance);
+        float baseDistance = mountHandler.IsMounted()
+            ? GetMountedReachedDistance(playerW)
+            : ReachedDistance(OutDoorMinDistance);
+
         if (!RequiresPreciseTracking(playerW, targetW, worldDistance))
         {
             return baseDistance;
@@ -727,7 +753,9 @@ public sealed partial class Navigation : IDisposable
 
     private void ReduceByDistance(Vector3 playerW, float minDistance, bool singlePop = false)
     {
-        float reached = ReachedDistance(minDistance);
+        float reached = mountHandler.IsMounted()
+            ? minDistance
+            : ReachedDistance(minDistance);
 
         while (routeToNextWaypoint.Count > 0 &&
                playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek()) < reached)

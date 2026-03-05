@@ -51,12 +51,38 @@ public class OscillationDetectorTests
     }
 
     [Fact]
+    public void IsOscillating_AlternatingHeadings_TriggersWithinEightSamples()
+    {
+        // Regression guard for tightened settings:
+        // HEADING_HISTORY_SIZE=8 and OSCILLATION_THRESHOLD=4.
+        var d = MakeDetector();
+        for (int i = 0; i < 8; i++)
+        {
+            d.TrackHeading(i % 2 == 0 ? 0.8f : 1.2f);
+        }
+
+        d.IsOscillating.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsOscillating_ThreeSamples_DoesNotTrigger()
+    {
+        // Detector needs at least max(4, history/2) samples before evaluating.
+        var d = MakeDetector();
+        d.TrackHeading(0.8f);
+        d.TrackHeading(1.2f);
+        d.TrackHeading(0.8f);
+
+        d.IsOscillating.Should().BeFalse();
+    }
+
+    [Fact]
     public void IsOscillating_DoubleCornered_SCurve_DoesNotTrigger()
     {
         // S-bend: two legitimate direction changes, not alternating
         // heading goes: 0 → 0.3 → 0.6 → 0.9 (right turn)
         //             → 0.6 → 0.3 → 0.0 (left turn back)
-        // Total: 6 readings, only 1 reversal — well below threshold of 5
+        // Total: 6 readings, only 1 reversal — well below threshold of 4
         var d = MakeDetector();
         float[] headings = [0f, 0.3f, 0.6f, 0.9f, 0.6f, 0.3f, 0.0f];
         foreach (float h in headings)

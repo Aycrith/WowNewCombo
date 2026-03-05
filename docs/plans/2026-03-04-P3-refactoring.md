@@ -291,7 +291,7 @@ git commit -m "docs(goap): add XML summary and grouped comments to UpdateWorldSt
 
 **Step 1: Read DiagnosticsController.cs header (lines 1-50) for constructor parameters and dependencies**
 
-**Step 2: Create `Frontend/Controllers/InputSecurityDiagnosticsController.cs`**
+**Step 2: Create `Frontend/Controllers/DiagnosticsFixController.cs`**
 
 ```csharp
 using Microsoft.AspNetCore.Mvc;
@@ -299,28 +299,27 @@ using Microsoft.Extensions.Logging;
 
 namespace Frontend.Controllers;
 
-/// <summary>Input security mode diagnostics. Extracted from DiagnosticsController.</summary>
+/// <summary>Fix/mutating diagnostics endpoints extracted from DiagnosticsController.</summary>
 [ApiController]
 [Route("api/diagnostics")]
-public sealed class InputSecurityDiagnosticsController : ControllerBase
+public sealed class DiagnosticsFixController : ControllerBase
 {
-    private readonly ILogger<InputSecurityDiagnosticsController> logger;
-    // Add only the dependencies used by input-mode endpoints
-    // (read which fields GetInputMode and SetInputMode use)
+    private readonly ILogger<DiagnosticsFixController> logger;
+    // Add only dependencies used by fix/mutating endpoints.
 
-    public InputSecurityDiagnosticsController(
-        ILogger<InputSecurityDiagnosticsController> logger,
-        /* only injected services needed for these 2 endpoints */)
+    public DiagnosticsFixController(
+        ILogger<DiagnosticsFixController> logger,
+        /* only injected services needed by mailbox/interact, fix/*, and input-mode */)
     {
         this.logger = logger;
     }
 
-    // PASTE GetInputMode and SetInputMode methods verbatim from DiagnosticsController.cs
-    // (lines 1600-1660)
+    // PASTE moved mutating endpoints from DiagnosticsController.cs:
+    // mailbox/interact, fix/*, and input-mode methods.
 }
 ```
 
-**Step 3: Delete lines 1600-1660 from DiagnosticsController.cs**
+**Step 3: Delete moved mutating endpoints from `DiagnosticsController.cs`**
 
 **Step 4: Build and test**
 ```bash
@@ -330,14 +329,13 @@ dotnet test MasterOfPuppets.sln --verbosity minimal
 
 **Step 5: Commit**
 ```bash
-git add Frontend/Controllers/DiagnosticsController.cs Frontend/Controllers/InputSecurityDiagnosticsController.cs
-git commit -m "refactor(api): extract input-security endpoints into InputSecurityDiagnosticsController"
+git add Frontend/Controllers/DiagnosticsController.cs Frontend/Controllers/DiagnosticsFixController.cs
+git commit -m "refactor(api): split diagnostics read/fix endpoints into DiagnosticsFixController"
 ```
 
 ### Implemented Variant (2026-03-05)
 
-P3-5 was completed with an expanded extraction to `Frontend/Controllers/DiagnosticsFixController.cs`
-instead of `InputSecurityDiagnosticsController.cs`.
+P3-5 was implemented as shown above using `Frontend/Controllers/DiagnosticsFixController.cs`.
 
 - Base route stayed `api/diagnostics`.
 - All fix/mutating endpoints were moved (`mailbox/interact`, `fix/*`, and `input-mode`).

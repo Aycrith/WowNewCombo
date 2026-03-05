@@ -33,6 +33,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private const float RefillAnchorTeleportResetDistance = 40f;
     private const int RefillSameSegmentLoopLimit = 3;
     private const float RefillTurnaroundDistanceTolerance = 0.75f;
+    private const float RefillSameSegmentProgressTolerance = 10f;
     private static readonly TimeSpan RefillSameSegmentLoopWindow = TimeSpan.FromSeconds(5);
 
     private readonly ILogger<FollowRouteGoal> logger;
@@ -85,6 +86,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private bool lastRefillAppliedReversed;
     private int lastRefillAppliedSegmentIndex;
     private DateTime lastRefillAppliedUtc;
+    private Vector3 lastRefillAppliedAnchorPoint;
     private int repeatedSameRefillCount;
     private int refillForcedMinSegmentForward = -1;
     private int refillForcedMinSegmentReversed = -1;
@@ -632,6 +634,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         lastRefillAppliedReversed = false;
         lastRefillAppliedSegmentIndex = 0;
         lastRefillAppliedUtc = DateTime.MinValue;
+        lastRefillAppliedAnchorPoint = default;
         repeatedSameRefillCount = 0;
         refillForcedMinSegmentForward = -1;
         refillForcedMinSegmentReversed = -1;
@@ -662,6 +665,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             hasRecentRefillApply &&
             chosenReversed == lastRefillAppliedReversed &&
             closestSegmentStartIndex == lastRefillAppliedSegmentIndex &&
+            mapClosestPoint.MapDistanceXYTo(lastRefillAppliedAnchorPoint) < RefillSameSegmentProgressTolerance &&
             (now - lastRefillAppliedUtc) <= RefillSameSegmentLoopWindow;
 
         if (sameSegmentLoop)
@@ -673,34 +677,31 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             repeatedSameRefillCount = 1;
         }
 
+        if (repeatedSameRefillCount >= RefillSameSegmentLoopLimit)
+        {
+            int advanceToPointIndex = closestSegmentStartIndex + 1;
+            if (advanceToPointIndex < chosenPath.Length)
+            {
+                LogWarning($"Refill loop detected on segment {closestSegmentStartIndex} (x{repeatedSameRefillCount}) - advancing route anchor");
+                closestSegmentStartIndex = advanceToPointIndex;
+                mapClosestPoint = chosenPath[advanceToPointIndex];
+                if (chosenReversed)
+                {
+                    refillForcedMinSegmentReversed = Math.Max(refillForcedMinSegmentReversed, advanceToPointIndex);
+                }
+                else
+                {
+                    refillForcedMinSegmentForward = Math.Max(refillForcedMinSegmentForward, advanceToPointIndex);
+                }
+            }
+            repeatedSameRefillCount = 0;
+        }
+
         hasRecentRefillApply = true;
         lastRefillAppliedReversed = chosenReversed;
         lastRefillAppliedSegmentIndex = closestSegmentStartIndex;
         lastRefillAppliedUtc = now;
-
-        if (repeatedSameRefillCount < RefillSameSegmentLoopLimit)
-        {
-            return;
-        }
-
-        int advanceToPointIndex = closestSegmentStartIndex + 1;
-        if (advanceToPointIndex >= chosenPath.Length)
-        {
-            return;
-        }
-
-        LogWarning($"Refill loop detected on segment {closestSegmentStartIndex} (x{repeatedSameRefillCount}) - advancing route anchor");
-        closestSegmentStartIndex = advanceToPointIndex;
-        mapClosestPoint = chosenPath[advanceToPointIndex];
-        if (chosenReversed)
-        {
-            refillForcedMinSegmentReversed = Math.Max(refillForcedMinSegmentReversed, advanceToPointIndex);
-        }
-        else
-        {
-            refillForcedMinSegmentForward = Math.Max(refillForcedMinSegmentForward, advanceToPointIndex);
-        }
-        repeatedSameRefillCount = 0;
+        lastRefillAppliedAnchorPoint = mapClosestPoint;
     }
 
     private float ScoreRefillCandidate(RefillCandidate candidate, bool reversed)
@@ -829,5 +830,4 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         logger.LogInformation(text);
     }
 }
-
 

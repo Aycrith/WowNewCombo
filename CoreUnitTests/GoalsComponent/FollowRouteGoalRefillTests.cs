@@ -24,7 +24,8 @@ public class FollowRouteGoalRefillTests
 
     private static readonly float BackwardSegmentPenalty = 2f;
     private static readonly int BackwardSegmentGrace = 1;
-    private static readonly int SameSegmentLoopLimit = 5;
+    private static readonly int SameSegmentLoopLimit = 3;
+    private static readonly float SameSegmentProgressTolerance = 10f;
 
     private sealed record RefillCandidate(int SegmentStartIndex, Vector3 MapClosestPoint, float DistanceToRoute);
 
@@ -80,10 +81,19 @@ public class FollowRouteGoalRefillTests
 
     private static int ApplyLoopBreakerAndGetForwardFloor(
         int segmentIndex,
+        bool sameSegmentLoop,
         ref int repeatedCount,
         ref int forcedMinForward)
     {
-        repeatedCount++;
+        if (sameSegmentLoop)
+        {
+            repeatedCount++;
+        }
+        else
+        {
+            repeatedCount = 1;
+        }
+
         if (repeatedCount < SameSegmentLoopLimit)
         {
             return segmentIndex;
@@ -202,12 +212,38 @@ public class FollowRouteGoalRefillTests
         int forcedMinForward = -1;
         int advancedSegment = ApplyLoopBreakerAndGetForwardFloor(
             segmentIndex: 149,
+            sameSegmentLoop: true,
             repeatedCount: ref repeated,
             forcedMinForward: ref forcedMinForward);
 
         advancedSegment.Should().Be(150);
         forcedMinForward.Should().Be(150, "loop breaker should enforce a forward floor after repeated same-segment refill");
         repeated.Should().Be(0, "loop counter should reset after forced advancement");
+    }
+
+    [Fact]
+    public void LoopBreaker_ProgressOnSameSegment_DoesNotAdvance()
+    {
+        // Simulate same segment but measurable route progress (> tolerance):
+        // should reset repeat count instead of forcing advancement.
+        var previousAnchor = new Vector3(100, 0, 0);
+        var currentAnchor = new Vector3(111, 0, 0);
+        bool sameSegmentLoop = Vector3.Distance(
+            new Vector3(previousAnchor.X, previousAnchor.Y, 0),
+            new Vector3(currentAnchor.X, currentAnchor.Y, 0)) < SameSegmentProgressTolerance;
+
+        int repeated = SameSegmentLoopLimit - 1;
+        int forcedMinForward = -1;
+
+        int resultingSegment = ApplyLoopBreakerAndGetForwardFloor(
+            segmentIndex: 149,
+            sameSegmentLoop: sameSegmentLoop,
+            repeatedCount: ref repeated,
+            forcedMinForward: ref forcedMinForward);
+
+        resultingSegment.Should().Be(149);
+        forcedMinForward.Should().Be(-1);
+        repeated.Should().Be(1, "progress should break same-segment loop streak");
     }
 
     [Fact]

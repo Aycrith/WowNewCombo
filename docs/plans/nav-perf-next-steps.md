@@ -9,6 +9,12 @@ For every item: **Problem → Root Cause → Proposed Solution → Expected Outc
 
 All findings are marked as confirmed (read from code) or speculative.
 
+## Implementation Status (2026-03-05)
+
+- Completed in earlier sprints: `1.1`, `1.3`, `1.4`, `2.2`, `2.3` (superseded), `3.2b`.
+- Completed in this continuation pass: `1.2` (oscillation constants), `2.1` (adaptive mounted reached distance), `3.3` (progress-aware refill loop breaker), `3.5` (goal age + transition count).
+- Remaining backlog items: `2.4`, `3.1`, `3.2a`, `3.2c`, `3.4`.
+
 ---
 
 ## Phase 1 — Quick Wins
