@@ -263,6 +263,44 @@ public sealed class FeatureFlagServiceTests
         }
     }
 
+    [Fact]
+    public void GlobalKillSwitch_True_IsEnabled_ReturnsFalseForAllFeatures()
+    {
+        FeatureFlagsOptions flags = new()
+        {
+            GlobalKillSwitch = true,
+            ObjectPooling = new() { Enabled = true },
+            CircuitBreaker = new() { Enabled = true },
+            HazardAvoidance = new() { Enabled = true },
+            Humanization = new() { Enabled = true },
+            HybridLLMDecision = new() { Enabled = true },
+            InputSecurity = new() { Enabled = true },
+        };
+
+        Assert.False(flags.IsEnabled(nameof(FeatureFlagsOptions.ObjectPooling)));
+        Assert.False(flags.IsEnabled(nameof(FeatureFlagsOptions.CircuitBreaker)));
+        Assert.False(flags.IsEnabled(nameof(FeatureFlagsOptions.HazardAvoidance)));
+        Assert.False(flags.IsEnabled(nameof(FeatureFlagsOptions.Humanization)));
+        Assert.False(flags.IsEnabled(nameof(FeatureFlagsOptions.HybridLLMDecision)));
+        Assert.False(flags.IsEnabled(nameof(FeatureFlagsOptions.InputSecurity)));
+    }
+
+    [Fact]
+    public void GlobalKillSwitch_False_IsEnabled_HonorsIndividualFlags()
+    {
+        FeatureFlagsOptions flags = new()
+        {
+            GlobalKillSwitch = false,
+            ObjectPooling = new() { Enabled = true },
+            CircuitBreaker = new() { Enabled = false },
+        };
+
+        Assert.True(flags.IsEnabled(nameof(FeatureFlagsOptions.ObjectPooling)),
+            "individually enabled flag should be true when kill switch is off");
+        Assert.False(flags.IsEnabled(nameof(FeatureFlagsOptions.CircuitBreaker)),
+            "individually disabled flag should remain false regardless of kill switch");
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
     {
         DateTime deadline = DateTime.UtcNow + timeout;

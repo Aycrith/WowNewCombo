@@ -541,4 +541,61 @@ public class NavigationHelperTests
         bool result = IsSharpTurn(from, via, to, minTurnRadians);
         result.Should().BeTrue("45 degree turn should be detected as sharp (> 30 degrees) - needed for mounted preservation");
     }
+
+    // ---- Navigation.IsSharpTurn (real internal static) boundary tests ----
+    // These call the production implementation directly via InternalsVisibleTo.
+    // The mirror tests above validate the algorithm; these tests lock in the >= boundary semantics.
+
+    [Fact]
+    public void Navigation_IsSharpTurn_ExactThresholdAngle_ReturnsTrue()
+    {
+        // Exactly 30° == threshold (>= means true at the boundary)
+        float threshold = MathF.PI / 6f; // 30°
+        var from = new Vector3(0, 0, 0);
+        var via = new Vector3(10, 0, 0);
+        var to = new Vector3(via.X + MathF.Cos(threshold) * 10f,
+                             via.Y + MathF.Sin(threshold) * 10f, 0);
+
+        NavigationGoal.IsSharpTurn(from, via, to, threshold)
+            .Should().BeTrue("angle == threshold satisfies >=, so IsSharpTurn must return true");
+    }
+
+    [Fact]
+    public void Navigation_IsSharpTurn_BelowThreshold_ReturnsFalse()
+    {
+        // 15° < 30° threshold
+        float threshold = MathF.PI / 6f; // 30°
+        float angle15 = MathF.PI / 12f;  // 15°
+        var from = new Vector3(0, 0, 0);
+        var via = new Vector3(10, 0, 0);
+        var to = new Vector3(via.X + MathF.Cos(angle15) * 10f,
+                             via.Y + MathF.Sin(angle15) * 10f, 0);
+
+        NavigationGoal.IsSharpTurn(from, via, to, threshold)
+            .Should().BeFalse("15° is below the 30° threshold");
+    }
+
+    [Fact]
+    public void Navigation_IsSharpTurn_StraightPath_ReturnsFalse()
+    {
+        // 0° — perfectly straight, angle = 0 < threshold
+        var from = new Vector3(0, 0, 0);
+        var via = new Vector3(5, 0, 0);
+        var to = new Vector3(10, 0, 0);
+
+        NavigationGoal.IsSharpTurn(from, via, to, MathF.PI / 6f)
+            .Should().BeFalse("straight path has 0° angle, always below threshold");
+    }
+
+    [Fact]
+    public void Navigation_IsSharpTurn_NinetyDegrees_ReturnsTrue()
+    {
+        // 90° well above any practical threshold
+        var from = new Vector3(0, 0, 0);
+        var via = new Vector3(10, 0, 0);
+        var to = new Vector3(10, 10, 0); // 90° left turn at via
+
+        NavigationGoal.IsSharpTurn(from, via, to, MathF.PI / 6f)
+            .Should().BeTrue("90° >> 30° threshold");
+    }
 }

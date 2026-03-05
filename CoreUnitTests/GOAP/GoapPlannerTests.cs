@@ -759,4 +759,58 @@ public class GoapPlannerTests
     }
 
     #endregion
+
+    #region Edge Case Tests
+
+    [Fact]
+    public void Plan_EmptyGoalArray_ReturnsEmptyPlan()
+    {
+        BitVector32 worldState = CreateWorldState();
+        Stack<GoapGoal> plan = GoapPlanner.Plan([], worldState, GoapPlanner.EmptyGoalState);
+
+        plan.Should().BeEmpty("no goals means no plan can be formed");
+    }
+
+    [Fact]
+    public void Plan_AllGoalsCannotRun_ReturnsEmptyPlan()
+    {
+        GoapGoal[] goals =
+        [
+            CreateGoal("A", canRun: false),
+            CreateGoal("B", canRun: false),
+            CreateGoal("C", canRun: false),
+        ];
+        BitVector32 worldState = CreateWorldState();
+
+        Stack<GoapGoal> plan = GoapPlanner.Plan(goals, worldState, GoapPlanner.EmptyGoalState);
+
+        plan.Should().BeEmpty("all goals have CanRun=false so planner has nothing to build from");
+    }
+
+    [Fact]
+    public void Plan_SingleGoalWithMatchingEffects_ReturnsThatGoal()
+    {
+        // Mirrors Plan_SingleGoalAchievable but documents the single-goal edge case explicitly.
+        // A goal whose effects satisfy the goal state is the minimal useful plan.
+        GoapGoal goal = CreateGoal("AcquireTarget",
+            effects: new Dictionary<GoapKey, bool> { [GoapKey.hastarget] = true });
+
+        bool[] goalState = CreateGoalState((GoapKey.hastarget, true));
+        Stack<GoapGoal> plan = GoapPlanner.Plan([goal], CreateWorldState(), goalState);
+
+        plan.Should().HaveCount(1)
+            .And.Contain(goal, "single achievable goal with matching effect must produce a 1-step plan");
+    }
+
+    [Fact]
+    public void InvalidateCache_WhenCalled_DoesNotThrow()
+    {
+        // Documents that the planner cache is intentionally disabled (EnableUsableGoalCache = false).
+        // InvalidateCache() exists as a no-op so callers (GoapAgent.cs) don't need conditional
+        // compilation when the cache is toggled. This test ensures the call contract stays stable.
+        Exception? ex = Record.Exception(GoapPlanner.InvalidateCache);
+        ex.Should().BeNull("InvalidateCache must remain a safe no-op whether cache is enabled or disabled");
+    }
+
+    #endregion
 }
