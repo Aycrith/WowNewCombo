@@ -339,3 +339,6 @@ Navigation/mmaps/
 Navigation/*.exe
 Navigation/*.dll
 logs/
+
+# .NET CLI telemetry/cache (local machine-specific)
+.dotnetcli/

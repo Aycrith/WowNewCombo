@@ -1,0 +1,112 @@
+﻿{
+    "$schema":  "https://json-schema.org/draft/2020-12/schema",
+    "$id":  "https://wowclassicgrindbot.local/schemas/capability-alias-schema.json",
+    "title":  "Capability Alias Registry",
+    "type":  "object",
+    "required":  [
+                     "version",
+                     "captured_on",
+                     "platforms",
+                     "domains",
+                     "aliases"
+                 ],
+    "properties":  {
+                       "version":  {
+                                       "type":  "string",
+                                       "pattern":  "^[0-9]+\\\\.[0-9]+\\\\.[0-9]+$"
+                                   },
+                       "captured_on":  {
+                                           "type":  "string",
+                                           "pattern":  "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                                       },
+                       "platforms":  {
+                                         "minItems":  1,
+                                         "items":  {
+                                                       "type":  "string"
+                                                   },
+                                         "type":  "array"
+                                     },
+                       "domains":  {
+                                       "minItems":  1,
+                                       "items":  {
+                                                     "type":  "string"
+                                                 },
+                                       "type":  "array"
+                                   },
+                       "aliases":  {
+                                       "minItems":  1,
+                                       "items":  {
+                                                     "additionalProperties":  false,
+                                                     "properties":  {
+                                                                        "source_platforms":  {
+                                                                                                 "minItems":  1,
+                                                                                                 "items":  {
+                                                                                                               "type":  "string"
+                                                                                                           },
+                                                                                                 "type":  "array"
+                                                                                             },
+                                                                        "execution_pattern":  {
+                                                                                                  "minItems":  1,
+                                                                                                  "items":  {
+                                                                                                                "type":  "string"
+                                                                                                            },
+                                                                                                  "type":  "array"
+                                                                                              },
+                                                                        "category":  {
+                                                                                         "type":  "string"
+                                                                                     },
+                                                                        "alias":  {
+                                                                                      "type":  "string",
+                                                                                      "pattern":  "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                                                                  },
+                                                                        "intent":  {
+                                                                                       "type":  "string"
+                                                                                   },
+                                                                        "status":  {
+                                                                                       "type":  "string",
+                                                                                       "enum":  [
+                                                                                                    "native",
+                                                                                                    "composed",
+                                                                                                    "partial",
+                                                                                                    "external-only"
+                                                                                                ]
+                                                                                   },
+                                                                        "limitations":  {
+                                                                                            "items":  {
+                                                                                                          "type":  "string"
+                                                                                                      },
+                                                                                            "type":  "array"
+                                                                                        },
+                                                                        "required_tools":  {
+                                                                                               "minItems":  1,
+                                                                                               "items":  {
+                                                                                                             "type":  "string"
+                                                                                                         },
+                                                                                               "type":  "array"
+                                                                                           },
+                                                                        "example_prompts":  {
+                                                                                                "minItems":  1,
+                                                                                                "items":  {
+                                                                                                              "type":  "string"
+                                                                                                          },
+                                                                                                "type":  "array"
+                                                                                            }
+                                                                    },
+                                                     "type":  "object",
+                                                     "required":  [
+                                                                      "alias",
+                                                                      "category",
+                                                                      "intent",
+                                                                      "source_platforms",
+                                                                      "execution_pattern",
+                                                                      "required_tools",
+                                                                      "status",
+                                                                      "limitations",
+                                                                      "example_prompts"
+                                                                  ]
+                                                 },
+                                       "type":  "array"
+                                   }
+                   },
+    "additionalProperties":  false
+}

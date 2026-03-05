@@ -1,0 +1,640 @@
+﻿{
+    "version":  "1.0.0",
+    "captured_on":  "2026-03-05",
+    "scoring_model":  {
+                          "utility":  "0-5",
+                          "applicability":  "0-5",
+                          "integration":  "0-5",
+                          "reliability":  "0-5",
+                          "workflow_value_formula":  "(25*Utility + 25*Applicability + 30*Integration + 20*Reliability)/5"
+                      },
+    "platforms":  [
+                      "Claude Code",
+                      "OpenCode",
+                      "Cursor",
+                      "Windsurf",
+                      "Aider",
+                      "Continue",
+                      "Cline",
+                      "GitHub Copilot",
+                      "Devin",
+                      "SWE-agent",
+                      "OpenAI Codex",
+                      "OpenHands",
+                      "Replit Agent",
+                      "Amazon Q Developer",
+                      "Gemini Code Assist"
+                  ],
+    "domains":  [
+                    "Agent orchestration and autonomy",
+                    "Context and memory systems",
+                    "Search and retrieval",
+                    "Code analysis and refactoring",
+                    "Test generation and execution",
+                    "Shell and filesystem control",
+                    "Browser and UI control",
+                    "API and external integrations (including MCP/tool ecosystems)",
+                    "Debugging and observability",
+                    "Docs and knowledge generation",
+                    "Workflow automation and CI/CD hooks",
+                    "Safety, approval, and permission models"
+                ],
+    "aliases":  [
+                    {
+                        "alias":  "agent-orchestration-sprint",
+                        "category":  "Agent orchestration and autonomy",
+                        "intent":  "Gated multi-step engineering sprint.",
+                        "source_platforms":  [
+                                                 "Claude Code",
+                                                 "Cline",
+                                                 "Devin",
+                                                 "OpenHands",
+                                                 "SWE-agent",
+                                                 "OpenAI Codex"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.shell_command",
+                                               "functions.apply_patch",
+                                               "web.search_query",
+                                               "web.open"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:agent-orchestration-sprint",
+                                                "run agent-orchestration-sprint workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "repo-context-scout",
+                        "category":  "Search and retrieval",
+                        "intent":  "Map repository structure and dependency paths.",
+                        "source_platforms":  [
+                                                 "OpenCode",
+                                                 "Continue",
+                                                 "Cursor",
+                                                 "Aider"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.shell_command",
+                                               "web.search_query"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:repo-context-scout",
+                                                "run repo-context-scout workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "cross-platform-capability-audit",
+                        "category":  "Docs and knowledge generation",
+                        "intent":  "Audit capabilities across platforms with scoring.",
+                        "source_platforms":  [
+                                                 "Claude Code",
+                                                 "OpenCode",
+                                                 "Cursor",
+                                                 "Windsurf",
+                                                 "GitHub Copilot",
+                                                 "OpenAI Codex"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "web.search_query",
+                                               "web.open",
+                                               "web.find",
+                                               "functions.shell_command"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:cross-platform-capability-audit",
+                                                "run cross-platform-capability-audit workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "code-refactor-safety-pass",
+                        "category":  "Code analysis and refactoring",
+                        "intent":  "Apply structural refactors with safety checks.",
+                        "source_platforms":  [
+                                                 "Cursor",
+                                                 "Aider",
+                                                 "GitHub Copilot",
+                                                 "OpenAI Codex",
+                                                 "Cline"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.shell_command",
+                                               "functions.apply_patch"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:code-refactor-safety-pass",
+                                                "run code-refactor-safety-pass workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "test-regression-hardening",
+                        "category":  "Test generation and execution",
+                        "intent":  "Generate tests and run regression loops.",
+                        "source_platforms":  [
+                                                 "Aider",
+                                                 "GitHub Copilot",
+                                                 "Claude Code",
+                                                 "SWE-agent",
+                                                 "OpenHands"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.shell_command",
+                                               "functions.apply_patch"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:test-regression-hardening",
+                                                "run test-regression-hardening workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "shell-investigation-loop",
+                        "category":  "Shell and filesystem control",
+                        "intent":  "Use iterative shell diagnostics and implementation loops.",
+                        "source_platforms":  [
+                                                 "Claude Code",
+                                                 "OpenCode",
+                                                 "Cline",
+                                                 "Devin",
+                                                 "SWE-agent",
+                                                 "OpenAI Codex"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  "functions.shell_command",
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:shell-investigation-loop",
+                                                "run shell-investigation-loop workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "browser-ui-repro",
+                        "category":  "Browser and UI control",
+                        "intent":  "Reproduce UI issues and gather browser evidence.",
+                        "source_platforms":  [
+                                                 "Cline",
+                                                 "Windsurf",
+                                                 "Devin",
+                                                 "OpenHands",
+                                                 "Replit Agent"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "web.open",
+                                               "web.find"
+                                           ],
+                        "status":  "partial",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:browser-ui-repro",
+                                                "run browser-ui-repro workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "mcp-integration-setup",
+                        "category":  "API and external integrations (including MCP/tool ecosystems)",
+                        "intent":  "Set up and validate MCP/tool integrations.",
+                        "source_platforms":  [
+                                                 "Claude Code",
+                                                 "OpenCode",
+                                                 "Cursor",
+                                                 "Windsurf",
+                                                 "GitHub Copilot",
+                                                 "OpenAI Codex",
+                                                 "Cline"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.shell_command",
+                                               "web.search_query",
+                                               "web.open"
+                                           ],
+                        "status":  "composed",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:mcp-integration-setup",
+                                                "run mcp-integration-setup workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "api-integration-hardening",
+                        "category":  "API and external integrations (including MCP/tool ecosystems)",
+                        "intent":  "Harden API integrations with resilience patterns.",
+                        "source_platforms":  [
+                                                 "OpenCode",
+                                                 "GitHub Copilot",
+                                                 "Aider",
+                                                 "Continue"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.apply_patch",
+                                               "functions.shell_command"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:api-integration-hardening",
+                                                "run api-integration-hardening workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "debug-root-cause-sprint",
+                        "category":  "Debugging and observability",
+                        "intent":  "Rapid root-cause analysis and fix validation.",
+                        "source_platforms":  [
+                                                 "Claude Code",
+                                                 "GitHub Copilot",
+                                                 "Devin",
+                                                 "Amazon Q Developer",
+                                                 "SWE-agent"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.shell_command",
+                                               "functions.apply_patch"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:debug-root-cause-sprint",
+                                                "run debug-root-cause-sprint workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "docs-knowledge-pack",
+                        "category":  "Docs and knowledge generation",
+                        "intent":  "Generate implementation and validation documentation.",
+                        "source_platforms":  [
+                                                 "Claude Code",
+                                                 "OpenCode",
+                                                 "GitHub Copilot",
+                                                 "Devin",
+                                                 "Gemini Code Assist"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  "functions.shell_command",
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:docs-knowledge-pack",
+                                                "run docs-knowledge-pack workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "ci-failure-triage",
+                        "category":  "Workflow automation and CI/CD hooks",
+                        "intent":  "Triage CI failures and implement fixes.",
+                        "source_platforms":  [
+                                                 "GitHub Copilot",
+                                                 "OpenCode",
+                                                 "Claude Code",
+                                                 "SWE-agent"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "gh-fix-ci",
+                                               "functions.shell_command",
+                                               "functions.apply_patch"
+                                           ],
+                        "status":  "composed",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:ci-failure-triage",
+                                                "run ci-failure-triage workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "dependency-risk-audit",
+                        "category":  "Code analysis and refactoring",
+                        "intent":  "Assess dependency vulnerabilities and update risk.",
+                        "source_platforms":  [
+                                                 "OpenCode",
+                                                 "GitHub Copilot",
+                                                 "Amazon Q Developer",
+                                                 "Gemini Code Assist"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.shell_command",
+                                               "web.search_query"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:dependency-risk-audit",
+                                                "run dependency-risk-audit workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "migration-planning-pack",
+                        "category":  "Workflow automation and CI/CD hooks",
+                        "intent":  "Build migration plan with rollback and risk tiers.",
+                        "source_platforms":  [
+                                                 "OpenCode",
+                                                 "Continue",
+                                                 "GitHub Copilot",
+                                                 "Claude Code"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.shell_command",
+                                               "functions.apply_patch"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:migration-planning-pack",
+                                                "run migration-planning-pack workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "pr-review-sweep",
+                        "category":  "Code analysis and refactoring",
+                        "intent":  "Run severity-first PR review and remediation hints.",
+                        "source_platforms":  [
+                                                 "GitHub Copilot",
+                                                 "Claude Code",
+                                                 "OpenCode",
+                                                 "Cline"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.shell_command",
+                                               "gh-address-comments"
+                                           ],
+                        "status":  "composed",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:pr-review-sweep",
+                                                "run pr-review-sweep workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "issue-reproducer-loop",
+                        "category":  "Debugging and observability",
+                        "intent":  "Convert issue reports into deterministic repro loops.",
+                        "source_platforms":  [
+                                                 "SWE-agent",
+                                                 "Devin",
+                                                 "Aider",
+                                                 "OpenHands"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.shell_command",
+                                               "functions.apply_patch"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:issue-reproducer-loop",
+                                                "run issue-reproducer-loop workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "memory-capture-brief",
+                        "category":  "Context and memory systems",
+                        "intent":  "Capture decisions, assumptions, and unresolved risks.",
+                        "source_platforms":  [
+                                                 "Claude Code",
+                                                 "Cursor",
+                                                 "Windsurf",
+                                                 "Devin",
+                                                 "Continue"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  "functions.shell_command",
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:memory-capture-brief",
+                                                "run memory-capture-brief workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "safety-gated-execution",
+                        "category":  "Safety, approval, and permission models",
+                        "intent":  "Run risky operations with explicit gates and checks.",
+                        "source_platforms":  [
+                                                 "Claude Code",
+                                                 "GitHub Copilot",
+                                                 "Amazon Q Developer",
+                                                 "OpenAI Codex",
+                                                 "Cline"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  "functions.shell_command",
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:safety-gated-execution",
+                                                "run safety-gated-execution workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "performance-optimization-pass",
+                        "category":  "Debugging and observability",
+                        "intent":  "Optimize hot paths and validate performance gains.",
+                        "source_platforms":  [
+                                                 "Aider",
+                                                 "OpenCode",
+                                                 "Amazon Q Developer",
+                                                 "Gemini Code Assist",
+                                                 "Claude Code"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.shell_command",
+                                               "functions.apply_patch"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:performance-optimization-pass",
+                                                "run performance-optimization-pass workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "platform-parity-compare",
+                        "category":  "Docs and knowledge generation",
+                        "intent":  "Compare platform capability parity for a workflow.",
+                        "source_platforms":  "All",
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "web.search_query",
+                                               "web.open",
+                                               "web.find"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:platform-parity-compare",
+                                                "run platform-parity-compare workflow"
+                                            ]
+                    },
+                    {
+                        "alias":  "workflow-automation-blueprint",
+                        "category":  "Workflow automation and CI/CD hooks",
+                        "intent":  "Design reusable automation blueprints and runbooks.",
+                        "source_platforms":  [
+                                                 "OpenCode",
+                                                 "Continue",
+                                                 "GitHub Copilot",
+                                                 "Replit Agent",
+                                                 "OpenAI Codex"
+                                             ],
+                        "execution_pattern":  [
+                                                  "Discover context and constraints.",
+                                                  "Execute bounded implementation steps.",
+                                                  "Validate outputs and summarize results."
+                                              ],
+                        "required_tools":  [
+                                               "functions.shell_command",
+                                               "functions.apply_patch"
+                                           ],
+                        "status":  "native",
+                        "limitations":  [
+                                            "Depends on available environment access and configured integrations."
+                                        ],
+                        "example_prompts":  [
+                                                "cap:workflow-automation-blueprint",
+                                                "run workflow-automation-blueprint workflow"
+                                            ]
+                    }
+                ]
+}
