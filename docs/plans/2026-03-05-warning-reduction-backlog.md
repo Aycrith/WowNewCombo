@@ -68,6 +68,24 @@
 ### Publish Point
 - Sprint 3 code changes landed on `dev` at commit `3d16626d6` on 2026-03-05.
 
-### Remaining Deferred (Sprint 4)
-- `SYSLIB1045` (`[GeneratedRegex]` migration) in `Core` and `CoreUnitTests`.
-  - Rationale: broad regex migration is behavior-sensitive and should run as a dedicated batch.
+## Sprint 4 Target
+- Eliminate remaining `SYSLIB1045` warnings using `[GeneratedRegex]`.
+- Keep behavior unchanged in production parsing/sanitization and regex extension tests.
+
+## Sprint 4 Outcome (Conservative: Core + CoreUnitTests)
+- Baseline (Sprint 4 start): `1` unique warning (`38` raw lines).
+- After Sprint 4: `0` unique warnings (`0` raw lines).
+- Net change: `1` unique warning resolved.
+- Acceptance target met: no deferred warning categories remain.
+
+### Fixed Categories
+- `SYSLIB1045` in:
+  - `Core/AI/HybridDecision/LLMResponseParser.cs`
+  - `Core/AI/ProfileGenerator/AIProfileGeneratorService.cs`
+  - `CoreUnitTests/Extensions/RegexExtensionTests.cs`
+
+### Publish Point
+- Sprint 4 code changes landed on `dev` at commit `d43de1c4b` on 2026-03-05.
+
+### Remaining Deferred (Post-Sprint 4)
+- None.
