@@ -31,7 +31,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = "The quick brown fox";
-        Regex regex = new(@"(?<animal>fox)");
+        Regex regex = AnimalRegex();
         string groupName = "animal";
         string replacement = "dog";
 
@@ -47,7 +47,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = "Hello World";
-        Regex regex = new(@"(?<missing>xyz)");
+        Regex regex = MissingRegex();
         string groupName = "missing";
         string replacement = "replacement";
 
@@ -63,7 +63,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = "";
-        Regex regex = new(@"(?<word>\w+)");
+        Regex regex = WordRegex();
         string groupName = "word";
         string replacement = "test";
 
@@ -79,7 +79,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = "Call me at (555) 123-4567";
-        Regex regex = new(@"\((?<areaCode>\d{3})\)");
+        Regex regex = AreaCodeRegex();
         string groupName = "areaCode";
         string replacement = "888";
 
@@ -95,7 +95,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = "2024-01-15";
-        Regex regex = new(@"(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})");
+        Regex regex = DateRegex();
         string groupName = "month";
         string replacement = "12";
 
@@ -111,7 +111,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = "Price: $100";
-        Regex regex = new(@"\$(?<amount>\d+)");
+        Regex regex = AmountRegex();
         string groupName = "amount";
         string replacement = "500";
 
@@ -127,7 +127,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = "word1 word2 word3";
-        Regex regex = new(@"(?<first>word1)");
+        Regex regex = FirstWordRegex();
         string groupName = "first";
         string replacement = "replaced";
 
@@ -143,7 +143,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = "user@olddomain.com";
-        Regex regex = new(@"@(?<domain>\w+\.\w+)");
+        Regex regex = DomainRegex();
         string groupName = "domain";
         string replacement = "newdomain.com";
 
@@ -159,7 +159,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = "http://example.com";
-        Regex regex = new(@"(?<protocol>https?):");
+        Regex regex = ProtocolRegex();
         string groupName = "protocol";
         string replacement = "https";
 
@@ -175,7 +175,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = "prefix-content-suffix";
-        Regex regex = new(@"-(?<middle>\w+)-");
+        Regex regex = MiddleRegex();
         string groupName = "middle";
         string replacement = "";
 
@@ -192,7 +192,7 @@ public partial class RegexExtensionTests
     {
         // Arrange - Pattern matches "ABC123" and "DEF456" separately
         string input = "ABC123DEF456";
-        Regex regex = new(@"(?<letters>[A-Z]+)(?<digits>\d+)");
+        Regex regex = LettersAndDigitsRegex();
         string groupName = "letters";
         string replacement = "XYZ";
 
@@ -208,7 +208,7 @@ public partial class RegexExtensionTests
     {
         // Arrange - IgnoreCase means pattern matches all case variations
         string input = "Hello HELLO hello";
-        Regex regex = new(@"(?<word>HELLO)", RegexOptions.IgnoreCase);
+        Regex regex = IgnoreCaseWordRegex();
         string groupName = "word";
         string replacement = "World";
 
@@ -224,7 +224,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = "Hello World";
-        Regex regex = new(@"(?<word>\w+)");
+        Regex regex = WordRegex();
         string groupName = "invalid";
         string replacement = "test";
 
@@ -239,7 +239,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = new string('a', 10000) + "TARGET" + new string('b', 10000);
-        Regex regex = new(@"(?<marker>TARGET)");
+        Regex regex = MarkerRegex();
         string groupName = "marker";
         string replacement = "REPLACED";
 
@@ -257,7 +257,7 @@ public partial class RegexExtensionTests
         // Arrange - Note: \w in .NET matches Unicode word characters by default
         // So both "Hello" and "世界" are matched by (?<greeting>\w+)
         string input = "Hello 世界";
-        Regex regex = new(@"(?<greeting>\w+)");
+        Regex regex = GreetingRegex();
         string groupName = "greeting";
         string replacement = "Bonjour";
 
@@ -273,7 +273,7 @@ public partial class RegexExtensionTests
     {
         // Arrange
         string input = "Line1\nLine2\nLine3";
-        Regex regex = new(@"(?<line>Line2)");
+        Regex regex = LineRegex();
         string groupName = "line";
         string replacement = "REPLACED";
 
@@ -286,4 +286,49 @@ public partial class RegexExtensionTests
 
     [GeneratedRegex(@"(?<word>World)")]
     private static partial Regex MyRegex();
+
+    [GeneratedRegex(@"(?<animal>fox)")]
+    private static partial Regex AnimalRegex();
+
+    [GeneratedRegex(@"(?<missing>xyz)")]
+    private static partial Regex MissingRegex();
+
+    [GeneratedRegex(@"(?<word>\w+)")]
+    private static partial Regex WordRegex();
+
+    [GeneratedRegex(@"\((?<areaCode>\d{3})\)")]
+    private static partial Regex AreaCodeRegex();
+
+    [GeneratedRegex(@"(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})")]
+    private static partial Regex DateRegex();
+
+    [GeneratedRegex(@"\$(?<amount>\d+)")]
+    private static partial Regex AmountRegex();
+
+    [GeneratedRegex(@"(?<first>word1)")]
+    private static partial Regex FirstWordRegex();
+
+    [GeneratedRegex(@"@(?<domain>\w+\.\w+)")]
+    private static partial Regex DomainRegex();
+
+    [GeneratedRegex(@"(?<protocol>https?):")]
+    private static partial Regex ProtocolRegex();
+
+    [GeneratedRegex(@"-(?<middle>\w+)-")]
+    private static partial Regex MiddleRegex();
+
+    [GeneratedRegex(@"(?<letters>[A-Z]+)(?<digits>\d+)")]
+    private static partial Regex LettersAndDigitsRegex();
+
+    [GeneratedRegex(@"(?<word>HELLO)", RegexOptions.IgnoreCase)]
+    private static partial Regex IgnoreCaseWordRegex();
+
+    [GeneratedRegex(@"(?<marker>TARGET)")]
+    private static partial Regex MarkerRegex();
+
+    [GeneratedRegex(@"(?<greeting>\w+)")]
+    private static partial Regex GreetingRegex();
+
+    [GeneratedRegex(@"(?<line>Line2)")]
+    private static partial Regex LineRegex();
 }

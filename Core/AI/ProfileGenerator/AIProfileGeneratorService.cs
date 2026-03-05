@@ -73,7 +73,7 @@ public sealed partial class AIProfileGeneratorService
         description = MyRegex().Replace(description, "");
 
         // Allow only safe characters: letters, digits, spaces, basic punctuation
-        description = Regex.Replace(description, @"[^\w\s\-.,;:!?'()/#+%]", "", RegexOptions.None);
+        description = AllowedPromptCharactersRegex().Replace(description, "");
 
         return description.Trim();
     }
@@ -294,7 +294,7 @@ Return ONLY valid JSON, no explanations or markdown formatting.
     private static string ExtractJson(string response)
     {
         // Try markdown code blocks
-        var match = Regex.Match(response, @"```(?:json)?\s*([\s\S]*?)\s*```", RegexOptions.IgnoreCase);
+        Match match = MarkdownJsonFenceRegex().Match(response);
         if (match.Success)
         {
             return match.Groups[1].Value.Trim();
@@ -343,6 +343,12 @@ Return ONLY valid JSON, no explanations or markdown formatting.
             rateLimitSemaphore.Release();
         }
     }
+
+    [GeneratedRegex(@"[^\w\s\-.,;:!?'()/#+%]")]
+    private static partial Regex AllowedPromptCharactersRegex();
+
+    [GeneratedRegex(@"```(?:json)?\s*([\s\S]*?)\s*```", RegexOptions.IgnoreCase, "en-US")]
+    private static partial Regex MarkdownJsonFenceRegex();
 
     [GeneratedRegex(@"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]")]
     private static partial Regex MyRegex();

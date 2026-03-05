@@ -102,7 +102,7 @@ public sealed partial class LLMResponseParser
         }
 
         // Try to find JSON object directly
-        Match jsonMatch = Regex.Match(response, @"\{[\s\S]*?\}");
+        Match jsonMatch = JsonObjectRegex().Match(response);
         if (jsonMatch.Success)
         {
             return jsonMatch.Value;
@@ -137,6 +137,9 @@ public sealed partial class LLMResponseParser
 
         return 0;
     }
+
+    [GeneratedRegex(@"\{[\s\S]*?\}")]
+    private static partial Regex JsonObjectRegex();
 
     [GeneratedRegex(@"```(?:json)?\s*(\{[\s\S]*?\})\s*```", RegexOptions.IgnoreCase, "en-US")]
     private static partial Regex MyRegex();
