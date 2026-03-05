@@ -226,8 +226,7 @@ public class PPatherV2
                     int cy = a / Adt.ADT_CELLS_PER_GRID;
 
                     adt.GetTerrainVertsAndTris((uint)cx, (uint)cy, terrain);
-                    // TODO: fix this memory leak
-                    //adt.GetLiquidVertsAndTris((uint)cx, (uint)cy, terrain);
+                    adt.GetLiquidVertsAndTris((uint)cx, (uint)cy, terrain);
                 }
 
                 pooler.Return(adtData);
