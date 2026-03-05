@@ -334,6 +334,17 @@ git add Frontend/Controllers/DiagnosticsController.cs Frontend/Controllers/Input
 git commit -m "refactor(api): extract input-security endpoints into InputSecurityDiagnosticsController"
 ```
 
+### Implemented Variant (2026-03-05)
+
+P3-5 was completed with an expanded extraction to `Frontend/Controllers/DiagnosticsFixController.cs`
+instead of `InputSecurityDiagnosticsController.cs`.
+
+- Base route stayed `api/diagnostics`.
+- All fix/mutating endpoints were moved (`mailbox/interact`, `fix/*`, and `input-mode`).
+- API paths remained unchanged after the extraction.
+- `DiagnosticsController.TryNormalizeSupportedSlashCommand` intentionally stayed public static
+  for cross-controller safe-list validation.
+
 ---
 
 ## Execution Order

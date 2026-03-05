@@ -14,7 +14,7 @@ All P0 tasks committed in a single session. Total time: ~25 minutes.
 
 | Task | Commit | Result |
 |------|--------|--------|
-| P0-1 | `2e645ad02` | Stable NuGet packages — no pre-release in production build |
+| P0-1 | `2e645ad06` | Stable NuGet packages — no pre-release in production build |
 | P0-2 | `94d3914cf` | MapId fix — stuck events now zone-aware; +1 regression test |
 | P0-3 | `cce5e5a78` | DetectUnexpectedState implemented — LLM intervention active; +4 unit tests |
 | P0-4 | `6fa6e7094` | Liquid geometry restored — water/ocean nav now included |
@@ -106,14 +106,15 @@ COMPLETE: P3-5 (DiagnosticsController split)
 | `MockWoWClient/GameState/FailureSimulationService.cs` | ~266 | P0-2 |
 | `Core/Goals/GoalTimeouts.cs` | NEW | P1-4 |
 | `BlazorServer/runtime_feature_flags.json` | 169 | P3-3 |
-| `Frontend/Controllers/DiagnosticsController.cs` | 1699 | P3-5 (pending split) |
+| `Frontend/Controllers/DiagnosticsController.cs` | 1088 | P3-5 (diagnostic endpoints retained) |
+| `Frontend/Controllers/DiagnosticsFixController.cs` | 673 | P3-5 (fix/mutating endpoints extracted) |
 
 ---
 
 ## Final Verification (All Complete)
 
 ```bash
-# Clean build — 0 errors, 0 warnings in production code
+# Clean build — 0 errors (warnings remain in baseline)
 dotnet build MasterOfPuppets.sln --nologo -v quiet
 
 # Full test suite
