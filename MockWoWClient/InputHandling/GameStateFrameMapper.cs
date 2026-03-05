@@ -53,8 +53,8 @@ public sealed class GameStateFrameMapper
         // Direction (frame 3)
         _renderer.SetFrameFloat(FrameIndices.Direction, player.Direction);
 
-        // Map ID (frame 4) - would need actual map ID from data files
-        _renderer.SetFrame(FrameIndices.UIMapId, 141); // Example: Eastern Kingdoms
+        // Map ID (frame 4)
+        _renderer.SetFrame(FrameIndices.UIMapId, _gameState.UIMapId);
 
         // Level (frame 5)
         _renderer.SetFrame(FrameIndices.PlayerLevel, player.Level);

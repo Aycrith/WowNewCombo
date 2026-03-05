@@ -42,8 +42,8 @@ public sealed class FailureSimulationService : IFailureSimulationService
                 Id = Guid.NewGuid(),
                 Timestamp = _clock.CurrentTime,
                 Position = _gameState.Player.Position,
-                MapId = 0, // TODO: Get actual map ID
-                UIMapId = 0,
+                MapId = _gameState.MapId,
+                UIMapId = _gameState.UIMapId,
                 Direction = _gameState.Player.Direction,
                 State = stuckState,
                 DurationMs = durationMs,
@@ -80,8 +80,8 @@ public sealed class FailureSimulationService : IFailureSimulationService
                 Id = Guid.NewGuid(),
                 Timestamp = _clock.CurrentTime,
                 Position = _gameState.Player.Position,
-                MapId = 0,
-                UIMapId = 0,
+                MapId = _gameState.MapId,
+                UIMapId = _gameState.UIMapId,
                 Cause = cause,
                 Level = _gameState.Player.Level
             };
@@ -133,7 +133,7 @@ public sealed class FailureSimulationService : IFailureSimulationService
             {
                 Id = Guid.NewGuid(),
                 Center = center,
-                MapId = 0,
+                MapId = _gameState.MapId,
                 FailureCount = failureCount,
                 PrimaryType = failureType,
                 CreatedAt = _clock.CurrentTime,

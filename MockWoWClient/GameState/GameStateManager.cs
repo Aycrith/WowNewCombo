@@ -17,6 +17,10 @@ public sealed class GameStateManager
     public List<NpcEntity> Npcs { get; } = [];
     public List<CorpseEntity> Corpses { get; } = [];
 
+    // Zone/Map state
+    public int MapId { get; set; } = 0;
+    public int UIMapId { get; set; } = 0;
+
     // Combat state
     public bool InCombat => Player.InCombat;
     public DateTime CombatStartTime { get; private set; }

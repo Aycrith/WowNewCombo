@@ -300,6 +300,24 @@ public sealed class BotFailureScenarioTests : IntegrationTestBase
         hotZone.PrimaryType.Should().Be(FailureType.Death);
     }
 
+    [Fact]
+    public void SimulateStuck_ShouldCreateStuckEventWithCurrentMapId()
+    {
+        // Arrange
+        int expectedMapId = 1941; // Eversong Woods
+        GameState.MapId = expectedMapId;
+        SimulatedStuckEvent? capturedEvent = null;
+        FailureSimulation.OnStuckSimulated += evt => capturedEvent = evt;
+
+        // Act
+        FailureSimulation.SimulateStuck(UnstuckState.InitialAttempt);
+
+        // Assert
+        capturedEvent.Should().NotBeNull();
+        capturedEvent!.MapId.Should().Be(expectedMapId,
+            "stuck events must reflect the current zone for zone-specific analysis");
+    }
+
     protected override void CleanupTestData()
     {
         _blacklist.Dispose();
