@@ -26,6 +26,8 @@ public sealed class FeatureFlagsOptions
     public CombatRotation.CombatRotationOptimizerOptions CombatRotationOptimizer { get; set; } = new();
     public SmartBlacklistOptions SmartBlacklist { get; set; } = new();
     public StuckSensitivityOptions StuckSensitivity { get; set; } = new();
+    public NavigationExperimentsOptions NavigationExperiments { get; set; } = new();
+    public GoapPlannerCachingOptions GoapPlannerCaching { get; set; } = new();
     public NoPlanRecoveryOptions NoPlanRecovery { get; set; } = new();
     public FailureAnalyticsOptions FailureAnalytics { get; set; } = new();
 
@@ -273,6 +275,34 @@ public sealed class StuckSensitivityOptions
 }
 
 /// <summary>
+/// Experimental navigation controls for oscillation damping and route diagnostics.
+/// All options are disabled by default.
+/// </summary>
+public sealed class NavigationExperimentsOptions
+{
+    public bool EnableOscillationConfidenceThrottle { get; set; }
+    public bool EnableAdaptiveHeadingCooldown { get; set; }
+    public bool EnableRouteSegmentTracker { get; set; }
+
+    public int HeadingAdjustCooldownMs { get; set; } = 140;
+    public float MaxOscillationCooldownMultiplier { get; set; } = 4.0f;
+    public float BaselineAdaptiveSpeedMps { get; set; } = 2.0f;
+    public float MinAdaptiveCooldownScale { get; set; } = 0.5f;
+    public float MaxAdaptiveCooldownScale { get; set; } = 2.0f;
+}
+
+/// <summary>
+/// Experimental GOAP planner caches. Disabled by default.
+/// </summary>
+public sealed class GoapPlannerCachingOptions
+{
+    public bool EnableUsableGoalCache { get; set; }
+    public bool EnablePlanCache { get; set; }
+    public int MaxUsableCacheEntries { get; set; } = 64;
+    public int MaxPlanCacheEntries { get; set; } = 64;
+}
+
+/// <summary>
 /// NO PLAN recovery configuration.
 /// </summary>
 public sealed class NoPlanRecoveryOptions
@@ -340,6 +370,13 @@ public static class FeatureFlagExtensions
             nameof(FeatureFlagsOptions.CombatRotationOptimizer) => flags.CombatRotationOptimizer.Enabled,
             nameof(FeatureFlagsOptions.SmartBlacklist) => flags.SmartBlacklist.Enabled,
             nameof(FeatureFlagsOptions.StuckSensitivity) => flags.StuckSensitivity.Enabled,
+            nameof(FeatureFlagsOptions.NavigationExperiments) =>
+                flags.NavigationExperiments.EnableOscillationConfidenceThrottle ||
+                flags.NavigationExperiments.EnableAdaptiveHeadingCooldown ||
+                flags.NavigationExperiments.EnableRouteSegmentTracker,
+            nameof(FeatureFlagsOptions.GoapPlannerCaching) =>
+                flags.GoapPlannerCaching.EnableUsableGoalCache ||
+                flags.GoapPlannerCaching.EnablePlanCache,
             nameof(FeatureFlagsOptions.NoPlanRecovery) => flags.NoPlanRecovery.Enabled,
             nameof(FeatureFlagsOptions.FailureAnalytics) => flags.FailureAnalytics.Enabled,
             _ => false
@@ -368,6 +405,17 @@ public static class FeatureFlagExtensions
         if (flags.CombatRotationOptimizer.Enabled) yield return nameof(FeatureFlagsOptions.CombatRotationOptimizer);
         if (flags.SmartBlacklist.Enabled) yield return nameof(FeatureFlagsOptions.SmartBlacklist);
         if (flags.StuckSensitivity.Enabled) yield return nameof(FeatureFlagsOptions.StuckSensitivity);
+        if (flags.NavigationExperiments.EnableOscillationConfidenceThrottle ||
+            flags.NavigationExperiments.EnableAdaptiveHeadingCooldown ||
+            flags.NavigationExperiments.EnableRouteSegmentTracker)
+        {
+            yield return nameof(FeatureFlagsOptions.NavigationExperiments);
+        }
+        if (flags.GoapPlannerCaching.EnableUsableGoalCache ||
+            flags.GoapPlannerCaching.EnablePlanCache)
+        {
+            yield return nameof(FeatureFlagsOptions.GoapPlannerCaching);
+        }
         if (flags.NoPlanRecovery.Enabled) yield return nameof(FeatureFlagsOptions.NoPlanRecovery);
         if (flags.FailureAnalytics.Enabled) yield return nameof(FeatureFlagsOptions.FailureAnalytics);
     }

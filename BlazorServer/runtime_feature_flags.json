@@ -143,6 +143,24 @@
       "PredictiveRiskThreshold": 70,
       "ApproachTimeoutMultiplier": 2.0,
       "Description": "Conservative stuck thresholds for navigation reliability. Allows turn-heavy segments and heading corrections to complete before recovery actions."
+    },
+    "NavigationExperiments": {
+      "EnableOscillationConfidenceThrottle": false,
+      "EnableAdaptiveHeadingCooldown": false,
+      "EnableRouteSegmentTracker": false,
+      "HeadingAdjustCooldownMs": 140,
+      "MaxOscillationCooldownMultiplier": 4.0,
+      "BaselineAdaptiveSpeedMps": 2.0,
+      "MinAdaptiveCooldownScale": 0.5,
+      "MaxAdaptiveCooldownScale": 2.0,
+      "Description": "Experimental navigation damping/tracking controls. Keep disabled by default until soak validation."
+    },
+    "GoapPlannerCaching": {
+      "EnableUsableGoalCache": false,
+      "EnablePlanCache": false,
+      "MaxUsableCacheEntries": 64,
+      "MaxPlanCacheEntries": 64,
+      "Description": "Experimental GOAP planner caching controls. Keep disabled by default until validation."
     }
   },
   "Monitoring": {

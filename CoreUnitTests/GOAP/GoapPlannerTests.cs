@@ -805,11 +805,9 @@ public class GoapPlannerTests
     [Fact]
     public void InvalidateCache_WhenCalled_DoesNotThrow()
     {
-        // Documents that the planner cache is intentionally disabled (EnableUsableGoalCache = false).
-        // InvalidateCache() exists as a no-op so callers (GoapAgent.cs) don't need conditional
-        // compilation when the cache is toggled. This test ensures the call contract stays stable.
+        // Call contract guard: regardless of cache enablement, invalidation must be safe.
         Exception? ex = Record.Exception(GoapPlanner.InvalidateCache);
-        ex.Should().BeNull("InvalidateCache must remain a safe no-op whether cache is enabled or disabled");
+        ex.Should().BeNull("InvalidateCache must remain safe when caches are enabled or disabled");
     }
 
     #endregion

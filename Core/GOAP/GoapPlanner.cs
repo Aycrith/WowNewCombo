@@ -3,6 +3,8 @@ using Core.Goals;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Core.GOAP;
 
@@ -15,6 +17,11 @@ public static class GoapPlanner
     public static readonly bool[] EmptyGoalState = Array.Empty<bool>();
     public static readonly Stack<GoapGoal> EmptyGoal = new();
 
+    private static readonly object cacheSync = new();
+    private static int cacheGeneration;
+    private static readonly Dictionary<UsableCacheKey, GoapGoal[]> usableGoalCache = [];
+    private static readonly Dictionary<PlanCacheKey, GoapGoal[]> planCache = [];
+
     /// <summary>
     /// Explicitly invalidates the usable-goals cache so the next
     /// <see cref="Plan"/> call re-evaluates every goal's CanRun().
@@ -23,7 +30,12 @@ public static class GoapPlanner
     /// </summary>
     public static void InvalidateCache()
     {
-        // Usable-goal caching is currently disabled; no state to invalidate.
+        lock (cacheSync)
+        {
+            cacheGeneration++;
+            usableGoalCache.Clear();
+            planCache.Clear();
+        }
     }
 
     /**
@@ -37,32 +49,50 @@ public static class GoapPlanner
         BitVector32 worldState,
         bool[] goal)
     {
+        return Plan(available, worldState, goal, new GoapPlannerExecutionOptions());
+    }
+
+    public static Stack<GoapGoal> Plan(
+        GoapGoal[] available,
+        BitVector32 worldState,
+        bool[] goal,
+        GoapPlannerExecutionOptions executionOptions)
+    {
         if (available.Length > 31)
             throw new InvalidOperationException(
                 $"GoapPlanner bitmask supports at most 31 goals; got {available.Length}. " +
                 "Increase bitmask type to ulong to support up to 63 goals.");
 
+        int generation = Volatile.Read(ref cacheGeneration);
+        int availableSignature = ComputeAvailableSignature(available);
+        int goalSignature = ComputeGoalSignature(goal);
+
+        if (TryGetCachedPlan(
+                worldState,
+                goal,
+                generation,
+                availableSignature,
+                goalSignature,
+                executionOptions,
+                out Stack<GoapGoal>? cachedPlan))
+        {
+            return cachedPlan!;
+        }
+
         Node root = new(null, 0, worldState, null);
         PriorityQueue<Node, float> leaves = new();
 
-        // Collect usable goals into a fixed-size buffer — no heap allocation for this array
-        // when goal count is low (< available.Length, which is typically 28).
-        int usableCount = 0;
-        GoapGoal[] usableBuffer = new GoapGoal[available.Length];
-        for (int i = 0; i < available.Length; i++)
-        {
-            GoapGoal g = available[i];
-            if (g.CanRun())
-                usableBuffer[usableCount++] = g;
-        }
-
-        if (usableCount == 0)
+        GoapGoal[] usable = GetUsableGoals(
+            available,
+            worldState,
+            generation,
+            availableSignature,
+            executionOptions);
+        if (usable.Length == 0)
             return EmptyGoal;
 
-        GoapGoal[] usable = usableBuffer[..usableCount];
-
         // Build initial mask with all usable-goal bits set
-        uint allMask = (1u << usableCount) - 1u;
+        uint allMask = (1u << usable.Length) - 1u;
 
         BuildGraph(root, leaves, usable, allMask, goal);
 
@@ -78,11 +108,210 @@ public static class GoapPlanner
                 }
                 node = node.parent;
             }
+
+            StorePlanCache(
+                result,
+                worldState,
+                generation,
+                availableSignature,
+                goalSignature,
+                executionOptions);
             return result;
         }
 
         return EmptyGoal;
     }
+
+    private static GoapGoal[] EvaluateUsableGoals(GoapGoal[] available)
+    {
+        int usableCount = 0;
+        GoapGoal[] usableBuffer = new GoapGoal[available.Length];
+        for (int i = 0; i < available.Length; i++)
+        {
+            GoapGoal goal = available[i];
+            if (goal.CanRun())
+            {
+                usableBuffer[usableCount++] = goal;
+            }
+        }
+
+        return usableCount == 0 ? [] : usableBuffer[..usableCount];
+    }
+
+    private static GoapGoal[] GetUsableGoals(
+        GoapGoal[] available,
+        BitVector32 worldState,
+        int generation,
+        int availableSignature,
+        GoapPlannerExecutionOptions executionOptions)
+    {
+        if (!executionOptions.EnableUsableGoalCache)
+        {
+            return EvaluateUsableGoals(available);
+        }
+
+        UsableCacheKey key = new(generation, worldState.Data, availableSignature);
+
+        lock (cacheSync)
+        {
+            if (usableGoalCache.TryGetValue(key, out GoapGoal[]? cached))
+            {
+                return cached;
+            }
+        }
+
+        GoapGoal[] evaluated = EvaluateUsableGoals(available);
+        lock (cacheSync)
+        {
+            TrimCache(usableGoalCache, executionOptions.MaxUsableCacheEntries);
+            usableGoalCache[key] = evaluated;
+        }
+
+        return evaluated;
+    }
+
+    private static bool TryGetCachedPlan(
+        BitVector32 worldState,
+        bool[] goal,
+        int generation,
+        int availableSignature,
+        int goalSignature,
+        GoapPlannerExecutionOptions executionOptions,
+        out Stack<GoapGoal>? cachedPlan)
+    {
+        cachedPlan = null;
+        if (!executionOptions.EnablePlanCache)
+        {
+            return false;
+        }
+
+        PlanCacheKey key = new(generation, worldState.Data, goalSignature, availableSignature);
+        GoapGoal[]? cachedTopFirst;
+        lock (cacheSync)
+        {
+            if (!planCache.TryGetValue(key, out cachedTopFirst))
+            {
+                return false;
+            }
+        }
+
+        if (!ValidateCachedPlan(cachedTopFirst, worldState, goal))
+        {
+            lock (cacheSync)
+            {
+                planCache.Remove(key);
+            }
+
+            return false;
+        }
+
+        cachedPlan = BuildStackFromTopFirst(cachedTopFirst);
+        return true;
+    }
+
+    private static bool ValidateCachedPlan(GoapGoal[] cachedTopFirst, BitVector32 worldState, bool[] goal)
+    {
+        if (cachedTopFirst.Length == 0)
+        {
+            return false;
+        }
+
+        BitVector32 currentState = worldState;
+        for (int i = 0; i < cachedTopFirst.Length; i++)
+        {
+            GoapGoal action = cachedTopFirst[i];
+            if (!action.CanRun())
+            {
+                return false;
+            }
+
+            if (!InState(action.Preconditions, currentState))
+            {
+                return false;
+            }
+
+            currentState = PopulateState(currentState, action.Effects);
+        }
+
+        return InState(goal, currentState);
+    }
+
+    private static void StorePlanCache(
+        Stack<GoapGoal> plan,
+        BitVector32 worldState,
+        int generation,
+        int availableSignature,
+        int goalSignature,
+        GoapPlannerExecutionOptions executionOptions)
+    {
+        if (!executionOptions.EnablePlanCache || plan.Count == 0)
+        {
+            return;
+        }
+
+        PlanCacheKey key = new(generation, worldState.Data, goalSignature, availableSignature);
+        GoapGoal[] topFirst = plan.ToArray();
+
+        lock (cacheSync)
+        {
+            TrimCache(planCache, executionOptions.MaxPlanCacheEntries);
+            planCache[key] = topFirst;
+        }
+    }
+
+    private static Stack<GoapGoal> BuildStackFromTopFirst(GoapGoal[] topFirst)
+    {
+        Stack<GoapGoal> plan = new(topFirst.Length);
+        for (int i = topFirst.Length - 1; i >= 0; i--)
+        {
+            plan.Push(topFirst[i]);
+        }
+
+        return plan;
+    }
+
+    private static int ComputeAvailableSignature(GoapGoal[] available)
+    {
+        return HashCode.Combine(RuntimeHelpers.GetHashCode(available), available.Length);
+    }
+
+    private static int ComputeGoalSignature(bool[] goal)
+    {
+        HashCode hash = new();
+        hash.Add(goal.Length);
+        for (int i = 0; i < goal.Length; i++)
+        {
+            if (goal[i])
+            {
+                hash.Add(i);
+            }
+        }
+
+        return hash.ToHashCode();
+    }
+
+    private static void TrimCache<TKey, TValue>(Dictionary<TKey, TValue> cache, int maxEntries)
+        where TKey : notnull
+    {
+        int boundedMaxEntries = Math.Clamp(maxEntries, 1, 1024);
+        if (cache.Count < boundedMaxEntries)
+        {
+            return;
+        }
+
+        cache.Clear();
+    }
+
+    private readonly record struct UsableCacheKey(
+        int Generation,
+        int WorldStateData,
+        int AvailableSignature);
+
+    private readonly record struct PlanCacheKey(
+        int Generation,
+        int WorldStateData,
+        int GoalSignature,
+        int AvailableSignature);
 
 
     /**

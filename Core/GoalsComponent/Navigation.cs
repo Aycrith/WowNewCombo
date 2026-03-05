@@ -121,8 +121,23 @@ public sealed partial class Navigation : IDisposable
     private const float PendingRerouteTargetMatchDistance = 4.0f;
     private const int TurnInPlaceStuckGraceMs = 1200;
     private const int SharpTurnStuckGraceMs = 1800;
+    private const int DefaultHeadingAdjustCooldownMs = 140;
+    private const float DefaultMaxOscillationCooldownMultiplier = 4.0f;
+    private const float DefaultAdaptiveBaselineSpeedMps = 2.0f;
+    private const float DefaultAdaptiveMinScale = 0.5f;
+    private const float DefaultAdaptiveMaxScale = 2.0f;
+    private const int HeadingAdjustCooldownFloorMs = 20;
+    private const int HeadingAdjustCooldownCeilingMs = 1200;
     private int tailRecalcFailures;
     private float lastHeadingDiffRadians;
+    private readonly OscillationDetector oscillationDetector = new();
+    private DateTime lastHeadingAdjustmentUtc = DateTime.MinValue;
+    private DateTime lastHeadingSampleUtc = DateTime.MinValue;
+    private Vector3 lastHeadingSamplePosition;
+    private float estimatedSpeedMps;
+    private float lastOscillationConfidence;
+    private int lastHeadingAdjustCooldownMs;
+    private RouteSegmentTracker routeSegmentTracker;
     private DateTime turnStuckGraceUntilUtc = DateTime.MinValue;
     private DateTime? lastSuppressedTurnStuckRecoveryUtc;
     private int suppressedTurnStuckRecoveryCount;
@@ -285,7 +300,11 @@ public sealed partial class Navigation : IDisposable
             if (SimplifyRouteToWaypoint)
                 ReduceByDistance(playerW, reachedDistance, preciseTracking);
             else
+            {
+                Vector3 consumed = routeToNextWaypoint.Peek();
                 routeToNextWaypoint.Pop();
+                TrackRouteSubSegmentConsumed(consumed);
+            }
 
             TryRehabilitateSuccessfulTraversal(playerW);
 
@@ -299,6 +318,7 @@ public sealed partial class Navigation : IDisposable
                 if (wayPoints.Count > 0)
                 {
                     wayPoints.Pop();
+                    TrackWaypointConsumed();
                     UpdateTotalRoute();
 
                     if (DebugEnabled)
@@ -377,6 +397,7 @@ public sealed partial class Navigation : IDisposable
         if (removed > 0)
         {
             UpdateTotalRoute();
+            TrackRouteRebuild("resume-adjust-waypoint");
 
             if (DebugEnabled)
                 LogDebug($"Resume: removed {removed} waypoint!");
@@ -389,6 +410,7 @@ public sealed partial class Navigation : IDisposable
 
         wayPoints.Clear();
         routeToNextWaypoint.Clear();
+        ResetRouteSegmentTracker();
         ClearPendingReroute();
         hadNoPathFailureSinceLastPath = false;
 
@@ -419,6 +441,7 @@ public sealed partial class Navigation : IDisposable
     {
         wayPoints.Clear();
         routeToNextWaypoint.Clear();
+        ResetRouteSegmentTracker();
         ClearPendingReroute();
         hadNoPathFailureSinceLastPath = false;
 
@@ -456,6 +479,12 @@ public sealed partial class Navigation : IDisposable
     public void ResetStuckParameters()
     {
         stuckDetector.Reset();
+        oscillationDetector.Reset();
+        lastHeadingAdjustmentUtc = DateTime.MinValue;
+        lastHeadingSampleUtc = DateTime.MinValue;
+        estimatedSpeedMps = 0f;
+        lastOscillationConfidence = 0f;
+        lastHeadingAdjustCooldownMs = 0;
         turnStuckGraceUntilUtc = DateTime.MinValue;
     }
 
@@ -514,6 +543,7 @@ public sealed partial class Navigation : IDisposable
 
             stuckDetector.SetTargetLocation(targetW);
             UpdateTotalRoute();
+            TrackRouteRebuild("refill-direct-target");
         }
     }
 
@@ -611,6 +641,7 @@ public sealed partial class Navigation : IDisposable
 
         stuckDetector.SetTargetLocation(routeToNextWaypoint.Peek());
         UpdateTotalRoute();
+        TrackRouteRebuild("pathfinder-result");
 
         if (recoveredFromNoPath)
         {
@@ -760,7 +791,9 @@ public sealed partial class Navigation : IDisposable
         while (routeToNextWaypoint.Count > 0 &&
                playerW.WorldDistanceXYTo(routeToNextWaypoint.Peek()) < reached)
         {
+            Vector3 consumed = routeToNextWaypoint.Peek();
             routeToNextWaypoint.Pop();
+            TrackRouteSubSegmentConsumed(consumed);
 
             if (singlePop)
             {
@@ -796,9 +829,110 @@ public sealed partial class Navigation : IDisposable
         AdjustHeading(heading, OutDoorMinDistance, token);
     }
 
+    private NavigationExperimentsOptions? TryGetNavigationExperiments()
+    {
+        return featureFlagService?.Current.NavigationExperiments;
+    }
+
+    private void UpdateHeadingTelemetry(float heading, DateTime now)
+    {
+        oscillationDetector.TrackHeading(heading);
+        lastOscillationConfidence = oscillationDetector.OscillationConfidence;
+
+        if (lastHeadingSampleUtc != DateTime.MinValue)
+        {
+            double deltaSeconds = (now - lastHeadingSampleUtc).TotalSeconds;
+            estimatedSpeedMps = EstimateSpeedMps(lastHeadingSamplePosition, playerReader.WorldPos, deltaSeconds);
+        }
+
+        lastHeadingSampleUtc = now;
+        lastHeadingSamplePosition = playerReader.WorldPos;
+    }
+
+    internal static float EstimateSpeedMps(Vector3 previousPosition, Vector3 currentPosition, double deltaSeconds)
+    {
+        if (!double.IsFinite(deltaSeconds) || deltaSeconds <= 0.0001)
+        {
+            return 0f;
+        }
+
+        float distance = previousPosition.WorldDistanceXYTo(currentPosition);
+        if (!float.IsFinite(distance) || distance <= 0f)
+        {
+            return 0f;
+        }
+
+        return (float)(distance / deltaSeconds);
+    }
+
+    internal static int ComputeHeadingAdjustCooldownMs(
+        NavigationExperimentsOptions? experiments,
+        float oscillationConfidence,
+        float speedMps)
+    {
+        if (experiments == null)
+        {
+            return 0;
+        }
+
+        bool useOscillation = experiments.EnableOscillationConfidenceThrottle;
+        bool useAdaptive = experiments.EnableAdaptiveHeadingCooldown;
+        if (!useOscillation && !useAdaptive)
+        {
+            return 0;
+        }
+
+        float baseCooldownMs = Math.Clamp(
+            experiments.HeadingAdjustCooldownMs,
+            HeadingAdjustCooldownFloorMs,
+            HeadingAdjustCooldownCeilingMs);
+
+        float cooldownMs = baseCooldownMs;
+
+        if (useOscillation)
+        {
+            float confidence = Math.Clamp(oscillationConfidence, 0f, 1f);
+            float maxMultiplier = Math.Clamp(
+                experiments.MaxOscillationCooldownMultiplier,
+                1f,
+                DefaultMaxOscillationCooldownMultiplier);
+            cooldownMs *= 1f + (confidence * (maxMultiplier - 1f));
+        }
+
+        if (useAdaptive)
+        {
+            float baselineSpeed = Math.Clamp(
+                experiments.BaselineAdaptiveSpeedMps,
+                0.25f,
+                20f);
+            float clampedSpeed = Math.Clamp(speedMps, 0.25f, 20f);
+            float minScale = Math.Clamp(experiments.MinAdaptiveCooldownScale, 0.1f, 1f);
+            float maxScale = Math.Clamp(experiments.MaxAdaptiveCooldownScale, 1f, 4f);
+            float adaptiveScale = Math.Clamp(baselineSpeed / clampedSpeed, minScale, maxScale);
+            cooldownMs *= adaptiveScale;
+        }
+
+        return (int)Math.Ceiling(Math.Clamp(cooldownMs, HeadingAdjustCooldownFloorMs, HeadingAdjustCooldownCeilingMs));
+    }
+
+    private bool ShouldThrottleHeadingAdjustment(DateTime now, out int cooldownMs)
+    {
+        NavigationExperimentsOptions? experiments = TryGetNavigationExperiments();
+        cooldownMs = ComputeHeadingAdjustCooldownMs(experiments, lastOscillationConfidence, estimatedSpeedMps);
+        if (cooldownMs <= 0 || lastHeadingAdjustmentUtc == DateTime.MinValue)
+        {
+            return false;
+        }
+
+        return (now - lastHeadingAdjustmentUtc).TotalMilliseconds < cooldownMs;
+    }
+
     private void AdjustHeading(float heading, float steeringIgnoreDistance, CancellationToken token)
     {
         DateTime now = DateTime.UtcNow;
+        UpdateHeadingTelemetry(heading, now);
+        lastHeadingAdjustCooldownMs = 0;
+
         float diff1 = Abs(Tau + heading - playerReader.Direction) % Tau;
         float diff2 = Abs(heading - playerReader.Direction - Tau) % Tau;
 
@@ -810,11 +944,14 @@ public sealed partial class Navigation : IDisposable
             return;
         }
 
-        // Nav recovery baseline: removed oscillation detector integration
-        // and heading throttle. These added complexity that masked real stuck
-        // conditions and created sluggish steering. Just turn if needed.
         if (diff > minAngleToTurn)
         {
+            if (ShouldThrottleHeadingAdjustment(now, out int cooldownMs))
+            {
+                lastHeadingAdjustCooldownMs = cooldownMs;
+                return;
+            }
+
             SetTurnStuckGraceWindow(now);
 
             if (diff > minAngleToStopBeforeTurn)
@@ -823,6 +960,8 @@ public sealed partial class Navigation : IDisposable
             }
 
             playerDirection.SetDirection(heading, routeToNextWaypoint.Peek(), steeringIgnoreDistance, token);
+            lastHeadingAdjustmentUtc = now;
+            lastHeadingAdjustCooldownMs = 0;
         }
     }
 
@@ -882,6 +1021,55 @@ public sealed partial class Navigation : IDisposable
         }
 
         return lastHeadingDiffRadians > minAngleToTurn;
+    }
+
+    private bool IsRouteSegmentTrackingEnabled()
+    {
+        return TryGetNavigationExperiments()?.EnableRouteSegmentTracker == true;
+    }
+
+    private void TrackRouteRebuild(string source)
+    {
+        if (!IsRouteSegmentTrackingEnabled() || routeToNextWaypoint.Count == 0)
+        {
+            return;
+        }
+
+        Vector3[] routeTopFirst = routeToNextWaypoint.ToArray();
+        if (routeSegmentTracker.ObserveRouteRebuild(routeTopFirst, source, out string? warning))
+        {
+            logger.LogWarning("[Navigation       ] RouteSegmentTracker regression: {Warning}", warning);
+        }
+    }
+
+    private void TrackRouteSubSegmentConsumed(Vector3 consumedPoint)
+    {
+        if (!IsRouteSegmentTrackingEnabled())
+        {
+            return;
+        }
+
+        routeSegmentTracker.ObserveSubSegmentConsumed(consumedPoint);
+    }
+
+    private void TrackWaypointConsumed()
+    {
+        if (!IsRouteSegmentTrackingEnabled())
+        {
+            return;
+        }
+
+        routeSegmentTracker.ObserveWaypointConsumed();
+    }
+
+    private void ResetRouteSegmentTracker()
+    {
+        if (!IsRouteSegmentTrackingEnabled())
+        {
+            return;
+        }
+
+        routeSegmentTracker.Reset();
     }
 
     private bool AdjustNextWaypointPointToClosest()
@@ -961,6 +1149,7 @@ public sealed partial class Navigation : IDisposable
         {
             routeToNextWaypoint.Push(reduced[i]);
         }
+        TrackRouteRebuild("simplify-route-points");
     }
 
     /// <summary>
@@ -1090,8 +1279,11 @@ public sealed partial class Navigation : IDisposable
             TailRecalcFailures: tailRecalcFailures,
             DistanceToNextWaypoint: distanceToNextWaypoint,
             LastHeadingDiffRadians: lastHeadingDiffRadians,
-            OscillationDetected: false,
-            OscillationCount: 0,
+            OscillationDetected: oscillationDetector.IsOscillating,
+            OscillationCount: oscillationDetector.OscillationCount,
+            OscillationConfidence: lastOscillationConfidence,
+            EstimatedSpeedMps: estimatedSpeedMps,
+            HeadingAdjustCooldownMs: lastHeadingAdjustCooldownMs,
             TurnStuckGraceActive: turnStuckGraceActive,
             TurnStuckGraceRemainingMs: turnStuckGraceRemainingMs,
             SuppressedTurnStuckRecoveryCount: suppressedTurnStuckRecoveryCount,
@@ -1104,6 +1296,12 @@ public sealed partial class Navigation : IDisposable
             RepeatedFrontBypassCount: 0,
             RepeatedFrontBypassNoProgressCount: 0,
             RepeatedHazardDetourCount: 0,
+            RouteTrackerRebuildCount: routeSegmentTracker.RouteRebuildCount,
+            RouteTrackerWaypointTransitions: routeSegmentTracker.WaypointTransitionCount,
+            RouteTrackerSubSegmentTransitions: routeSegmentTracker.SubSegmentTransitionCount,
+            RouteTrackerRegressionCount: routeSegmentTracker.RegressionCount,
+            RouteTrackerLastRegressionReason: routeSegmentTracker.LastRegressionReason,
+            RouteTrackerLastRegressionUtc: routeSegmentTracker.LastRegressionUtc,
             RerouteTriggerCount: rerouteTriggerCount,
             RerouteApplyCount: rerouteApplyCount,
             RerouteDropCount: rerouteDropCount,

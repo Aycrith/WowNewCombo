@@ -281,6 +281,7 @@ public sealed partial class Navigation
         {
             routeToNextWaypoint.Push(mergedRoute[i]);
         }
+        TrackRouteRebuild("insert-detour");
 
         stuckDetector.Reset();
         if (routeToNextWaypoint.Count > 0)

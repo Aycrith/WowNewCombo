@@ -19,6 +19,7 @@ public class OscillationDetectorTests
     {
         var d = MakeDetector();
         d.IsOscillating.Should().BeFalse();
+        d.OscillationConfidence.Should().Be(0f);
     }
 
     [Fact]
@@ -74,6 +75,19 @@ public class OscillationDetectorTests
         d.TrackHeading(0.8f);
 
         d.IsOscillating.Should().BeFalse();
+        d.OscillationConfidence.Should().BeLessThan(1f);
+    }
+
+    [Fact]
+    public void OscillationConfidence_GenuineOscillation_ReachesOne()
+    {
+        var d = MakeDetector();
+        for (int i = 0; i < 8; i++)
+        {
+            d.TrackHeading(i % 2 == 0 ? 0.8f : 1.2f);
+        }
+
+        d.OscillationConfidence.Should().Be(1f);
     }
 
     [Fact]

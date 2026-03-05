@@ -1,4 +1,5 @@
 using Core.Diagnostics;
+using Core.FeatureFlags;
 using Core.Goals;
 using Core.Session;
 using Core.Hazard;
@@ -47,6 +48,7 @@ public sealed partial class GoapAgent : IDisposable
     private readonly HazardEventCollector hazardEventCollector;
     private readonly IHumanizationProvider? humanizationProvider;
     private readonly IGoapEventHistory? goapEventHistory;
+    private readonly FeatureFlagService? featureFlagService;
     private readonly GoapCurrentGoalState currentGoalState;
 
     private readonly IEnumerable<IGoapEventListener> extraListeners;
@@ -154,7 +156,8 @@ public sealed partial class GoapAgent : IDisposable
         IHumanizationProvider? humanizationProvider = null,
         IGoapEventHistory? goapEventHistory = null,
         IEnumerable<IGoapEventListener>? extraListeners = null,
-        GoapCurrentGoalState? goapCurrentGoalState = null
+        GoapCurrentGoalState? goapCurrentGoalState = null,
+        FeatureFlagService? featureFlagService = null
     )
     {
         this.routeInfo = routeInfo;
@@ -182,6 +185,7 @@ public sealed partial class GoapAgent : IDisposable
         this.hazardEventCollector = hazardEventCollector;
         this.humanizationProvider = humanizationProvider;
         this.goapEventHistory = goapEventHistory;
+        this.featureFlagService = featureFlagService;
 
         this.extraListeners = extraListeners ?? Array.Empty<IGoapEventListener>();
 
@@ -382,7 +386,18 @@ public sealed partial class GoapAgent : IDisposable
 
         if (Plan.Count == 0)
         {
-            Plan = GoapPlanner.Plan(AvailableGoals, WorldState, GoapPlanner.EmptyGoalState);
+            GoapPlannerExecutionOptions plannerOptions = new();
+            GoapPlannerCachingOptions? plannerCaching = featureFlagService?.Current.GoapPlannerCaching;
+            if (plannerCaching != null)
+            {
+                plannerOptions = new GoapPlannerExecutionOptions(
+                    EnableUsableGoalCache: plannerCaching.EnableUsableGoalCache,
+                    EnablePlanCache: plannerCaching.EnablePlanCache,
+                    MaxUsableCacheEntries: plannerCaching.MaxUsableCacheEntries,
+                    MaxPlanCacheEntries: plannerCaching.MaxPlanCacheEntries);
+            }
+
+            Plan = GoapPlanner.Plan(AvailableGoals, WorldState, GoapPlanner.EmptyGoalState, plannerOptions);
         }
 
         return Plan.Count > 0 ? Plan.Pop() : null;

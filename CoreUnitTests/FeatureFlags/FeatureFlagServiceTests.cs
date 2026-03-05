@@ -301,6 +301,20 @@ public sealed class FeatureFlagServiceTests
             "individually disabled flag should remain false regardless of kill switch");
     }
 
+    [Fact]
+    public void IsEnabled_ExperimentalFlags_HonorsCompositeOptions()
+    {
+        FeatureFlagsOptions flags = new()
+        {
+            GlobalKillSwitch = false,
+            NavigationExperiments = new() { EnableRouteSegmentTracker = true },
+            GoapPlannerCaching = new() { EnablePlanCache = true }
+        };
+
+        Assert.True(flags.IsEnabled(nameof(FeatureFlagsOptions.NavigationExperiments)));
+        Assert.True(flags.IsEnabled(nameof(FeatureFlagsOptions.GoapPlannerCaching)));
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
     {
         DateTime deadline = DateTime.UtcNow + timeout;

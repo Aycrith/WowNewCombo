@@ -1,4 +1,5 @@
 using Core;
+using Core.FeatureFlags;
 using Core.Goals;
 using NavigationGoal = Core.Goals.Navigation;
 
@@ -175,6 +176,55 @@ public class NavigationHelperTests
 
         float reached = GetMountedReachedDistance(player, current, next);
         reached.Should().BeApproximately(15f, 0.001f);
+    }
+
+    [Fact]
+    public void EstimateSpeedMps_UsesHorizontalDistanceOverTime()
+    {
+        Vector3 previous = new(0, 0, 0);
+        Vector3 current = new(6, 8, 0); // 10 units XY distance
+
+        float speed = NavigationGoal.EstimateSpeedMps(previous, current, deltaSeconds: 2.0);
+        speed.Should().BeApproximately(5f, 0.001f);
+    }
+
+    [Fact]
+    public void EstimateSpeedMps_NonPositiveDelta_ReturnsZero()
+    {
+        float speed = NavigationGoal.EstimateSpeedMps(new Vector3(0, 0, 0), new Vector3(5, 0, 0), 0);
+        speed.Should().Be(0f);
+    }
+
+    [Fact]
+    public void ComputeHeadingAdjustCooldownMs_NoExperimentsEnabled_ReturnsZero()
+    {
+        NavigationExperimentsOptions options = new()
+        {
+            EnableOscillationConfidenceThrottle = false,
+            EnableAdaptiveHeadingCooldown = false
+        };
+
+        int cooldownMs = NavigationGoal.ComputeHeadingAdjustCooldownMs(options, oscillationConfidence: 1f, speedMps: 0.5f);
+        cooldownMs.Should().Be(0);
+    }
+
+    [Fact]
+    public void ComputeHeadingAdjustCooldownMs_OscillationAndAdaptive_AppliesBothScales()
+    {
+        NavigationExperimentsOptions options = new()
+        {
+            EnableOscillationConfidenceThrottle = true,
+            EnableAdaptiveHeadingCooldown = true,
+            HeadingAdjustCooldownMs = 140,
+            MaxOscillationCooldownMultiplier = 4f,
+            BaselineAdaptiveSpeedMps = 2f,
+            MinAdaptiveCooldownScale = 0.5f,
+            MaxAdaptiveCooldownScale = 2f
+        };
+
+        // Base 140 * oscillation factor 4 * adaptive factor 2 = 1120
+        int cooldownMs = NavigationGoal.ComputeHeadingAdjustCooldownMs(options, oscillationConfidence: 1f, speedMps: 1f);
+        cooldownMs.Should().Be(1120);
     }
 
     // ---- IsExcessiveHazardDetour mirror ----

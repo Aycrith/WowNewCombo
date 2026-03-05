@@ -27,6 +27,7 @@ public sealed class OscillationDetector
     private readonly Queue<HeadingHistoryEntry> headingHistory = new(HEADING_HISTORY_SIZE);
     private long lastOscillationCheckTime;
     private int oscillationCount;
+    private int lastDirectionChanges;
 
     /// <summary>
     /// Gets whether oscillation is currently detected
@@ -37,6 +38,23 @@ public sealed class OscillationDetector
     /// Gets the number of oscillation events detected
     /// </summary>
     public int OscillationCount => oscillationCount;
+
+    /// <summary>
+    /// Gets a normalized oscillation confidence score (0..1) derived from
+    /// recent direction reversals versus the configured threshold.
+    /// </summary>
+    public float OscillationConfidence
+    {
+        get
+        {
+            if (headingHistory.Count < 3)
+            {
+                return 0f;
+            }
+
+            return Math.Clamp((float)lastDirectionChanges / OSCILLATION_THRESHOLD, 0f, 1f);
+        }
+    }
 
     public OscillationDetector()
     {
@@ -109,10 +127,12 @@ public sealed class OscillationDetector
 
         if (directionChanges >= OSCILLATION_THRESHOLD)
         {
+            lastDirectionChanges = directionChanges;
             oscillationCount++;
             return true;
         }
 
+        lastDirectionChanges = directionChanges;
         return false;
     }
 
@@ -123,6 +143,7 @@ public sealed class OscillationDetector
     {
         headingHistory.Clear();
         IsOscillating = false;
+        lastDirectionChanges = 0;
         lastOscillationCheckTime = GetTimestamp();
     }
 }
