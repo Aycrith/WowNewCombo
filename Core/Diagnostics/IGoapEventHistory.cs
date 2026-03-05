@@ -17,7 +17,7 @@ public interface IGoapEventHistory
     /// <summary>
     /// Records a NO PLAN event when the planner fails to find a valid plan.
     /// </summary>
-    void RecordNoPlanEvent(string worldState, List<string> availableGoals, string context);
+    void RecordNoPlanEvent(string worldState, IReadOnlyList<string> availableGoals, string context);
 
     /// <summary>
     /// Records a precondition failure for a goal.

@@ -125,6 +125,7 @@ public sealed partial class GoapAgent : IDisposable
 
     public GoapAgentState State { get; }
     public GoapGoal[] AvailableGoals { get; }
+    private string[] _availableGoalNames = Array.Empty<string>();
 
     public Stack<GoapGoal> Plan { get; private set; }
     public GoapGoal? CurrentGoal { get; private set; }
@@ -191,6 +192,7 @@ public sealed partial class GoapAgent : IDisposable
         this.sessionHandler = sessionHandler;
 
         this.AvailableGoals = availableGoals.OrderBy(a => a.Cost).ToArray();
+        this._availableGoalNames = AvailableGoals.Select(static g => g.Name).ToArray();
 
         combatLog.KillCredit += OnKillCredit;
         combatLog.PlayerDeath += PlayerDied;
@@ -289,7 +291,6 @@ public sealed partial class GoapAgent : IDisposable
                     if (!TryAdvanceHysteresis(newGoal))
                     {
                         CurrentGoal?.Update();
-                        Thread.Sleep(2);
 
                         try
                         {
@@ -347,13 +348,14 @@ public sealed partial class GoapAgent : IDisposable
                 wasEmpty = true;
 
                 // Record NO PLAN event for diagnostics
-                goapEventHistory?.RecordNoPlanEvent(
-                    WorldState.ToString(),
-                    AvailableGoals.Select(g => g.Name).ToList(),
-                    $"WorldState: {WorldState}");
+                if (goapEventHistory is not null)
+                {
+                    goapEventHistory.RecordNoPlanEvent(
+                        WorldState.Data.ToString("X8"),
+                        _availableGoalNames,
+                        string.Empty);
+                }
             }
-
-            Thread.Sleep(2);
 
             try
             {

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -17,9 +19,8 @@ public sealed class LLMClientFactory : ILLMClientFactory
     private readonly ILogger<LLMClientFactory> logger;
     private readonly AIProfileGeneratorOptions options;
 
-    // Cache of clients by provider name
-    private readonly Dictionary<string, ILLMClient> clientCache = new(StringComparer.OrdinalIgnoreCase);
-    private readonly object cacheLock = new();
+    private readonly ConcurrentDictionary<string, Lazy<ILLMClient>> _clientCache =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public LLMClientFactory(
         IServiceProvider serviceProvider,
@@ -36,28 +37,26 @@ public sealed class LLMClientFactory : ILLMClientFactory
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
 
-        lock (cacheLock)
-        {
-            if (clientCache.TryGetValue(providerName, out var cached))
-            {
-                return cached;
-            }
-        }
+        Lazy<ILLMClient> lazy = _clientCache.GetOrAdd(
+            providerName,
+            static (key, self) => new Lazy<ILLMClient>(
+                () => self.CreateClientCore(key),
+                LazyThreadSafetyMode.ExecutionAndPublication),
+            this);
 
-        ILLMClient client = providerName.ToLowerInvariant() switch
+        return lazy.Value;
+    }
+
+    private ILLMClient CreateClientCore(string providerName)
+    {
+        return providerName.ToLowerInvariant() switch
         {
             "openai" => CreateOpenAIClient(),
             "local" or "llama" or "local_llama" => CreateLocalLlamaClient(),
-            _ => throw new ArgumentException($"Unknown LLM provider: {providerName}. " +
-                $"Supported: {string.Join(", ", options.AllowedProviders)}", nameof(providerName))
+            _ => throw new ArgumentException(
+                $"Unknown LLM provider: '{providerName}'. Supported: {string.Join(", ", options.AllowedProviders)}.",
+                nameof(providerName))
         };
-
-        lock (cacheLock)
-        {
-            clientCache[providerName] = client;
-        }
-
-        return client;
     }
 
     /// <inheritdoc />

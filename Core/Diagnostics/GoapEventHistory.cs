@@ -45,7 +45,7 @@ public sealed class GoapEventHistory : IGoapEventHistory
     }
 
     /// <inheritdoc />
-    public void RecordNoPlanEvent(string worldState, List<string> availableGoals, string context)
+    public void RecordNoPlanEvent(string worldState, IReadOnlyList<string> availableGoals, string context)
     {
         var entry = new NoPlanEventEntry
         {
