@@ -31,7 +31,7 @@ public sealed class PPatherService
     public Action<LinesEventArgs> OnLinesAdded;
     public Action<SphereEventArgs> OnSphereAdded;
 
-    private Search? search { get; set; }
+    private Search search { get; set; }
 
     public bool Initialised
     {

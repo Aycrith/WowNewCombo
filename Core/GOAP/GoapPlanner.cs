@@ -12,23 +12,6 @@ namespace Core.GOAP;
 
 public static class GoapPlanner
 {
-    // Disabled for now: many goals' CanRun() depend on dynamic state not fully represented in WorldState
-    // (cooldowns, auras/forms, action usability, globalTime-driven requirement evaluation). Caching usable
-    // goals only by WorldState bits can return stale runnable sets and trap the planner in invalid goals.
-    private static bool EnableUsableGoalCache => false;
-
-    [ThreadStatic]
-    private static GoapGoal[]? cachedUsableGoals;
-
-    [ThreadStatic]
-    private static GoapGoal[]? cachedAvailableGoals;
-
-    [ThreadStatic]
-    private static int cachedWorldStateBits;
-
-    [ThreadStatic]
-    private static bool hasUsableGoalsCache;
-
     public static readonly bool[] EmptyGoalState = Array.Empty<bool>();
     public static readonly Stack<GoapGoal> EmptyGoal = new();
 
@@ -40,7 +23,7 @@ public static class GoapPlanner
     /// </summary>
     public static void InvalidateCache()
     {
-        hasUsableGoalsCache = false;
+        // Usable-goal caching is currently disabled; no state to invalidate.
     }
 
     /**

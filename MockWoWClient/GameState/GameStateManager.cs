@@ -18,8 +18,8 @@ public sealed class GameStateManager
     public List<CorpseEntity> Corpses { get; } = [];
 
     // Zone/Map state
-    public int MapId { get; set; } = 0;
-    public int UIMapId { get; set; } = 0;
+    public int MapId { get; set; }
+    public int UIMapId { get; set; }
 
     // Combat state
     public bool InCombat => Player.InCombat;
@@ -54,6 +54,7 @@ public sealed class GameStateManager
         {
             // Update all entities
             Player.Update(deltaTime);
+            OnPlayerStateChanged?.Invoke(Player);
             CurrentTarget?.Update(deltaTime);
 
             foreach (var npc in Npcs)

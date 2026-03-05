@@ -5,7 +5,6 @@ using Core.GoalsComponent;
 using Core.GOAP;
 using Core.Hazard;
 using Core.Session;
-using Core.GoalsComponent;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
