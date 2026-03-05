@@ -49,7 +49,7 @@ public sealed partial class HeadlessServer
 
         botController.LoadClassProfile(options.Value.ClassConfig!);
 
-        botController.ToggleBotStatus();
+        botController.ToggleBotStatus("HeadlessStartRequest");
     }
 
     public void RunLoadOnly(ParserResult<RunOptions> options)

@@ -1,48 +1,41 @@
 using Core.GOAP;
 using Core.Goals;
+
 using FluentAssertions;
+
+using System;
+
 using Xunit;
 
 namespace CoreUnitTests.GOAP;
 
 /// <summary>
-/// Unit tests for the goal-switch hysteresis state machine in GoapAgent.
-///
-/// The hysteresis prevents single-frame plan oscillation by requiring a new goal to win
-/// for N consecutive planning ticks before the agent actually switches to it. This avoids
-/// churn caused by transient world-state bits like DamageTaken or momentary stuck detection.
+/// Unit tests for GOAP anti-oscillation guardrails:
+/// goal-switch hysteresis and pull-range hysteresis latch behavior.
 /// </summary>
-public class GoapAgentHysteresisTests
+public sealed class GoapAgentHysteresisTests
 {
-    /// <summary>
-    /// Minimal test goal for hysteresis state machine testing.
-    /// </summary>
     private sealed class TestGoal : GoapGoal
     {
         public TestGoal(string name) : base(name) { }
+
         public override float Cost => 1.0f;
+
         public override bool CanRun() => true;
     }
 
-    /// <summary>
-    /// Harness to test hysteresis state machine logic.
-    /// Mimics the private state management of GoapAgent without requiring full infrastructure.
-    /// </summary>
     private sealed class HysteresisTestHarness
     {
+        private const int GoalSwitchHysteresisThreshold = 3;
+
         private GoapGoal? pendingGoal;
         private int pendingGoalTicks;
-        private const int GoalSwitchHysteresisThreshold = 3;
+        private DateTime pullRangeHysteresisUntilUtc = DateTime.MinValue;
 
         public GoapGoal? CurrentGoal { get; set; }
 
-        /// <summary>
-        /// Mimics the hysteresis logic from GoapAgent.TryAdvanceHysteresis().
-        /// </summary>
         public bool TryAdvanceHysteresis(GoapGoal? newGoal)
         {
-            // If newGoal == CurrentGoal, clear any pending alternative and return true
-            // (no state change needed — execute the goal normally).
             if (newGoal == CurrentGoal)
             {
                 pendingGoal = null;
@@ -50,7 +43,6 @@ public class GoapAgentHysteresisTests
                 return true;
             }
 
-            // Track consecutive wins for the new goal
             if (newGoal == pendingGoal)
             {
                 pendingGoalTicks++;
@@ -61,134 +53,108 @@ public class GoapAgentHysteresisTests
                 pendingGoalTicks = 1;
             }
 
-            // Return true when threshold is satisfied
             return pendingGoalTicks >= GoalSwitchHysteresisThreshold;
         }
 
-        public GoapGoal? GetPendingGoal() => pendingGoal;
-        public int GetPendingGoalTicks() => pendingGoalTicks;
-    }
-
-    /// <summary>
-    /// Test that same goal for 3 consecutive ticks triggers transition.
-    /// </summary>
-    [Fact]
-    public void SameGoalFor3Ticks_TransitionCommitted()
-    {
-        // Arrange
-        var currentGoal = new TestGoal("CurrentGoal");
-        var newGoal = new TestGoal("NewGoal");
-        var harness = new HysteresisTestHarness { CurrentGoal = currentGoal };
-
-        // Act & Assert: Tick 1 - new goal arrives
-        harness.TryAdvanceHysteresis(newGoal).Should().BeFalse(
-            "First tick of a new goal should not reach threshold");
-
-        // Tick 2 - same goal arrives again
-        harness.TryAdvanceHysteresis(newGoal).Should().BeFalse(
-            "Second tick should still be below threshold (3)");
-
-        // Tick 3 - same goal arrives a third time
-        harness.TryAdvanceHysteresis(newGoal).Should().BeTrue(
-            "Third consecutive tick should reach threshold and allow transition");
-    }
-
-    /// <summary>
-    /// Test that oscillating between two goals never reaches the threshold.
-    /// </summary>
-    [Fact]
-    public void GoalOscillation_NeverReachesThreshold()
-    {
-        // Arrange
-        var currentGoal = new TestGoal("CurrentGoal");
-        var goalA = new TestGoal("GoalA");
-        var goalB = new TestGoal("GoalB");
-        var harness = new HysteresisTestHarness { CurrentGoal = currentGoal };
-
-        // Act & Assert: Oscillate A/B/A/B and verify none reach threshold
-        for (int cycle = 0; cycle < 5; cycle++)
+        public bool WithInPullRangeHysteresis(bool nowInRange, DateTime nowUtc)
         {
-            harness.TryAdvanceHysteresis(goalA).Should().BeFalse(
-                $"Cycle {cycle}: Goal A should not reach threshold (oscillation prevents accumulation)");
+            if (nowInRange)
+            {
+                pullRangeHysteresisUntilUtc = nowUtc.AddMilliseconds(500);
+                return true;
+            }
 
-            harness.TryAdvanceHysteresis(goalB).Should().BeFalse(
-                $"Cycle {cycle}: Goal B should not reach threshold (oscillation prevents accumulation)");
+            return nowUtc < pullRangeHysteresisUntilUtc;
         }
     }
 
-    /// <summary>
-    /// Test that switching to a new goal resets the counter for the previous goal.
-    /// </summary>
+    [Fact]
+    public void SameGoalFor3Ticks_TransitionCommitted()
+    {
+        TestGoal currentGoal = new("CurrentGoal");
+        TestGoal newGoal = new("NewGoal");
+        HysteresisTestHarness harness = new() { CurrentGoal = currentGoal };
+
+        harness.TryAdvanceHysteresis(newGoal).Should().BeFalse();
+        harness.TryAdvanceHysteresis(newGoal).Should().BeFalse();
+        harness.TryAdvanceHysteresis(newGoal).Should().BeTrue();
+    }
+
+    [Fact]
+    public void GoalOscillation_NeverReachesThreshold()
+    {
+        TestGoal currentGoal = new("CurrentGoal");
+        TestGoal goalA = new("GoalA");
+        TestGoal goalB = new("GoalB");
+        HysteresisTestHarness harness = new() { CurrentGoal = currentGoal };
+
+        for (int i = 0; i < 5; i++)
+        {
+            harness.TryAdvanceHysteresis(goalA).Should().BeFalse();
+            harness.TryAdvanceHysteresis(goalB).Should().BeFalse();
+        }
+    }
+
     [Fact]
     public void NewGoalResetsCounter()
     {
-        // Arrange
-        var currentGoal = new TestGoal("CurrentGoal");
-        var goalA = new TestGoal("GoalA");
-        var goalB = new TestGoal("GoalB");
-        var harness = new HysteresisTestHarness { CurrentGoal = currentGoal };
+        TestGoal currentGoal = new("CurrentGoal");
+        TestGoal goalA = new("GoalA");
+        TestGoal goalB = new("GoalB");
+        HysteresisTestHarness harness = new() { CurrentGoal = currentGoal };
 
-        // Act: Accumulate 2 ticks for goalA
         harness.TryAdvanceHysteresis(goalA).Should().BeFalse();
         harness.TryAdvanceHysteresis(goalA).Should().BeFalse();
 
-        // Then switch to goalB
-        harness.TryAdvanceHysteresis(goalB).Should().BeFalse(
-            "After switch, goalB count should be 1 (below threshold)");
-
-        // Verify one more tick of goalB doesn't reach threshold
-        harness.TryAdvanceHysteresis(goalB).Should().BeFalse(
-            "Second tick of goalB should be count=2 (still below threshold=3)");
-
-        // But third tick should
-        harness.TryAdvanceHysteresis(goalB).Should().BeTrue(
-            "Third consecutive tick of goalB should reach threshold");
+        harness.TryAdvanceHysteresis(goalB).Should().BeFalse();
+        harness.TryAdvanceHysteresis(goalB).Should().BeFalse();
+        harness.TryAdvanceHysteresis(goalB).Should().BeTrue();
     }
 
-    /// <summary>
-    /// Test that calling with newGoal == CurrentGoal immediately clears pending state.
-    /// </summary>
     [Fact]
     public void SameGoalAsCurrent_ClearsPending()
     {
-        // Arrange
-        var goalA = new TestGoal("GoalA");
-        var goalB = new TestGoal("GoalB");
-        var harness = new HysteresisTestHarness { CurrentGoal = goalA };
+        TestGoal goalA = new("GoalA");
+        TestGoal goalB = new("GoalB");
+        HysteresisTestHarness harness = new() { CurrentGoal = goalA };
 
-        // Act: Accumulate some ticks for goalB (pending)
         harness.TryAdvanceHysteresis(goalB).Should().BeFalse();
         harness.TryAdvanceHysteresis(goalB).Should().BeFalse();
 
-        // Then call with CurrentGoal (goalA) - should clear pending and return true
-        harness.TryAdvanceHysteresis(goalA).Should().BeTrue(
-            "Calling with CurrentGoal should clear pending and return true (no state change)");
-
-        // Verify pending was cleared: next call with goalB should start fresh
-        harness.TryAdvanceHysteresis(goalB).Should().BeFalse(
-            "After clearing pending, goalB should start at count=1");
+        harness.TryAdvanceHysteresis(goalA).Should().BeTrue();
+        harness.TryAdvanceHysteresis(goalB).Should().BeFalse();
     }
 
-    /// <summary>
-    /// Test boundary case of threshold behavior.
-    /// Verifies the decision kernel works correctly at lower and upper bounds.
-    /// </summary>
     [Fact]
-    public void GoalTransition_WorksCorrectly()
+    public void PullRangeHysteresis_HoldsTrueWithinWindow()
     {
-        // Arrange
-        var goalA = new TestGoal("GoalA");
-        var goalB = new TestGoal("GoalB");
-        var harness = new HysteresisTestHarness { CurrentGoal = goalA };
+        HysteresisTestHarness harness = new();
+        DateTime now = DateTime.UtcNow;
 
-        // Act: First call to TryAdvanceHysteresis with goalB
-        var result1 = harness.TryAdvanceHysteresis(goalB);
+        harness.WithInPullRangeHysteresis(true, now).Should().BeTrue();
+        harness.WithInPullRangeHysteresis(false, now.AddMilliseconds(250)).Should().BeTrue();
+    }
 
-        // Assert: Should be false (count=1, threshold=3)
-        result1.Should().BeFalse("First tick should not satisfy threshold=3");
+    [Fact]
+    public void PullRangeHysteresis_ExpiresAfterWindow()
+    {
+        HysteresisTestHarness harness = new();
+        DateTime now = DateTime.UtcNow;
 
-        // Act: Continue calling until threshold
-        harness.TryAdvanceHysteresis(goalB).Should().BeFalse("Second tick");
-        harness.TryAdvanceHysteresis(goalB).Should().BeTrue("Third tick satisfies threshold");
+        harness.WithInPullRangeHysteresis(true, now).Should().BeTrue();
+        harness.WithInPullRangeHysteresis(false, now.AddMilliseconds(600)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void PullRangeHysteresis_RefreshesOnInRangeSample()
+    {
+        HysteresisTestHarness harness = new();
+        DateTime now = DateTime.UtcNow;
+
+        harness.WithInPullRangeHysteresis(true, now).Should().BeTrue();
+        harness.WithInPullRangeHysteresis(false, now.AddMilliseconds(450)).Should().BeTrue();
+        harness.WithInPullRangeHysteresis(true, now.AddMilliseconds(480)).Should().BeTrue();
+        harness.WithInPullRangeHysteresis(false, now.AddMilliseconds(900)).Should().BeTrue();
+        harness.WithInPullRangeHysteresis(false, now.AddMilliseconds(1100)).Should().BeFalse();
     }
 }

@@ -133,7 +133,7 @@ public sealed class GlobalHotkeyKillSwitchService : BackgroundService
 
         if (botController.IsBotActive)
         {
-            botController.ToggleBotStatus();
+            botController.ToggleBotStatus("KillSwitchSoftStop");
             logger.LogWarning("[KillSwitch       ] Bot stopped");
         }
     }
@@ -146,7 +146,7 @@ public sealed class GlobalHotkeyKillSwitchService : BackgroundService
         IBotController? botController = serviceProvider.GetService<IBotController>();
         if (botController != null && botController.IsBotActive)
         {
-            botController.ToggleBotStatus();
+            botController.ToggleBotStatus("KillSwitchHardStop");
             logger.LogError("[KillSwitch       ] Bot stopped (hard stop)");
         }
 

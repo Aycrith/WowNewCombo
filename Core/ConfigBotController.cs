@@ -27,6 +27,8 @@ public sealed class ConfigBotController : IBotController, IDisposable
     public ClassConfiguration? ClassConfig => null;
 
     public bool IsBotActive => false;
+    public string? LastDeactivateReason => null;
+    public DateTime? LastDeactivateUtc => null;
 
     public double AvgScreenLatency => 0;
     public double AvgNPCLatency => 0;
@@ -75,10 +77,15 @@ public sealed class ConfigBotController : IBotController, IDisposable
         // No-op in config mode
     }
 
-    public void ToggleBotStatus()
+    public void ToggleBotStatus(string? reason = null)
     {
         StatusChanged?.Invoke();
         logger.LogWarning("[ConfigBotController ] ToggleBotStatus called in configuration mode — ignored");
+    }
+
+    public void RecordDeactivateReason(string reason)
+    {
+        logger.LogWarning("[ConfigBotController ] RecordDeactivateReason called in configuration mode — ignored ({Reason})", reason);
     }
 
     public IEnumerable<string> ClassFiles()

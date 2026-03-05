@@ -2,6 +2,7 @@ using Core;
 using Core.Launch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -16,7 +17,9 @@ public record BotStatus(
     string? CurrentGoal,
     int? GoalStackDepth,
     double AvgScreenLatency,
-    double AvgNpcLatency);
+    double AvgNpcLatency,
+    string? LastDeactivateReason,
+    DateTime? LastDeactivateUtc);
 
 public record ProfileListItem(
     string FileName,
@@ -81,7 +84,9 @@ public class BotApiController : ControllerBase
                 agent?.CurrentGoal?.Name,
                 agent?.Plan?.Count,
                 avgScreen,
-                avgNpc);
+                avgNpc,
+                botController.LastDeactivateReason,
+                botController.LastDeactivateUtc);
 
             sw.Stop();
             logger.LogDebug("Bot status: active={IsActive}, profile={ProfileName} ({ElapsedMs}ms)",
@@ -117,6 +122,7 @@ public class BotApiController : ControllerBase
             LaunchReadinessSnapshot readiness = EvaluateReadiness();
             if (!readiness.CanStartBot)
             {
+                botController.RecordDeactivateReason("LaunchReadinessBlocked");
                 sw.Stop();
                 return Conflict(new
                 {
@@ -127,11 +133,12 @@ public class BotApiController : ControllerBase
             }
 
             logger.LogInformation("Starting bot");
-            botController.ToggleBotStatus();
+            botController.ToggleBotStatus("ApiStartRequest");
 
             sw.Stop();
             if (!botController.IsBotActive)
             {
+                botController.RecordDeactivateReason("ApiStartBlockedAfterToggle");
                 return Conflict(new
                 {
                     Message = "Bot start attempted but was blocked. Open /launch for details.",
@@ -144,6 +151,7 @@ public class BotApiController : ControllerBase
         }
         catch (System.Exception ex)
         {
+            botController.RecordDeactivateReason("ApiStartException");
             logger.LogError(ex, "Start bot failed");
             sw.Stop();
             return StatusCode(500, new { Error = ex.Message });
@@ -168,13 +176,14 @@ public class BotApiController : ControllerBase
             }
 
             logger.LogInformation("Stopping bot");
-            botController.ToggleBotStatus();
+            botController.ToggleBotStatus("ApiStopRequest");
 
             sw.Stop();
             return Ok(new { Message = "Bot stopped", IsActive = botController.IsBotActive });
         }
         catch (System.Exception ex)
         {
+            botController.RecordDeactivateReason("ApiStopException");
             logger.LogError(ex, "Stop bot failed");
             sw.Stop();
             return StatusCode(500, new { Error = ex.Message });
@@ -202,6 +211,7 @@ public class BotApiController : ControllerBase
                 LaunchReadinessSnapshot readiness = EvaluateReadiness();
                 if (!readiness.CanStartBot)
                 {
+                    botController.RecordDeactivateReason("LaunchReadinessBlocked");
                     sw.Stop();
                     return Conflict(new
                     {
@@ -212,7 +222,7 @@ public class BotApiController : ControllerBase
                 }
             }
 
-            botController.ToggleBotStatus();
+            botController.ToggleBotStatus(wasBotActive ? "ApiToggleStopRequest" : "ApiToggleStartRequest");
 
             sw.Stop();
             return Ok(new
@@ -223,6 +233,7 @@ public class BotApiController : ControllerBase
         }
         catch (System.Exception ex)
         {
+            botController.RecordDeactivateReason("ApiToggleException");
             logger.LogError(ex, "Toggle bot failed");
             sw.Stop();
             return StatusCode(500, new { Error = ex.Message });

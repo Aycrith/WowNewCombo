@@ -1,3 +1,4 @@
+using Core;
 using Core.Startup;
 using Frontend.Controllers;
 
@@ -47,6 +48,38 @@ public sealed class DiagnosticsControllerSlashFixTests
 
         ObjectResult obj = Assert.IsType<ObjectResult>(result);
         Assert.Equal(503, obj.StatusCode);
+    }
+
+    [Fact]
+    public void ResolveCastingSnapshot_WhenLiveSnapshotMissing_ReturnsFallback()
+    {
+        CastingRuntimeSnapshot snapshot = DiagnosticsController.ResolveCastingSnapshot(
+            liveSnapshot: null,
+            combatSnapshot: null);
+
+        Assert.NotNull(snapshot);
+        Assert.Equal(0, snapshot.CurrentActionNotDetectedCountWindow);
+        Assert.Equal(0, snapshot.UIFeedbackNotDetectedCountWindow);
+        Assert.Equal(0, snapshot.AmbiguousCastResolvedCountWindow);
+        Assert.Equal(0, snapshot.InterruptedRetrySuppressedCountWindow);
+        Assert.True(snapshot.WindowSeconds > 0);
+    }
+
+    [Fact]
+    public void ResolveCastingSnapshot_WhenCombatSnapshotPresent_UsesCombatSnapshot()
+    {
+        CastingRuntimeSnapshot combatSnapshot = new(
+            CurrentActionNotDetectedCountWindow: 3,
+            UIFeedbackNotDetectedCountWindow: 1,
+            AmbiguousCastResolvedCountWindow: 2,
+            InterruptedRetrySuppressedCountWindow: 4,
+            WindowSeconds: 120);
+
+        CastingRuntimeSnapshot snapshot = DiagnosticsController.ResolveCastingSnapshot(
+            liveSnapshot: null,
+            combatSnapshot: combatSnapshot);
+
+        Assert.Equal(combatSnapshot, snapshot);
     }
 
     private static DiagnosticsController CreateController(Core.Navigation.NavSoakMetricsService? navSoakMetricsService)

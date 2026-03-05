@@ -17,6 +17,8 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private const double MAX_APPROACH_DURATION_MS = 15_000; // max time to chase to pull
     private const double MIN_TIME_TILL_IDLE = 2000;
     private const int MIN_CLOSER_TARGET_RANGE_IMPROVEMENT = 8;
+    private const int ClearTargetRangeRegressionThreshold = 4;
+    private const int ConsecutiveNoMovementRetriesBeforeClear = 3;
 
     public override float Cost => 8f;
 
@@ -38,6 +40,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
     private int initialTargetGuid;
     private float initialMinRange;
+    private int consecutiveNoMovementChecks;
 
     // Throttle Tab (nearest target) presses to avoid rapid target churn.
     private double _lastTabAttemptMs;
@@ -92,6 +95,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
         _lastTabAttemptMs = 0;
         approachStart = GetTimestamp();
+        consecutiveNoMovementChecks = 0;
         SetNextStuckTimeCheck();
     }
 
@@ -242,6 +246,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
                     Log($"Target is too far({playerReader.MinRange()} yard) for interact, start moving forward!");
                     input.StartForward(false);
+                    consecutiveNoMovementChecks = 0;
 
                     return;
                 }
@@ -260,12 +265,33 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
                         input.PressInteract();
                         wait.Update();
 
+                        consecutiveNoMovementChecks = 0;
                         SetNextStuckTimeCheck();
 
                         return;
                     }
                 }
 
+                if (ShouldRetryNoMovementApproach())
+                {
+                    consecutiveNoMovementChecks++;
+                    Log(
+                        $"Approach stalled; retrying face/approach ({consecutiveNoMovementChecks}/{ConsecutiveNoMovementRetriesBeforeClear})");
+
+                    input.PressFastInteract();
+                    wait.Update();
+
+                    if (!input.Approach.OnCooldown() &&
+                        (!bits.SoftInteract() || HasValidSoftInteract()))
+                    {
+                        input.PressApproach();
+                        wait.Update();
+                    }
+
+                    return;
+                }
+
+                consecutiveNoMovementChecks = 0;
                 Log($"Seems stuck! Clear Target.");
 
                 input.ForceAggressiveClearTarget(wait, bits);
@@ -273,12 +299,15 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
                 return;
             }
+
+            consecutiveNoMovementChecks = 0;
         }
 
         if (ApproachDurationMs > MAX_APPROACH_DURATION_MS)
         {
             logger.LogWarning("Too long time. Clear Target. Turn away.");
 
+            consecutiveNoMovementChecks = 0;
             input.ForceAggressiveClearTarget(wait, bits);
             input.TurnRandomDir(250 + Random.Shared.Next(250));
 
@@ -334,10 +363,14 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
             }
         }
 
-        if (ApproachDurationMs > MIN_TIME_TILL_IDLE && initialMinRange < playerReader.MinRange())
+        int rangeRegression = playerReader.MinRange() - (int)initialMinRange;
+        if (ApproachDurationMs > MIN_TIME_TILL_IDLE &&
+            rangeRegression >= ClearTargetRangeRegressionThreshold)
         {
-            Log($"Going away from the target! {initialMinRange} < {playerReader.MinRange()}");
+            Log(
+                $"Going away from the target! {initialMinRange} < {playerReader.MinRange()} (regression {rangeRegression}y)");
 
+            consecutiveNoMovementChecks = 0;
             input.ForceAggressiveClearTarget(wait, bits);
         }
     }
@@ -364,6 +397,14 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
             !bits.SoftInteract_Dead() &&
             !bits.SoftInteract_Tagged() &&
             playerReader.SoftInteract_Type == GuidType.Creature;
+    }
+
+    private bool ShouldRetryNoMovementApproach()
+    {
+        return bits.Target() &&
+            bits.Target_Alive() &&
+            bits.Target_Hostile() &&
+            consecutiveNoMovementChecks < ConsecutiveNoMovementRetriesBeforeClear;
     }
 
     private void Log(string text)

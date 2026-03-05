@@ -5,11 +5,20 @@ using Microsoft.Extensions.Logging;
 using SharedLib.NpcFinder;
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 
 using static System.Diagnostics.Stopwatch;
 
 namespace Core.Goals;
+
+internal enum PullFailureAction
+{
+    WaitForCastState,
+    WaitForTargetState,
+    SoftRetryApproach,
+    HardClearTarget
+}
 
 public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 {
@@ -18,6 +27,11 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private const int AcquireTargetTimeMs = 5000;
     private const int MAX_PULL_DURATION = 15_000;
     private const int RangedPullFailureAbortCount = 4;
+    private const int RangedPullFailureSoftAbortWindowMs = 6000;
+    private const int PullRetryApproachDelayMs = 120;
+    private const int FaceTargetAssistCooldownMs = 350;
+    private const float FaceAssistDirectionDeltaRadians = MathF.PI / 36f; // ~5 deg
+    private const int RuntimeMetricsWindowMs = 10 * 60 * 1000;
 
     private readonly ILogger<PullTargetGoal> logger;
     private readonly ConfigurableInput input;
@@ -42,7 +56,11 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private readonly bool requiresNpcNameFinder;
 
     private long pullStart;
+    private long lastFaceTargetAssistTick;
     private int consecutiveRangedPullFailures;
+    private int lastFailureTargetGuid;
+    private readonly object runtimeMetricsLock = new();
+    private readonly Queue<long> softRetryTicks = [];
 
     private double PullDurationMs => GetElapsedTime(pullStart).TotalMilliseconds;
 
@@ -110,7 +128,14 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     {
         wait.Update();
         stuckDetector.Reset();
-        consecutiveRangedPullFailures = 0;
+        lastFaceTargetAssistTick = 0;
+
+        int currentTargetGuid = bits.Target() ? playerReader.TargetGuid : 0;
+        if (currentTargetGuid != lastFailureTargetGuid)
+        {
+            consecutiveRangedPullFailures = 0;
+            lastFailureTargetGuid = currentTargetGuid;
+        }
 
         if (mountHandler.IsMounted())
         {
@@ -173,9 +198,20 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     {
         wait.Update();
 
+        int currentTargetGuid = bits.Target() ? playerReader.TargetGuid : 0;
+        if (currentTargetGuid != lastFailureTargetGuid)
+        {
+            consecutiveRangedPullFailures = 0;
+            lastFailureTargetGuid = currentTargetGuid;
+        }
+
         if (!bits.Target() || bits.Combat())
         {
             consecutiveRangedPullFailures = 0;
+            if (!bits.Target())
+            {
+                lastFailureTargetGuid = 0;
+            }
         }
 
         if (IsGearTooBrokenToFight())
@@ -221,6 +257,8 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             input.PressPetAttack();
         }
 
+        TryFaceTargetForRangedPull();
+
         bool castAny = false;
         bool spellInQueue = false;
 
@@ -244,6 +282,11 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
             bool isRangedPullAction = IsRangedPullAction(keyAction);
             bool interrupt() => keyAction.CanBeInterrupted() || PullPrevention();
+            bool beforeCombat = bits.Combat();
+            int beforeTargetHealth = playerReader.TargetHealth();
+            int beforeCastCount = playerReader.CastCount;
+            int beforeDamageDoneCount = combatLog.DamageDoneCount();
+            int beforeDamageTakenCount = combatLog.DamageTakenCount();
 
             bool castResult = castingHandler.Cast(keyAction, interrupt);
             if (castResult)
@@ -261,19 +304,69 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
                 !bits.Combat() &&
                 !playerReader.IsInMeleeRange())
             {
-                consecutiveRangedPullFailures++;
-
-                if (consecutiveRangedPullFailures >= RangedPullFailureAbortCount)
+                bool likelyPullSuccess = TryConfirmLikelyPullSuccess(
+                    beforeCombat,
+                    beforeTargetHealth,
+                    beforeCastCount,
+                    beforeDamageDoneCount,
+                    beforeDamageTakenCount);
+                if (likelyPullSuccess)
                 {
-                    Log($"Ranged pull '{keyAction.Name}' failed {consecutiveRangedPullFailures}x; refusing body-pull and clearing target.");
-                    input.PressStopAttack();
-                    input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+                    logger.LogDebug(
+                        "Ranged pull '{PullAbility}' unconfirmed by cast signal, but success evidence detected; suppressing retry churn",
+                        keyAction.Name);
+                    castAny = true;
                     consecutiveRangedPullFailures = 0;
                     return;
                 }
 
+                consecutiveRangedPullFailures++;
+
+                if (consecutiveRangedPullFailures >= RangedPullFailureAbortCount)
+                {
+                    PullFailureAction failureAction = DecideRangedFailureAction(
+                        isCasting: playerReader.IsCasting(),
+                        spellInQueue: castingHandler.SpellInQueue(),
+                        hasTarget: bits.Target(),
+                        pullDurationMs: PullDurationMs,
+                        softAbortWindowMs: RangedPullFailureSoftAbortWindowMs);
+
+                    if (failureAction == PullFailureAction.WaitForCastState)
+                    {
+                        wait.Fixed(Math.Max(playerReader.NetworkLatency, 50));
+                        return;
+                    }
+
+                    if (failureAction == PullFailureAction.WaitForTargetState)
+                    {
+                        wait.Fixed(Math.Max(playerReader.NetworkLatency, 50));
+                        return;
+                    }
+
+                    if (failureAction == PullFailureAction.SoftRetryApproach)
+                    {
+                        RecordSoftRetry();
+                        logger.LogWarning(
+                            "Ranged pull '{PullAbility}' failed {FailureCount}x; forcing short approach retry before clear",
+                            keyAction.Name,
+                            consecutiveRangedPullFailures);
+
+                        input.PressApproachOnCooldown();
+                        wait.Fixed(PullRetryApproachDelayMs);
+                        consecutiveRangedPullFailures = RangedPullFailureAbortCount - 1;
+                        return;
+                    }
+
+                    Log($"Ranged pull '{keyAction.Name}' failed {consecutiveRangedPullFailures}x; refusing body-pull and clearing target.");
+                    input.PressStopAttack();
+                    input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+                    consecutiveRangedPullFailures = 0;
+                    lastFailureTargetGuid = 0;
+                    return;
+                }
+
                 logger.LogDebug(
-                    "Ranged pull '{ActionName}' failed to confirm ({FailureCount}/{MaxFailures}); retrying without approach",
+                    "Ranged pull '{PullAbility}' failed to confirm ({FailureCount}/{MaxFailures}); retrying without approach",
                     keyAction.Name,
                     consecutiveRangedPullFailures,
                     RangedPullFailureAbortCount);
@@ -354,6 +447,178 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         !bits.SoftInteract_Dead() &&
         !bits.SoftInteract_Tagged() &&
         playerReader.SoftInteract_Type == GuidType.Creature;
+
+    private void TryFaceTargetForRangedPull()
+    {
+        if (!bits.Target() ||
+            !bits.Target_Alive() ||
+            !bits.Target_Hostile() ||
+            playerReader.IsInMeleeRange() ||
+            playerReader.IsCasting() ||
+            castingHandler.SpellInQueue())
+        {
+            return;
+        }
+
+        long nowTick = GetTimestamp();
+        if (lastFaceTargetAssistTick != 0 &&
+            GetElapsedTime(lastFaceTargetAssistTick).TotalMilliseconds < FaceTargetAssistCooldownMs)
+        {
+            return;
+        }
+
+        lastFaceTargetAssistTick = nowTick;
+
+        float directionBeforeAssist = playerReader.Direction;
+        input.PressFastInteract();
+        stopMoving.StopForward();
+        wait.Update();
+
+        if (DidDirectionChangeEnough(directionBeforeAssist, playerReader.Direction))
+        {
+            return;
+        }
+
+        // Retry fast interact once before any movement adjustment.
+        wait.Fixed(Math.Max(playerReader.HalfNetworkLatency, 25));
+        input.PressFastInteract();
+        stopMoving.StopForward();
+        wait.Update();
+
+        if (DidDirectionChangeEnough(directionBeforeAssist, playerReader.Direction))
+        {
+            return;
+        }
+
+        // Only tap approach when truly outside pull range.
+        if (!playerReader.WithInPullRange())
+        {
+            input.PressApproachOnCooldown();
+            wait.Update();
+            stopMoving.StopForward();
+        }
+    }
+
+    private static bool DidDirectionChangeEnough(float before, float after)
+    {
+        float diff = MathF.Abs(after - before);
+        if (diff > MathF.PI)
+        {
+            diff = (MathF.PI * 2f) - diff;
+        }
+
+        return diff >= FaceAssistDirectionDeltaRadians;
+    }
+
+    internal static PullFailureAction DecideRangedFailureAction(
+        bool isCasting,
+        bool spellInQueue,
+        bool hasTarget,
+        double pullDurationMs,
+        int softAbortWindowMs)
+    {
+        if (isCasting || spellInQueue)
+        {
+            return PullFailureAction.WaitForCastState;
+        }
+
+        if (!hasTarget)
+        {
+            return PullFailureAction.WaitForTargetState;
+        }
+
+        if (pullDurationMs < softAbortWindowMs)
+        {
+            return PullFailureAction.SoftRetryApproach;
+        }
+
+        return PullFailureAction.HardClearTarget;
+    }
+
+    private bool TryConfirmLikelyPullSuccess(
+        bool beforeCombat,
+        int beforeTargetHealth,
+        int beforeCastCount,
+        int beforeDamageDoneCount,
+        int beforeDamageTakenCount)
+    {
+        bool likelySuccess = IsLikelyPullSuccess(
+            enteredCombat: !beforeCombat && bits.Combat(),
+            targetHealthDropped: DidTargetHealthDrop(beforeTargetHealth, playerReader.TargetHealth()),
+            castStateProgressed: playerReader.CastCount > beforeCastCount,
+            combatLogProgressed: DidCombatLogProgress(beforeDamageDoneCount, beforeDamageTakenCount, combatLog.DamageDoneCount(), combatLog.DamageTakenCount()));
+        if (likelySuccess)
+        {
+            return true;
+        }
+
+        wait.Fixed(Math.Max(playerReader.HalfNetworkLatency, 50));
+        return IsLikelyPullSuccess(
+            enteredCombat: !beforeCombat && bits.Combat(),
+            targetHealthDropped: DidTargetHealthDrop(beforeTargetHealth, playerReader.TargetHealth()),
+            castStateProgressed: playerReader.CastCount > beforeCastCount,
+            combatLogProgressed: DidCombatLogProgress(beforeDamageDoneCount, beforeDamageTakenCount, combatLog.DamageDoneCount(), combatLog.DamageTakenCount()));
+    }
+
+    internal static bool IsLikelyPullSuccess(
+        bool enteredCombat,
+        bool targetHealthDropped,
+        bool castStateProgressed,
+        bool combatLogProgressed)
+    {
+        return enteredCombat ||
+            targetHealthDropped ||
+            castStateProgressed ||
+            combatLogProgressed;
+    }
+
+    internal static bool DidTargetHealthDrop(int beforeTargetHealth, int afterTargetHealth)
+    {
+        return beforeTargetHealth > 0 &&
+            afterTargetHealth > 0 &&
+            afterTargetHealth < beforeTargetHealth;
+    }
+
+    internal static bool DidCombatLogProgress(
+        int beforeDamageDoneCount,
+        int beforeDamageTakenCount,
+        int afterDamageDoneCount,
+        int afterDamageTakenCount)
+    {
+        return afterDamageDoneCount > beforeDamageDoneCount ||
+            afterDamageTakenCount > beforeDamageTakenCount;
+    }
+
+    private void RecordSoftRetry()
+    {
+        lock (runtimeMetricsLock)
+        {
+            long nowTick = Environment.TickCount64;
+            softRetryTicks.Enqueue(nowTick);
+            PruneRuntimeSamples(softRetryTicks, nowTick, RuntimeMetricsWindowMs);
+        }
+    }
+
+    private static void PruneRuntimeSamples(Queue<long> queue, long nowTick, int windowMs)
+    {
+        while (queue.Count > 0 && (nowTick - queue.Peek()) > windowMs)
+        {
+            queue.Dequeue();
+        }
+    }
+
+    public PullRuntimeSnapshot GetRuntimeSnapshot()
+    {
+        lock (runtimeMetricsLock)
+        {
+            long nowTick = Environment.TickCount64;
+            PruneRuntimeSamples(softRetryTicks, nowTick, RuntimeMetricsWindowMs);
+
+            return new PullRuntimeSnapshot(
+                PullFailureSoftRetryCountWindow: softRetryTicks.Count,
+                WindowSeconds: RuntimeMetricsWindowMs / 1000);
+        }
+    }
 
     private static bool IsRangedPullAction(KeyAction keyAction)
     {

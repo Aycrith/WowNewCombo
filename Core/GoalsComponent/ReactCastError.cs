@@ -66,7 +66,11 @@ public sealed class ReactCastError
             case UI_ERROR.SPELL_FAILED_TARGETS_DEAD:
                 break;
             case UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED:
-                item.SetClicked();
+                int retryDelayMs = Math.Max(
+                    playerReader.GCD.Value,
+                    Math.Max(playerReader.HalfSpellQueueTimeMs, CastingHandler.SPELL_QUEUE));
+                item.SetClicked(retryDelayMs);
+                wait.Fixed(Math.Min(retryDelayMs, playerReader.NetworkLatency));
                 break;
             case UI_ERROR.SPELL_FAILED_NOT_READY:
             /*
@@ -178,6 +182,7 @@ public sealed class ReactCastError
                 float beforeDir = playerReader.Direction;
 
                 input.PressFastInteract();
+                stopMoving.StopForward();
 
                 const int updateCount = 2;
                 float e = wait.AfterEquals(playerReader.SpellQueueTimeMs,
@@ -185,8 +190,9 @@ public sealed class ReactCastError
 
                 float sampleTimeMs =
                     updateCount * (float)addonReader.AvgUpdateLatency;
+                bool directionChanged = DidDirectionChangeEnough(beforeDir, playerReader.Direction);
 
-                if (e > sampleTimeMs)
+                if (e > sampleTimeMs || directionChanged)
                 {
                     stopMoving.Stop();
                     logger.LogInformation(
@@ -203,7 +209,28 @@ public sealed class ReactCastError
                 if (!wasAnyAuto)
                     input.PressStopAttack();
 
-                if (e <= sampleTimeMs && beforeDir == playerReader.Direction)
+                if (e <= sampleTimeMs && !directionChanged && bits.Target() && bits.Target_Alive())
+                {
+                    wait.Fixed(Math.Max(playerReader.HalfNetworkLatency, 25));
+                    input.PressFastInteract();
+                    stopMoving.StopForward();
+                    wait.Update();
+                    directionChanged = DidDirectionChangeEnough(beforeDir, playerReader.Direction);
+                }
+
+                if (e <= sampleTimeMs &&
+                    !directionChanged &&
+                    bits.Target() &&
+                    bits.Target_Alive() &&
+                    !playerReader.WithInCombatRange())
+                {
+                    input.PressApproachOnCooldown();
+                    wait.Update();
+                    stopMoving.StopForward();
+                    directionChanged = DidDirectionChangeEnough(beforeDir, playerReader.Direction);
+                }
+
+                if (e <= sampleTimeMs && !directionChanged)
                 {
                     stopMoving.Stop();
                     logger.LogInformation($"React to {value.ToStringF()} - " +
@@ -268,5 +295,16 @@ public sealed class ReactCastError
             wait.Until(duration, () =>
             before != usableAction.Is(item) || usableAction.Is(item));
 
+    }
+
+    private static bool DidDirectionChangeEnough(float before, float after)
+    {
+        float diff = Abs(after - before);
+        if (diff > PI)
+        {
+            diff = Tau - diff;
+        }
+
+        return diff >= (PI / 36f); // ~5 degrees
     }
 }

@@ -54,6 +54,8 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly NpcNameOverlay? npcNameOverlay;
 
     public bool IsBotActive => GoapAgent != null && GoapAgent.Active;
+    public string? LastDeactivateReason { get; private set; }
+    public DateTime? LastDeactivateUtc { get; private set; }
 
     private readonly Thread addonThread;
 
@@ -462,10 +464,13 @@ public sealed partial class BotController : IBotController, IDisposable
             logger.LogDebug($"{nameof(RemotePathingThread)} stopped!");
     }
 
-    public void ToggleBotStatus()
+    public void ToggleBotStatus(string? reason = null)
     {
         if (GoapAgent == null)
+        {
+            RecordDeactivateReason("GoapAgentUnavailable");
             return;
+        }
 
         bool starting = !GoapAgent.Active;
         if (starting)
@@ -473,6 +478,7 @@ public sealed partial class BotController : IBotController, IDisposable
             LaunchReadinessSnapshot snapshot = botStartGuard.Evaluate(ClassConfig, RouteInfo);
             if (!snapshot.CanStartBot)
             {
+                RecordDeactivateReason("LaunchReadinessBlocked");
                 string blocking = string.Join(" | ",
                     snapshot.Checks
                         .Where(c => c.IsBlocking)
@@ -484,10 +490,25 @@ public sealed partial class BotController : IBotController, IDisposable
                 return;
             }
         }
+        else
+        {
+            RecordDeactivateReason(string.IsNullOrWhiteSpace(reason) ? "ManualToggleStop" : reason!);
+        }
 
         GoapAgent.Active = !GoapAgent.Active;
 
         StatusChanged?.Invoke();
+    }
+
+    public void RecordDeactivateReason(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return;
+        }
+
+        LastDeactivateReason = reason;
+        LastDeactivateUtc = DateTime.UtcNow;
     }
 
     private bool InitialiseFromFile(string classFile, Dictionary<int, string> pathFiles)

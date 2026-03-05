@@ -8,6 +8,8 @@ namespace Core;
 public interface IBotController
 {
     bool IsBotActive { get; }
+    string? LastDeactivateReason { get; }
+    DateTime? LastDeactivateUtc { get; }
     string SelectedClassFilename { get; }
     Dictionary<int, string> SelectedPathFilename { get; }
     ClassConfiguration? ClassConfig { get; }
@@ -21,7 +23,8 @@ public interface IBotController
 
     ClassConfiguration ResolveLoadedProfile();
 
-    void ToggleBotStatus();
+    void ToggleBotStatus(string? reason = null);
+    void RecordDeactivateReason(string reason);
 
     void MinimapNodeFound();
 
