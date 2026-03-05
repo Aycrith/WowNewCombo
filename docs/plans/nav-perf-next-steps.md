@@ -12,8 +12,29 @@ All findings are marked as confirmed (read from code) or speculative.
 ## Implementation Status (2026-03-05)
 
 - Completed in earlier sprints: `1.1`, `1.3`, `1.4`, `2.2`, `2.3` (superseded), `3.2b`.
-- Completed in this continuation pass: `1.2` (oscillation constants), `2.1` (adaptive mounted reached distance), `3.3` (progress-aware refill loop breaker), `3.5` (goal age + transition count).
-- Remaining backlog items: `2.4`, `3.1`, `3.2a`, `3.2c`, `3.4`.
+- Completed in continuation passes before final closure: `1.2`, `2.1`, `3.3`, `3.5`.
+- Completed in final closure pass (default-off where noted): `2.4`, `3.1`, `3.2a`, `3.2c`, `3.4`.
+- Remaining backlog items: **None**.
+
+### Final Completion Matrix
+
+| Item | Status | Implementation Note |
+|------|--------|---------------------|
+| `1.1` | Complete | Forward-only refill candidate bounded by progress anchor. |
+| `1.2` | Complete | Oscillation detector thresholds tightened to `10/5/1500`. |
+| `1.3` | Complete | Turn-preserving break in `ReduceByDistance()`. |
+| `1.4` | Complete | Resume waypoint pop limit reduced to `2`. |
+| `2.1` | Complete | Mounted reached distance now adapts by upcoming turn shape. |
+| `2.2` | Complete | Route deviation metric wired to soak metrics. |
+| `2.3` | Complete (superseded) | Legacy wait/retry cap path replaced by simplified turn model. |
+| `2.4` | Complete (flagged, default OFF) | Oscillation confidence throttle added via `NavigationExperiments`. |
+| `3.1` | Complete (diagnostic-only, flagged) | `RouteSegmentTracker` added with regression counters/warnings and runtime snapshot visibility. |
+| `3.2a` | Complete (flagged, default OFF) | Usable-goal cache added through per-call planner execution options. |
+| `3.2b` | Complete | Bitmask planner already landed in prior sprint. |
+| `3.2c` | Complete (flagged, default OFF) | Plan cache with revalidation + invalidation support added through per-call execution options. |
+| `3.3` | Complete | Progress-aware refill loop-breaker guard implemented. |
+| `3.4` | Complete (flagged, default OFF) | Speed-adaptive heading cooldown added via `NavigationExperiments`. |
+| `3.5` | Complete | `GoapCurrentGoalState` now tracks goal age + transition count. |
 
 ---
 
