@@ -3,6 +3,7 @@ using Game;
 using Microsoft.Extensions.Logging;
 
 using System;
+using System.Collections.Generic;
 using static System.Diagnostics.Stopwatch;
 using System.Threading;
 
@@ -24,6 +25,8 @@ public sealed partial class CastingHandler
     public const int SPELL_QUEUE = 400;
 
     private const int MAX_WAIT_MELEE_RANGE = 10_000;
+    private const int AmbiguousInstantRecheckMs = 220;
+    private const int RuntimeMetricsWindowMs = 10 * 60 * 1000;
 
     private readonly ILogger<CastingHandler> logger;
     private readonly bool Log;
@@ -48,6 +51,11 @@ public sealed partial class CastingHandler
     private readonly ReactCastError react;
 
     private readonly CastingHandlerInterruptWatchdog interruptWatchdog;
+    private readonly object runtimeMetricsLock = new();
+    private readonly Queue<long> currentActionNotDetectedTicks = [];
+    private readonly Queue<long> uiFeedbackNotDetectedTicks = [];
+    private readonly Queue<long> ambiguousCastResolvedTicks = [];
+    private readonly Queue<long> interruptedRetrySuppressedTicks = [];
 
     public bool SpellInQueue()
     {
@@ -162,6 +170,10 @@ public sealed partial class CastingHandler
         UI_ERROR beforeCastEventValue = playerReader.CastState;
         bool beforeUsable = usableAction.Is(item);
         bool beforeAction = currentAction.Is(item);
+        int beforeCastCount = playerReader.CastCount;
+        int beforeGcdMs = playerReader.GCD.Value;
+        bool beforeInCombat = bits.Combat();
+        int beforeTargetHealth = playerReader.TargetHealth();
 
         int pressMs = PressKeyAction(item, token);
         if (item.BaseAction)
@@ -188,6 +200,20 @@ public sealed partial class CastingHandler
             if (!DEBUG || (Log && item.Log))
                 LogInstantInput(logger, item.Name, pressMs,
                     playerReader.CastState.ToStringF(), elapsedMs);
+
+            if (TryResolveAmbiguousInstantSuccess(
+                item,
+                beforeAuraHash,
+                beforeCastEventTime,
+                beforeGcdMs,
+                beforeCastCount,
+                beforeUsable,
+                beforeInCombat,
+                beforeTargetHealth,
+                token))
+            {
+                return CastResult.Success;
+            }
 
             return CastResult.CurrentActionNotDetected;
         }
@@ -254,6 +280,20 @@ public sealed partial class CastingHandler
                     beforeCastEventValue.ToStringF(),
                     playerReader.CastState.ToStringF());
 
+            if (TryResolveAmbiguousInstantSuccess(
+                item,
+                beforeAuraHash,
+                beforeCastEventTime,
+                beforeGcdMs,
+                beforeCastCount,
+                beforeUsable,
+                beforeInCombat,
+                beforeTargetHealth,
+                token))
+            {
+                return CastResult.Success;
+            }
+
             return CastResult.UIFeedbackNotDetected;
         }
 
@@ -288,6 +328,167 @@ public sealed partial class CastingHandler
             playerReader.ReadLastCastGCD();
 
         return CastResult.Success;
+    }
+
+    private bool TryResolveAmbiguousInstantSuccess(
+        KeyAction item,
+        int beforeAuraHash,
+        int beforeCastEventTime,
+        int beforeGcdMs,
+        int beforeCastCount,
+        bool beforeUsable,
+        bool beforeInCombat,
+        int beforeTargetHealth,
+        CancellationToken token)
+    {
+        int beforeMissType = combatLog.TargetMissType.Value;
+        float elapsedMs = wait.Until(
+            AmbiguousInstantRecheckMs,
+            interrupt: () =>
+            HasAmbiguousInstantSuccessEvidence(
+                beforeAuraHash: beforeAuraHash,
+                afterAuraHash: playerReader.AuraCount.Hash,
+                beforeCastEventTime: beforeCastEventTime,
+                afterCastEventTime: playerReader.UIErrorTime.Value,
+                castEvent: (UI_ERROR)playerReader.CastEvent.Value,
+                beforeGcdMs: beforeGcdMs,
+                afterGcdMs: playerReader.GCD.Value,
+                beforeCastCount: beforeCastCount,
+                afterCastCount: playerReader.CastCount,
+                beforeUsable: beforeUsable,
+                afterUsable: usableAction.Is(item),
+                beforeInCombat: beforeInCombat,
+                afterInCombat: bits.Combat(),
+                beforeTargetHealth: beforeTargetHealth,
+                afterTargetHealth: playerReader.TargetHealth(),
+                beforeMissType: beforeMissType,
+                afterMissType: combatLog.TargetMissType.Value) ||
+            token.IsCancellationRequested);
+
+        if (!ShouldContinueAmbiguousResolution(elapsedMs, token.IsCancellationRequested))
+        {
+            return false;
+        }
+
+        bool probableSuccess = HasAmbiguousInstantSuccessEvidence(
+            beforeAuraHash: beforeAuraHash,
+            afterAuraHash: playerReader.AuraCount.Hash,
+            beforeCastEventTime: beforeCastEventTime,
+            afterCastEventTime: playerReader.UIErrorTime.Value,
+            castEvent: (UI_ERROR)playerReader.CastEvent.Value,
+            beforeGcdMs: beforeGcdMs,
+            afterGcdMs: playerReader.GCD.Value,
+            beforeCastCount: beforeCastCount,
+            afterCastCount: playerReader.CastCount,
+            beforeUsable: beforeUsable,
+            afterUsable: usableAction.Is(item),
+            beforeInCombat: beforeInCombat,
+            afterInCombat: bits.Combat(),
+            beforeTargetHealth: beforeTargetHealth,
+            afterTargetHealth: playerReader.TargetHealth(),
+            beforeMissType: beforeMissType,
+            afterMissType: combatLog.TargetMissType.Value);
+
+        if (!probableSuccess)
+        {
+            return false;
+        }
+
+        if (playerReader.CastState == UI_ERROR.CAST_SUCCESS)
+        {
+            item.SpellId = playerReader.CastSpellId.Value;
+        }
+
+        item.SetClicked();
+        playerReader.ReadLastCastGCD();
+        RecordAmbiguousCastResolved();
+
+        if (Log && item.Log)
+        {
+            LogAmbiguousCastResolved(logger, item.Name, playerReader.CastState.ToStringF());
+        }
+
+        return true;
+    }
+
+    internal static bool ShouldContinueAmbiguousResolution(float recheckElapsedMs, bool tokenCancelled)
+    {
+        return !tokenCancelled && recheckElapsedMs >= 0;
+    }
+
+    internal static bool HasAmbiguousInstantSuccessEvidence(
+        int beforeAuraHash,
+        int afterAuraHash,
+        int beforeCastEventTime,
+        int afterCastEventTime,
+        UI_ERROR castEvent,
+        int beforeGcdMs,
+        int afterGcdMs,
+        int beforeCastCount,
+        int afterCastCount,
+        bool beforeUsable,
+        bool afterUsable,
+        bool beforeInCombat,
+        bool afterInCombat,
+        int beforeTargetHealth,
+        int afterTargetHealth,
+        int beforeMissType,
+        int afterMissType)
+    {
+        if (CastInstantSuccessful((int)castEvent))
+        {
+            return true;
+        }
+
+        if (castEvent is < UI_ERROR.MAX_ERROR_RANGE and not UI_ERROR.NONE)
+        {
+            return false;
+        }
+
+        if (beforeAuraHash != afterAuraHash)
+        {
+            return true;
+        }
+
+        if (beforeCastEventTime != afterCastEventTime)
+        {
+            return true;
+        }
+
+        bool gcdAdvanced = beforeGcdMs == 0 && afterGcdMs > 0;
+        if (gcdAdvanced)
+        {
+            return true;
+        }
+
+        if (afterCastCount > beforeCastCount)
+        {
+            return true;
+        }
+
+        if (beforeUsable && !afterUsable)
+        {
+            return true;
+        }
+
+        if (!beforeInCombat && afterInCombat)
+        {
+            return true;
+        }
+
+        if (beforeTargetHealth > 0 &&
+            afterTargetHealth > 0 &&
+            afterTargetHealth < beforeTargetHealth)
+        {
+            return true;
+        }
+
+        if (beforeMissType != afterMissType)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private CastResult CastCastbar(KeyAction item, CancellationToken token)
@@ -725,6 +926,15 @@ public sealed partial class CastingHandler
         CastResult result = castStrategy(item, token);
         if (result != CastResult.Success)
         {
+            if (result == CastResult.CurrentActionNotDetected)
+            {
+                RecordCurrentActionNotDetected();
+            }
+            else if (result == CastResult.UIFeedbackNotDetected)
+            {
+                RecordUIFeedbackNotDetected();
+            }
+
             if (result != CastResult.UIError)
             {
                 if (result == CastResult.TokenInterrupted &&
@@ -733,6 +943,11 @@ public sealed partial class CastingHandler
                     input.PressESC();
                     WaitForGCD(item, false, true, CancellationToken.None);
                     wait.Fixed(playerReader.NetworkLatency);
+                }
+
+                if (result is CastResult.CurrentActionNotDetected or CastResult.UIFeedbackNotDetected)
+                {
+                    SuppressImmediateReattempt(item);
                 }
 
                 LogFailedDueReason(logger, item.Name, result.ToStringF());
@@ -746,7 +961,14 @@ public sealed partial class CastingHandler
             }
 
             LogFailedAttemptTryAgain(logger, item.Name);
+            UI_ERROR castError = (UI_ERROR)playerReader.CastEvent.Value;
             react.Do(item);
+
+            if (ShouldSuppressImmediateRetry(castError))
+            {
+                RecordInterruptedRetrySuppressed();
+                return false;
+            }
 
             if (token.IsCancellationRequested ||
                 castStrategy(item, token) != CastResult.Success)
@@ -822,6 +1044,83 @@ public sealed partial class CastingHandler
                 input.PressStopAttack();
 
             input.PressPetAttack();
+        }
+    }
+
+    private static bool ShouldSuppressImmediateRetry(UI_ERROR castError)
+    {
+        return castError == UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED;
+    }
+
+    private void SuppressImmediateReattempt(KeyAction item)
+    {
+        if (item.BaseAction)
+        {
+            return;
+        }
+
+        int delayMs =
+            Math.Max(
+                playerReader.GCD.Value,
+                Math.Max(MIN_GCD - playerReader.SpellQueueTimeMs, playerReader.HalfSpellQueueTimeMs));
+        delayMs = Math.Max(delayMs, playerReader.NetworkLatency);
+        item.SetClicked(delayMs);
+    }
+
+    private void RecordCurrentActionNotDetected()
+    {
+        RecordRuntimeMetric(currentActionNotDetectedTicks);
+    }
+
+    private void RecordUIFeedbackNotDetected()
+    {
+        RecordRuntimeMetric(uiFeedbackNotDetectedTicks);
+    }
+
+    private void RecordAmbiguousCastResolved()
+    {
+        RecordRuntimeMetric(ambiguousCastResolvedTicks);
+    }
+
+    private void RecordInterruptedRetrySuppressed()
+    {
+        RecordRuntimeMetric(interruptedRetrySuppressedTicks);
+    }
+
+    private void RecordRuntimeMetric(Queue<long> queue)
+    {
+        lock (runtimeMetricsLock)
+        {
+            long nowTick = Environment.TickCount64;
+            queue.Enqueue(nowTick);
+            PruneOldRuntimeMetricSamples(queue, nowTick);
+        }
+    }
+
+    private static void PruneOldRuntimeMetricSamples(Queue<long> queue, long nowTick)
+    {
+        while (queue.Count > 0 && (nowTick - queue.Peek()) > RuntimeMetricsWindowMs)
+        {
+            queue.Dequeue();
+        }
+    }
+
+    public CastingRuntimeSnapshot GetRuntimeSnapshot()
+    {
+        lock (runtimeMetricsLock)
+        {
+            long nowTick = Environment.TickCount64;
+            PruneOldRuntimeMetricSamples(currentActionNotDetectedTicks, nowTick);
+            PruneOldRuntimeMetricSamples(uiFeedbackNotDetectedTicks, nowTick);
+            PruneOldRuntimeMetricSamples(ambiguousCastResolvedTicks, nowTick);
+            PruneOldRuntimeMetricSamples(interruptedRetrySuppressedTicks, nowTick);
+
+            return new CastingRuntimeSnapshot(
+                CurrentActionNotDetectedCountWindow: currentActionNotDetectedTicks.Count,
+                UIFeedbackNotDetectedCountWindow: uiFeedbackNotDetectedTicks.Count,
+                AmbiguousCastResolvedCountWindow: ambiguousCastResolvedTicks.Count,
+                InterruptedRetrySuppressedCountWindow: interruptedRetrySuppressedTicks.Count,
+                WindowSeconds: RuntimeMetricsWindowMs / 1000);
         }
     }
 
@@ -1013,6 +1312,12 @@ public sealed partial class CastingHandler
         Level = LogLevel.Information,
         Message = "[{name,-17}] ... BeforeCastFaceTarget {elapsedMs}ms")]
     static partial void LogBeforeCastFaceTarget(ILogger logger, string name, float elapsedMs);
+
+    [LoggerMessage(
+        EventId = 0100,
+        Level = LogLevel.Information,
+        Message = "[{name,-17}] ... Ambiguous instant cast resolved as success via {castState}")]
+    static partial void LogAmbiguousCastResolved(ILogger logger, string name, string castState);
 
 
     #endregion

@@ -18,13 +18,11 @@ namespace Frontend.Controllers;
 [Route("api/session")]
 public sealed class SessionController : ControllerBase
 {
-    private readonly GoapAgent? goapAgent;
+    private readonly IBotController botController;
 
-    public SessionController(GoapAgent? goapAgent = null)
+    public SessionController(IBotController botController)
     {
-        // GoapAgent may not be registered in DI for all configurations
-        // (e.g., configuration mode without WoW running)
-        this.goapAgent = goapAgent;
+        this.botController = botController;
     }
 
     /// <summary>
@@ -33,6 +31,7 @@ public sealed class SessionController : ControllerBase
     [HttpGet]
     public IActionResult Get()
     {
+        GoapAgent? goapAgent = botController.GoapAgent;
         if (goapAgent == null)
         {
             return ServiceUnavailable("GOAP agent not initialized");
@@ -67,6 +66,7 @@ public sealed class SessionController : ControllerBase
     [HttpGet("worldstate")]
     public IActionResult GetWorldState()
     {
+        GoapAgent? goapAgent = botController.GoapAgent;
         if (goapAgent == null)
         {
             return ServiceUnavailable("GOAP agent not initialized");
@@ -81,6 +81,7 @@ public sealed class SessionController : ControllerBase
     [HttpGet("stats")]
     public IActionResult GetStats()
     {
+        GoapAgent? goapAgent = botController.GoapAgent;
         if (goapAgent == null)
         {
             return ServiceUnavailable("GOAP agent not initialized");

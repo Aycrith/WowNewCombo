@@ -11,6 +11,10 @@ namespace Core.Goals;
 
 public sealed class StopMoving : IDisposable
 {
+    private const int ClickToMoveCancelPressMs = 35;
+    private const int ClickToMoveCancelRetryPressMs = 55;
+    private const int ClickToMoveCancelVerifyWaitMs = 40;
+
     private readonly WowProcessInput input;
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
@@ -58,10 +62,20 @@ public sealed class StopMoving : IDisposable
         }
         else
         {
-            // Tap forward briefly to cancel interact/click-to-move, then release.
-            // Matches upstream pattern: 1ms press + short sleep.
-            input.PressFixed(input.ForwardKey, 1, token);
-            Thread.Sleep(10);
+            CancelClickToMove(ClickToMoveCancelPressMs, ClickToMoveCancelVerifyWaitMs);
+            if (bits.Moving())
+            {
+                CancelClickToMove(ClickToMoveCancelRetryPressMs, ClickToMoveCancelVerifyWaitMs);
+            }
+        }
+    }
+
+    private void CancelClickToMove(int pressDurationMs, int verifyWaitMs)
+    {
+        input.PressFixed(input.ForwardKey, pressDurationMs, token);
+        if (!token.IsCancellationRequested && verifyWaitMs > 0)
+        {
+            token.WaitHandle.WaitOne(verifyWaitMs);
         }
     }
 

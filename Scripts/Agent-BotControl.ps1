@@ -53,6 +53,7 @@ param(
     [switch]$SkipCharacterGate,
     [switch]$StartMonitor,
     [switch]$StopServices,
+    [switch]$SkipBuild,
 
     [ValidateSet("GET", "POST", "PUT", "DELETE")]
     [string]$ApiMethod = "GET",
@@ -83,6 +84,8 @@ $script:DtcReloadRecoveryAttempted = $false
 $script:FeatureFlagSnapshotPath = $null
 $script:FeatureFlagSnapshotActive = $false
 $script:FeatureFlagProfileApplied = $null
+$script:ApiBaseCandidates = @()
+$script:PreferredApiBase = $null
 
 function Write-Info([string]$Message)
 {
@@ -103,6 +106,98 @@ function Write-ErrLine([string]$Message)
 {
     Write-Host "[ERR  ] $Message" -ForegroundColor Red
 }
+
+function Get-ApiBaseCandidates
+{
+    param([Parameter(Mandatory = $true)][string]$InputBaseUrl)
+
+    $candidates = New-Object System.Collections.Generic.List[string]
+    $baseValue = $InputBaseUrl.Trim().TrimEnd('/')
+    if (-not [string]::IsNullOrWhiteSpace($baseValue))
+    {
+        [void]$candidates.Add($baseValue)
+    }
+
+    $uri = $null
+    if ([Uri]::TryCreate($baseValue, [UriKind]::Absolute, [ref]$uri))
+    {
+        $uriHost = $uri.Host.ToLowerInvariant()
+        if ($uriHost -eq "localhost")
+        {
+            [void]$candidates.Add(("{0}://127.0.0.1:{1}" -f $uri.Scheme, $uri.Port))
+        }
+        elseif ($uriHost -eq "127.0.0.1")
+        {
+            [void]$candidates.Add(("{0}://localhost:{1}" -f $uri.Scheme, $uri.Port))
+        }
+    }
+
+    return @($candidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+}
+
+function Get-OrderedApiBases
+{
+    $ordered = New-Object System.Collections.Generic.List[string]
+    if (-not [string]::IsNullOrWhiteSpace($script:PreferredApiBase))
+    {
+        [void]$ordered.Add($script:PreferredApiBase)
+    }
+
+    foreach ($candidate in @($script:ApiBaseCandidates))
+    {
+        if ([string]::IsNullOrWhiteSpace($candidate))
+        {
+            continue
+        }
+
+        if (-not $ordered.Contains($candidate))
+        {
+            [void]$ordered.Add($candidate)
+        }
+    }
+
+    return @($ordered)
+}
+
+function Test-TransientApiError
+{
+    param([string]$Message)
+
+    if ([string]::IsNullOrWhiteSpace($Message))
+    {
+        return $false
+    }
+
+    $patterns = @(
+        "Only one usage of each socket address",
+        "actively refused",
+        "No connection could be made",
+        "Unable to connect",
+        "configured HttpClient.Timeout",
+        "HttpClient.Timeout",
+        "timed out",
+        "connection was forcibly closed",
+        "reset by peer",
+        "A connection attempt failed"
+    )
+
+    foreach ($pattern in $patterns)
+    {
+        if ($Message.IndexOf($pattern, [StringComparison]::OrdinalIgnoreCase) -ge 0)
+        {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+$script:ApiBaseCandidates = Get-ApiBaseCandidates -InputBaseUrl $BaseUrl
+if (@($script:ApiBaseCandidates).Count -eq 0)
+{
+    throw "Unable to resolve valid API base URL candidates from '$BaseUrl'"
+}
+$script:PreferredApiBase = $script:ApiBaseCandidates[0]
 
 function Get-JsonDepth([object]$Obj, [int]$Depth = 8)
 {
@@ -285,83 +380,145 @@ function Invoke-AgentApi
         [int]$TimeoutSec = 15
     )
 
-    $uri = "$BaseUrl$Path"
-
-    try
+    $methodUpper = $Method.ToUpperInvariant()
+    $isGet = $methodUpper -eq "GET"
+    $maxAttempts = if ($isGet) { 3 } else { 1 }
+    $attemptsExecuted = 0
+    $lastError = $null
+    $attemptErrors = New-Object System.Collections.Generic.List[string]
+    if ($isGet)
     {
-        if ($Method -eq "GET")
-        {
-            return Invoke-RestMethod -Uri $uri -Method Get -TimeoutSec $TimeoutSec
-        }
-
-        if ($null -eq $Body)
-        {
-            return Invoke-RestMethod -Uri $uri -Method $Method -TimeoutSec $TimeoutSec -ContentType "application/json" -Body "{}"
-        }
-
-        if ($Body -is [string])
-        {
-            $jsonBody = $Body
-        }
-        else
-        {
-            $jsonBody = $Body | ConvertTo-Json -Depth 12
-        }
-
-        return Invoke-RestMethod -Uri $uri -Method $Method -TimeoutSec $TimeoutSec -ContentType "application/json" -Body $jsonBody
+        $bases = @(Get-OrderedApiBases)
     }
-    catch
+    else
     {
-        $err = $_.Exception.Message
-        $response = $null
-        if ($null -ne $_.Exception -and $_.Exception.PSObject.Properties.Match("Response").Count -gt 0)
+        $preferredBase = $script:PreferredApiBase
+        if ([string]::IsNullOrWhiteSpace($preferredBase) -and @($script:ApiBaseCandidates).Count -gt 0)
         {
-            $response = $_.Exception.Response
+            $preferredBase = $script:ApiBaseCandidates[0]
         }
 
-        $responseBody = $null
-        if ($null -ne $response)
-        {
-            if ($response.PSObject.Methods.Match("GetResponseStream").Count -gt 0)
-            {
-                try
-                {
-                    $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
-                    $responseBody = $reader.ReadToEnd()
-                }
-                catch
-                {
-                    # keep default error message
-                }
-            }
-            elseif ($response.PSObject.Properties.Match("Content").Count -gt 0 -and $null -ne $response.Content)
-            {
-                try
-                {
-                    $responseBody = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-                }
-                catch
-                {
-                    # keep default error message
-                }
-            }
-        }
-
-        if (-not [string]::IsNullOrWhiteSpace($responseBody))
-        {
-            $err = "$err`n$responseBody"
-        }
-
-        if ($null -ne $_.ErrorDetails -and -not [string]::IsNullOrWhiteSpace($_.ErrorDetails.Message))
-        {
-            if ($err -notlike "*$($_.ErrorDetails.Message)*")
-            {
-                $err = "$err`n$($_.ErrorDetails.Message)"
-            }
-        }
-
-        throw "API $Method $Path failed: $err"
+        $bases = @($preferredBase)
     }
+    $bases = @($bases | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+
+    if ($bases.Count -eq 0)
+    {
+        $bases = @($BaseUrl.Trim().TrimEnd('/'))
+    }
+
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++)
+    {
+        $attemptsExecuted = $attempt
+        $attemptHadTransientError = $false
+        foreach ($base in $bases)
+        {
+            $uri = "$base$Path"
+
+            try
+            {
+                if ($methodUpper -eq "GET")
+                {
+                    $result = Invoke-RestMethod -Uri $uri -Method Get -TimeoutSec $TimeoutSec
+                }
+                else
+                {
+                    if ($null -eq $Body)
+                    {
+                        $result = Invoke-RestMethod -Uri $uri -Method $methodUpper -TimeoutSec $TimeoutSec -ContentType "application/json" -Body "{}"
+                    }
+                    else
+                    {
+                        if ($Body -is [string])
+                        {
+                            $jsonBody = $Body
+                        }
+                        else
+                        {
+                            $jsonBody = $Body | ConvertTo-Json -Depth 12
+                        }
+
+                        $result = Invoke-RestMethod -Uri $uri -Method $methodUpper -TimeoutSec $TimeoutSec -ContentType "application/json" -Body $jsonBody
+                    }
+                }
+
+                $script:PreferredApiBase = $base
+                return $result
+            }
+            catch
+            {
+                $err = $_.Exception.Message
+                $response = $null
+                if ($null -ne $_.Exception -and $_.Exception.PSObject.Properties.Match("Response").Count -gt 0)
+                {
+                    $response = $_.Exception.Response
+                }
+
+                $responseBody = $null
+                if ($null -ne $response)
+                {
+                    if ($response.PSObject.Methods.Match("GetResponseStream").Count -gt 0)
+                    {
+                        try
+                        {
+                            $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
+                            $responseBody = $reader.ReadToEnd()
+                        }
+                        catch
+                        {
+                            # keep default error message
+                        }
+                    }
+                    elseif ($response.PSObject.Properties.Match("Content").Count -gt 0 -and $null -ne $response.Content)
+                    {
+                        try
+                        {
+                            $responseBody = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+                        }
+                        catch
+                        {
+                            # keep default error message
+                        }
+                    }
+                }
+
+                if (-not [string]::IsNullOrWhiteSpace($responseBody))
+                {
+                    $err = "$err`n$responseBody"
+                }
+
+                if ($null -ne $_.ErrorDetails -and -not [string]::IsNullOrWhiteSpace($_.ErrorDetails.Message))
+                {
+                    if ($err -notlike "*$($_.ErrorDetails.Message)*")
+                    {
+                        $err = "$err`n$($_.ErrorDetails.Message)"
+                    }
+                }
+
+                $attemptErr = "Attempt $attempt [$base]: $err"
+                [void]$attemptErrors.Add($attemptErr)
+                $lastError = $err
+                if (Test-TransientApiError -Message "$err")
+                {
+                    $attemptHadTransientError = $true
+                }
+            }
+        }
+
+        if (-not $attemptHadTransientError)
+        {
+            break
+        }
+
+        if ($attempt -lt $maxAttempts)
+        {
+            $delayMs = (200 * $attempt) + (Get-Random -Minimum 50 -Maximum 250)
+            Start-Sleep -Milliseconds $delayMs
+        }
+    }
+
+    $attemptSummary = @($attemptErrors) -join " || "
+    throw "API $Method $Path failed after $attemptsExecuted attempt(s): $attemptSummary"
 }
 
 function Get-FeatureFlagsFilePath
@@ -1071,6 +1228,91 @@ function Test-PortListening
     return $null -ne (Get-ListeningPid -Port $Port)
 }
 
+function Assert-ServiceReadinessGate
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Context,
+        [switch]$RequireApiHealth
+    )
+
+    if (-not (Test-PortListening -Port $WebPort))
+    {
+        throw "Readiness gate failed ($Context): web port $WebPort is not listening"
+    }
+
+    if (-not (Test-PortListening -Port $NavigationPort))
+    {
+        throw "Readiness gate failed ($Context): navigation port $NavigationPort is not listening"
+    }
+
+    if ($RequireApiHealth)
+    {
+        $health = Invoke-AgentApiSafe -Method GET -Path "/api/health" -TimeoutSec 5
+        if (-not $health.Success -or $null -eq $health.Result)
+        {
+            throw "Readiness gate failed ($Context): /api/health unavailable ($($health.Error))"
+        }
+    }
+}
+
+function Assert-ProfileRouteReadyGate
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Context
+    )
+
+    $launch = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+    if (-not $launch.Success -or $null -eq $launch.Result)
+    {
+        throw "Readiness gate failed ($Context): unable to read /api/launch/status ($($launch.Error))"
+    }
+
+    $profileCheck = Get-LaunchCheck -Launch $launch.Result -Title "Profile"
+    $routeCheck = Get-LaunchCheck -Launch $launch.Result -Title "Route"
+    $profileStatus = Get-LaunchStatusCode -Check $profileCheck
+    $routeStatus = Get-LaunchStatusCode -Check $routeCheck
+
+    if ($profileStatus -ne 2 -or $routeStatus -ne 2)
+    {
+        $profileMessage = if ($null -ne $profileCheck) { "$($profileCheck.Message)" } else { "missing Profile check" }
+        $routeMessage = if ($null -ne $routeCheck) { "$($routeCheck.Message)" } else { "missing Route check" }
+        throw "Readiness gate failed ($Context): profile/route not ready (Profile=$profileStatus '$profileMessage'; Route=$routeStatus '$routeMessage')"
+    }
+}
+
+function Assert-CastingSnapshotReadyGate
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Context,
+        [int]$TimeoutSec = 20
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $lastReason = "navigation runtime not yet available"
+
+    while ((Get-Date) -lt $deadline)
+    {
+        $runtime = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/navigation/runtime" -TimeoutSec 8
+        if ($runtime.Success -and $null -ne $runtime.Result)
+        {
+            if ($null -ne $runtime.Result.Casting)
+            {
+                return
+            }
+
+            $lastReason = "casting snapshot is null"
+        }
+        else
+        {
+            $lastReason = if ([string]::IsNullOrWhiteSpace("$($runtime.Error)")) { "navigation runtime request failed" } else { "$($runtime.Error)" }
+        }
+
+        Start-Sleep -Milliseconds 500
+    }
+
+    throw "Readiness gate failed ($Context): /api/diagnostics/navigation/runtime did not expose non-null casting payload within ${TimeoutSec}s ($lastReason)"
+}
+
 function Resolve-BlazorExecutable
 {
     $candidate = Join-Path $BotRoot "BlazorServer\bin\Release\net10.0\BlazorServer.exe"
@@ -1599,6 +1841,35 @@ function Stop-StaleServerProcesses
     {
         Write-Ok "No stale bot server processes found"
     }
+}
+
+function Invoke-ReleaseBuild
+{
+    if ($SkipBuild)
+    {
+        Write-WarnLine "Skipping Release build due -SkipBuild override"
+        return
+    }
+
+    Write-Info "Building solution in Release mode to deploy latest binaries"
+    Ensure-SessionArtifactDir | Out-Null
+    $buildLog = Join-Path $script:SessionArtifactDir ("{0}-build-release.log" -f $script:RunTag)
+
+    Push-Location $BotRoot
+    try
+    {
+        & dotnet build MasterOfPuppets.sln -c Release 2>&1 | Tee-Object -FilePath $buildLog
+        if ($LASTEXITCODE -ne 0)
+        {
+            throw "Release build failed (exit $LASTEXITCODE). See $buildLog"
+        }
+    }
+    finally
+    {
+        Pop-Location
+    }
+
+    Write-Ok "Release build completed"
 }
 
 function Start-NavigationServer
@@ -3072,6 +3343,7 @@ function Show-Status
     $rows += "Process WoW:          " + $(if ($wow) { "RUNNING PID=$($wow.Id)" } else { "STOPPED" })
     $rows += "Port ${WebPort}:          " + $(if (Test-PortListening -Port $WebPort) { "LISTENING" } else { "CLOSED" })
     $rows += "Port ${NavigationPort}:       " + $(if (Test-PortListening -Port $NavigationPort) { "LISTENING" } else { "CLOSED" })
+    $rows += "API preferred base:    $script:PreferredApiBase"
 
     foreach ($r in $rows) { Write-Host $r }
 
@@ -3247,6 +3519,9 @@ function Invoke-WatchNav
         [switch]$Quiet
     )
 
+    Assert-ServiceReadinessGate -Context "watchnav-start" -RequireApiHealth
+    Assert-ProfileRouteReadyGate -Context "watchnav-start"
+    Assert-CastingSnapshotReadyGate -Context "watchnav-start"
     Ensure-SessionArtifactDir | Out-Null
     $sampleFile = Join-Path $script:SessionArtifactDir ("{0}-watchnav-samples.jsonl" -f $script:RunTag)
     $deadline = (Get-Date).AddSeconds([Math]::Max(1, $DurationSeconds))
@@ -3771,7 +4046,19 @@ function Assert-NoImmediateAbortCondition
 
     if ($null -ne $Sample.BotStatus -and -not [bool]$Sample.BotStatus.IsActive)
     {
-        throw "Abort: Bot became inactive during live validation"
+        $reason = "$($Sample.BotStatus.LastDeactivateReason)"
+        if ([string]::IsNullOrWhiteSpace($reason))
+        {
+            $reason = "unknown"
+        }
+
+        $when = "$($Sample.BotStatus.LastDeactivateUtc)"
+        if ([string]::IsNullOrWhiteSpace($when))
+        {
+            $when = "unknown"
+        }
+
+        throw "Abort: Bot became inactive during live validation (Reason=$reason, LastDeactivateUtc=$when)"
     }
 
     if ($null -ne $Sample.Snapshot)
@@ -3813,6 +4100,9 @@ function Invoke-ShortActiveValidation
 function Invoke-SoakRun
 {
     Write-Info "Starting soak run (${SoakMinutes}m target, ${WindowMinutes}m windows, cadence ${EvidenceIntervalSeconds}s)"
+    Assert-ServiceReadinessGate -Context "soak-start" -RequireApiHealth
+    Assert-ProfileRouteReadyGate -Context "soak-start"
+    Assert-CastingSnapshotReadyGate -Context "soak-start"
     if ($MaxPatchLoops -gt 0)
     {
         Write-Info "MaxPatchLoops parameter set to $MaxPatchLoops (manual triage/patch loop remains operator-driven)"
@@ -3883,6 +4173,7 @@ function Invoke-LiveSession
         }
 
         Invoke-StartFlow -WithValidation
+        Assert-ServiceReadinessGate -Context "live-session-post-start" -RequireApiHealth
         Invoke-CollectEvidence -Stage "post-start"
 
         $watchDuration = [Math]::Min([Math]::Max(60, $ShortValidationSeconds), 300)
@@ -3914,6 +4205,7 @@ function Invoke-LiveSession
         }
 
         Invoke-CollectEvidence -Stage "pre-soak"
+        Assert-ServiceReadinessGate -Context "live-session-pre-soak" -RequireApiHealth
         Invoke-SoakRun
         Invoke-CollectEvidence -Stage "final" -FlushSoak
     }
@@ -3937,8 +4229,10 @@ function Invoke-LiveSession
 function Invoke-StartFlow([switch]$WithValidation)
 {
     Stop-StaleServerProcesses
+    Invoke-ReleaseBuild
     Start-NavigationServer
     Start-BlazorServer
+    Assert-ServiceReadinessGate -Context "post-service-start" -RequireApiHealth
     Set-LaunchOverrides
     Load-BotProfile
     Assert-CharacterAlignment
@@ -3957,7 +4251,10 @@ function Invoke-StartFlow([switch]$WithValidation)
         $null = Wait-ForReadiness
     }
 
+    Assert-ServiceReadinessGate -Context "pre-bot-start" -RequireApiHealth
     Start-Bot
+    Assert-ProfileRouteReadyGate -Context "post-bot-start"
+    Assert-CastingSnapshotReadyGate -Context "post-bot-start"
 
     if ($WithValidation)
     {

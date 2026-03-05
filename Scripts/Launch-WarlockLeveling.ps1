@@ -12,18 +12,26 @@
   pwsh -NoProfile -ExecutionPolicy Bypass -File Scripts\Launch-WarlockLeveling.ps1 -OpenDashboard
   pwsh -NoProfile -ExecutionPolicy Bypass -File Scripts\Launch-WarlockLeveling.ps1 -AutoConfirmTrainer
 #>
-
+[CmdletBinding()]
 param(
     [string]$Profile = "BloodElf_Warlock_1-70_TBC.json",
     [int]$ResumeFromLevel = 0,
     [switch]$OpenDashboard,
     [switch]$AutoConfirmTrainer,
     [switch]$VerboseLogging,
-    [string]$BotRoot = ""
+    [string]$BotRoot = "",
+    [Alias("h", "?")][switch]$Help
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ($Help)
+{
+    Write-Host "Usage: Launch-WarlockLeveling.ps1 [-Profile <json>] [-ResumeFromLevel <n>] [-OpenDashboard] [-AutoConfirmTrainer] [-VerboseLogging] [-BotRoot <path>]" -ForegroundColor Cyan
+    Write-Host "Starts validated warlock leveling services and launches orchestrator." -ForegroundColor Gray
+    return
+}
 
 # ============================================================================
 # Setup

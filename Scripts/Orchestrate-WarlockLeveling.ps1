@@ -20,7 +20,7 @@
   pwsh -File Scripts/Orchestrate-WarlockLeveling.ps1 -ResumeFromLevel 24
   pwsh -File Scripts/Orchestrate-WarlockLeveling.ps1 -AutoConfirmTrainer
 #>
-
+[CmdletBinding()]
 param(
     [string]$Profile = "BloodElf_Warlock_1-70_TBC.json",
     [int]$ResumeFromLevel = 0,
@@ -28,11 +28,19 @@ param(
     [string]$BaseUrl = "http://localhost:5000",
     [int]$PollIntervalSeconds = 15,
     [switch]$AutoConfirmTrainer,
-    [switch]$VerboseLogging
+    [switch]$VerboseLogging,
+    [Alias("h", "?")][switch]$Help
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Continue"
+
+if ($Help)
+{
+    Write-Host "Usage: Orchestrate-WarlockLeveling.ps1 [-Profile <json>] [-ResumeFromLevel <n>] [-BaseUrl <url>] [-PollIntervalSeconds <n>] [-AutoConfirmTrainer] [-VerboseLogging] [-BotRoot <path>]" -ForegroundColor Cyan
+    Write-Host "Runs the autonomous warlock leveling state machine." -ForegroundColor Gray
+    return
+}
 
 # ============================================================================
 # Configuration

@@ -43,7 +43,7 @@
       "PathFilename": "_pack\\1-20\\Blood elf\\6-12_Eversong Woods.json",
       "PathThereAndBack": false,
       "PathReduceSteps": false,
-      "Requirements": ["Level >= 6", "Level < 13"]
+      "Requirements": ["Level >= 6", "Level < 10"]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\9-12_Ghostlands.json",
@@ -307,7 +307,7 @@
         "Name": "Fear",
         "Key": "7",
         "WhenUsable": true,
-        "Requirement": "MobCount == 1",
+        "Requirement": "Health% < FLEE_HP && MobCount >= 1",
         "HasCastBar": true
       },
       {
