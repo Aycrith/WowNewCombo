@@ -4,7 +4,7 @@
 **Final Baseline:** 1813/1816 CoreUnitTests (3 skipped) + 43/43 FrontendUnitTests
 **Branch:** dev
 
-> **Status: ALL P0–P3 TASKS COMPLETE ✅**
+> **Status: ALL P0–P3 TASKS COMPLETE ✅ (including P3-5)**
 
 ---
 
@@ -55,7 +55,7 @@ All P0 tasks committed in a single session. Total time: ~25 minutes.
 | P3-2 | `ec697a8d5` | Navigation.cs partial-class split (Logging + HazardAvoidance extracted) |
 | P3-3 | `4788e775a` | Feature flag re-enable criteria documented in runtime_feature_flags.json |
 | P3-4 | `4788e775a` | GoapAgent.UpdateWorldState XML doc added |
-| P3-5 | *(pending)* | DiagnosticsController split into DiagnosticsFixController |
+| P3-5 | `2833e5653` | DiagnosticsController split into DiagnosticsFixController |
 
 ---
 
@@ -66,7 +66,7 @@ COMPLETE: P0-1 → P0-2 → P0-3 → P0-4 → P0-5
 COMPLETE: P1-1 → P1-2 → P1-3 → P1-4 → P1-5
 COMPLETE: P2-1 → P2-2 → P2-3 → P2-4 → P2-5 → P2-6
 COMPLETE: P3-1 → P3-2 → P3-3 → P3-4
-PENDING:  P3-5 (DiagnosticsController split)
+COMPLETE: P3-5 (DiagnosticsController split)
 ```
 
 ---
@@ -86,7 +86,7 @@ PENDING:  P3-5 (DiagnosticsController split)
 | **P1-4** | MEDIUM | [P1-4](./2026-03-04-P1-4-goal-timeouts-constants.md) | Extract timeout constants into `GoalTimeouts` static class | ✅ COMPLETE | Low | 5 min |
 | **P1-5** | MEDIUM | [P1-5](./2026-03-04-P1-5-navsoak-outputdir-fix.md) | Anchor `NavSoakMetricsService` output to `AppContext.BaseDirectory` | ✅ COMPLETE | Low | 4 min |
 | **P2** | MEDIUM | [P2](./2026-03-04-P2-tests-coverage.md) | 6 test coverage gaps (all 6 tasks complete) | ✅ COMPLETE | Low | ~20 min |
-| **P3** | LOW | [P3](./2026-03-04-P3-refactoring.md) | Refactoring tasks (P3-1 through P3-4 complete; P3-5 pending) | 🔄 PARTIAL | None | ~15 min |
+| **P3** | LOW | [P3](./2026-03-04-P3-refactoring.md) | Refactoring tasks (all 5 tasks complete) | ✅ COMPLETE | None | ~15 min |
 
 ---
 
