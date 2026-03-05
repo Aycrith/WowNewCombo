@@ -206,4 +206,53 @@ public class NavSoakMetricsServiceTests
         window.AvgRouteDeviation.Should().Be(0f);
         window.RepeatStuckRate.Should().Be(0.0);
     }
+
+    [Fact]
+    public void WindowRollover_AfterWindowExpiry_CompletedWindowCountIncrements()
+    {
+        string outputDir = Path.Combine(Path.GetTempPath(), $"navsoak-rollover-{Guid.NewGuid():N}");
+        using NavSoakMetricsService svc = new(
+            NullLogger<NavSoakMetricsService>.Instance,
+            outputDir: outputDir,
+            windowDuration: TimeSpan.FromMilliseconds(1));
+
+        Core.Goals.Navigation nav = CreateNavigationStub();
+        StuckDetector stuck = CreateStuckDetectorStub();
+        svc.AttachRuntimeSources(stuck, nav);
+
+        // Fire event in first window, then wait for window to expire
+        RaiseNavigationEvent(nav, "OnDynamicDetourApplied");
+        System.Threading.Thread.Sleep(5);
+
+        // This event triggers MaybeCloseWindow which archives the expired window
+        RaiseNavigationEvent(nav, "OnSuccessfulReconnect");
+
+        NavSoakMetricsSnapshot snapshot = svc.GetSnapshot();
+        snapshot.CompletedWindowCount.Should().BeGreaterThanOrEqualTo(1,
+            "the 1ms window should be archived after a 5ms sleep");
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task FlushAsync_WritesJsonArtifactToOutputDir()
+    {
+        string outputDir = Path.Combine(Path.GetTempPath(), $"navsoak-flush-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(outputDir);
+
+        NavSoakMetricsService svc = new(
+            NullLogger<NavSoakMetricsService>.Instance,
+            outputDir: outputDir);
+
+        Core.Goals.Navigation nav = CreateNavigationStub();
+        StuckDetector stuck = CreateStuckDetectorStub();
+        svc.AttachRuntimeSources(stuck, nav);
+
+        RaiseNavigationEvent(nav, "OnSuccessfulReconnect");
+
+        await svc.FlushAsync();
+
+        string[] files = Directory.GetFiles(outputDir, "soak-nav-*.json");
+        files.Should().NotBeEmpty("FlushAsync must write a soak artifact JSON to outputDir");
+
+        svc.Dispose();
+    }
 }
