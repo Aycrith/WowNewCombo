@@ -450,7 +450,8 @@ public sealed class NavSoakMetricsService : IDisposable
             current = current.Parent;
         }
 
-        return configuredOutputDir;
+        // Fallback: anchor to assembly directory, not CWD (reliable in CI/containers/publish)
+        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, configuredOutputDir));
     }
 
     private void DetachAllLocked()

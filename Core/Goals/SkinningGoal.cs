@@ -15,7 +15,7 @@ public sealed partial class SkinningGoal : GoapGoal, IGoapEventListener, IDispos
     public override float Cost => 4.4f;
 
     private const int MAX_ATTEMPTS = 5;
-    private const int MAX_TIME_TO_REACH_MELEE = 10000;
+    private const int MAX_TIME_TO_REACH_MELEE = GoalTimeouts.MaxTimeToReachMeleeMs;
     private const int MAX_TIME_TO_DETECT_LOOT = 2 * CastingHandler.GCD;
     private const int MAX_TIME_TO_DETECT_CAST = 2 * CastingHandler.GCD;
     private const int MAX_TIME_TO_WAIT_NPC_NAME = 1000;

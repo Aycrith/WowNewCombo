@@ -20,7 +20,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 {
     public override float Cost => 4.6f;
 
-    private const int MAX_TIME_TO_REACH_MELEE = 10000;
+    private const int MAX_TIME_TO_REACH_MELEE = GoalTimeouts.MaxTimeToReachMeleeMs;
 
     private readonly ILogger<LootGoal> logger;
     private readonly ConfigurableInput input;

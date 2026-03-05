@@ -40,7 +40,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     private const bool debug = false;
 
-    private const int MAX_TIME_TO_REACH_MELEE = 10000;
+    private const int MAX_TIME_TO_REACH_MELEE = GoalTimeouts.MaxTimeToReachMeleeMs;
     private const int TIMEOUT = 5000;
     private const float NPC_DESTINATION_PROXIMITY = 12f;
     private const int MAX_FAR_DESTINATION_RETRIES = 3;
