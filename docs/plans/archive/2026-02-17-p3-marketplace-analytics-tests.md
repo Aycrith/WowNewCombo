@@ -13,6 +13,14 @@
 
 ---
 
+## Implementation Errata (2026-03-05)
+
+- Planned test file `CoreUnitTests/Marketplace/MarketplaceServiceTests.cs` was implemented as `CoreUnitTests/Marketplace/ProfileMarketplaceServiceTests.cs`.
+- Test intent and coverage areas are unchanged (trusted download URL validation, filename sanitization, request/token safety, feature-flag behavior).
+- Existing references in this archived document that mention `MarketplaceServiceTests` should be read as `ProfileMarketplaceServiceTests`.
+
+---
+
 ## Task 1: Marketplace Service Security Tests
 
 **Files:**

@@ -1,7 +1,7 @@
 # WowClassicGrindBot Improvement Plans — Master Index
 
 **Date:** 2026-03-04 | **Updated:** 2026-03-05
-**Final Baseline:** 1831/1834 CoreUnitTests (3 skipped) + 58/58 FrontendUnitTests
+**Final Baseline:** 1846/1849 CoreUnitTests (3 skipped) + 58/58 FrontendUnitTests
 **Branch:** dev
 
 > **Status: ALL P0–P3 TASKS COMPLETE ✅ (including P3-5)**
@@ -53,7 +53,7 @@ All P0 tasks committed in a single session. Total time: ~25 minutes.
 |------|--------|--------|
 | P3-1 | `4788e775a` | Typo fix: SimplyfyRouteToWaypoint → SimplifyRouteToWaypoint |
 | P3-2 | `ec697a8d5` | Navigation.cs partial-class split (Logging + HazardAvoidance extracted) |
-| P3-3 | `4788e775a` | Feature flag re-enable criteria documented in runtime_feature_flags.json |
+| P3-3 | `4788e775a` | Feature flag re-enable criteria documented in plan guidance |
 | P3-4 | `4788e775a` | GoapAgent.UpdateWorldState XML doc added |
 | P3-5 | `2833e5653` | DiagnosticsController split into DiagnosticsFixController |
 
@@ -119,7 +119,7 @@ dotnet build MasterOfPuppets.sln --nologo -v quiet
 
 # Full test suite
 dotnet test --nologo -v quiet
-# Result: 1831/1834 CoreUnitTests (3 skipped) + 58/58 FrontendUnitTests
+# Result: 1846/1849 CoreUnitTests (3 skipped) + 58/58 FrontendUnitTests
 
 # No pre-release packages
 dotnet list package --include-prerelease | grep -iE "preview|beta|alpha|dev-|rc\."

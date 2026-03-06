@@ -21,7 +21,7 @@ All findings are marked as confirmed (read from code) or speculative.
 | Item | Status | Implementation Note |
 |------|--------|---------------------|
 | `1.1` | Complete | Forward-only refill candidate bounded by progress anchor. |
-| `1.2` | Complete | Oscillation detector thresholds tightened to `10/5/1500`. |
+| `1.2` | Complete | Oscillation detector thresholds tightened to `8/4/1500`. |
 | `1.3` | Complete | Turn-preserving break in `ReduceByDistance()`. |
 | `1.4` | Complete | Resume waypoint pop limit reduced to `2`. |
 | `2.1` | Complete | Mounted reached distance now adapts by upcoming turn shape. |

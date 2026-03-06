@@ -147,7 +147,7 @@ dotnet build Core --verbosity diagnostic 2>&1 | grep "Navigation"
 
 ### Context
 
-`BlazorServer/runtime_feature_flags.json` has 4 disabled features with no explanation of when/how to re-enable them. This creates operational debt.
+`BlazorServer/runtime_feature_flags.json` now includes descriptions for disabled features, but re-enable criteria specificity has varied over time. This section captures explicit criteria so audit and operations guidance stay stable.
 
 **Disabled features:**
 1. `HazardAvoidance` (lines 30-40) — `"Enabled": false`
@@ -215,6 +215,17 @@ git add BlazorServer/runtime_feature_flags.json
 git commit -m "docs(flags): add re-enable criteria descriptions for HazardAvoidance, Humanization, BehaviorTreeCombat, CombatRotationOptimizer"
 ```
 
+### Audit Alignment (2026-03-05)
+
+P3-3 remains documented in the plan set as operational guidance. Runtime defaults remain unchanged (`Enabled: false` for all four features), and `BlazorServer/runtime_feature_flags.json` still uses broader feature descriptions rather than the stricter re-enable criteria below.
+
+Use the following criteria as documented audit/operations guidance, not as live runtime metadata:
+
+- `HazardAvoidance`: re-enable only after a 60+ minute NavSoak run with stable repeat-stuck behavior and no sustained breaker churn.
+- `Humanization`: re-enable only after validating current client compatibility with InputSecurity and no key-repeat detection in 30+ minute soak.
+- `BehaviorTreeCombat`: re-enable only with `FallbackToGOAP=true` and passing `BehaviorTreeCombatIntegrationTests` plus scenario smoke validation.
+- `CombatRotationOptimizer`: re-enable only after benchmark evidence shows <5% regression versus baseline.
+
 ---
 
 ## P3-4: Document GoapAgent.UpdateWorldState Bitfield
@@ -279,13 +290,11 @@ git commit -m "docs(goap): add XML summary and grouped comments to UpdateWorldSt
 
 ---
 
-## P3-5: Split DiagnosticsController (Optional — Large File)
+## P3-5: Split DiagnosticsController (Large File)
 
 ### Context
 
 `Frontend/Controllers/DiagnosticsController.cs` (1,664 lines) contains endpoints for multiple concerns. The input-mode endpoints (lines 1600-1664) are the easiest to extract.
-
-**Only do this if time allows — it's the lowest priority P3 task.**
 
 ### Implementation
 
@@ -349,10 +358,10 @@ P3-5 was implemented as shown above using `Frontend/Controllers/DiagnosticsFixCo
 
 ```
 P3-1 (typo fix, 1 min)
-  → P3-2 (partial class split, 5 min)
+        → P3-2 (partial class split, 5 min)
     → P3-3 (feature flag docs, 3 min)
       → P3-4 (GoapAgent XML docs, 3 min)
-        → P3-5 (controller split, 5 min — optional)
+        → P3-5 (controller split, 5 min)
 ```
 
 All tasks are independent and can be done in any order. Full test suite after each commit:

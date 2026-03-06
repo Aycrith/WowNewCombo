@@ -19,6 +19,13 @@
 
 ---
 
+## Implementation Errata (2026-03-05)
+
+- Planned range `15-20` integration tests was implemented at the top end: `20` tests in `CoreUnitTests/BehaviorTree/BehaviorTreeCombatIntegrationTests.cs`.
+- The implementation filename/class match the archived plan intent; use project-level filtering (`--filter "FullyQualifiedName~BehaviorTreeCombatIntegrationTests"`) for current test invocation.
+
+---
+
 ## Task 1: Create Test File and Mock Helpers
 
 **Files:**

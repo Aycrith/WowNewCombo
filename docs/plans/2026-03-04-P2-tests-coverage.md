@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Fill 7 specific test coverage gaps identified in the codebase. Each sub-task is independent and can be done in 3-5 minutes.
+**Goal:** Fill 6 specific test coverage gaps identified in the codebase. Each sub-task is independent and can be done in 3-5 minutes.
 
 **Priority:** P2 — Coverage
 
