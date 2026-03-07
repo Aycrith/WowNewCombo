@@ -14,8 +14,9 @@
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action Stop
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action Api -ApiMethod GET -ApiPath /api/launch/status
 #>
+[CmdletBinding()]
 param(
-    [ValidateSet("Start", "StartAndValidate", "Validate", "Status", "Stop", "Restart", "Monitor", "Api", "CollectEvidence", "Soak", "LiveSession", "Doctor", "GameCmd", "FlagsProfile", "WatchNav", "NavTriage")]
+    [ValidateSet("Start", "StartAndValidate", "Validate", "Status", "Stop", "Restart", "Monitor", "Api", "CollectEvidence", "Soak", "LiveSession", "Doctor", "GameCmd", "FlagsProfile", "WatchNav", "NavTriage", "ValidateReroute", "ValidateNoProgress", "ValidateCombat")]
     [string]$Action = "StartAndValidate",
 
     [string]$Profile = "BloodElf_Rogue_8-60_TBC.json",
@@ -250,6 +251,241 @@ function Write-ArtifactJson
     $path = Join-Path $dir (Get-SafeArtifactName -Name $Name)
     $Object | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $path -Encoding UTF8
     return $path
+}
+
+function Read-FeatureFlagsJson
+{
+    $flagsPath = Get-FeatureFlagsFilePath
+    if (-not (Test-Path -LiteralPath $flagsPath))
+    {
+        return $null
+    }
+
+    return (Get-Content -LiteralPath $flagsPath -Raw -Encoding UTF8 | ConvertFrom-Json)
+}
+
+function Get-FeatureFlagEffectiveSubset
+{
+    param([AllowNull()][object]$FlagsDocument = $null)
+
+    if ($null -eq $FlagsDocument)
+    {
+        $FlagsDocument = Read-FeatureFlagsJson
+    }
+
+    if ($null -eq $FlagsDocument)
+    {
+        return $null
+    }
+
+    $featuresRoot = $FlagsDocument
+    if ($FlagsDocument.PSObject.Properties["Features"])
+    {
+        $featuresRoot = $FlagsDocument.Features
+    }
+
+    return [ordered]@{
+        HazardAvoidance = $featuresRoot.HazardAvoidance
+        StuckSensitivity = $featuresRoot.StuckSensitivity
+        PathSmoothing = $featuresRoot.PathSmoothing
+        InputSecurity = $featuresRoot.InputSecurity
+    }
+}
+
+function New-SessionManifestBaseline
+{
+    return [ordered]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Action = $Action
+        Profile = $Profile
+        Branch = (& git rev-parse --abbrev-ref HEAD 2>$null)
+        Commit = (& git rev-parse --short HEAD 2>$null)
+        SoakMinutes = $SoakMinutes
+        WindowMinutes = $WindowMinutes
+        EvidenceIntervalSeconds = $EvidenceIntervalSeconds
+        ShortValidationSeconds = $ShortValidationSeconds
+        MaxPatchLoops = $MaxPatchLoops
+    }
+}
+
+function Write-SessionManifest
+{
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$Baseline,
+        [switch]$IncludeRuntimeState
+    )
+
+    $manifest = [ordered]@{}
+    foreach ($entry in $Baseline.GetEnumerator())
+    {
+        $manifest[$entry.Key] = $entry.Value
+    }
+
+    $manifest.RequestedNavProfile = $NavProfile
+    $manifest.AppliedNavProfile = $(if ([string]::IsNullOrWhiteSpace("$script:FeatureFlagProfileApplied")) { "current" } else { $script:FeatureFlagProfileApplied })
+    $manifest.RuntimeFlagsFilePath = Get-FeatureFlagsFilePath
+    $manifest.ResolvedEffectiveFlags = Get-FeatureFlagEffectiveSubset
+
+    if ($IncludeRuntimeState)
+    {
+        $botStatus = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
+        $sessionStats = Invoke-AgentApiSafe -Method GET -Path "/api/session/stats" -TimeoutSec 5
+
+        $manifest.RuntimeMode = $(if ($botStatus.Success -and $null -ne $botStatus.Result.RuntimeMode) { "$($botStatus.Result.RuntimeMode)" } else { $null })
+        $manifest.AgentAvailable = $(if ($botStatus.Success -and $null -ne $botStatus.Result.AgentAvailable) { [bool]$botStatus.Result.AgentAvailable } else { $null })
+        $manifest.BotStatus = $botStatus
+        $manifest.SessionStats = $sessionStats
+    }
+
+    [void](Write-ArtifactJson -Name "session-manifest.json" -Object $manifest)
+}
+
+function Write-ActionFailureArtifact
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$ActionName,
+        [Parameter(Mandatory = $true)][System.Management.Automation.ErrorRecord]$ErrorRecord
+    )
+
+    try
+    {
+        Ensure-SessionArtifactDir | Out-Null
+
+        $botStatus = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
+        $sessionStats = Invoke-AgentApiSafe -Method GET -Path "/api/session/stats" -TimeoutSec 5
+        $artifactName = "{0}-{1}-failure.json" -f $script:RunTag, (Get-SafeArtifactName -Name $ActionName.ToLowerInvariant())
+        $line = $null
+        try { $line = $ErrorRecord.InvocationInfo.ScriptLineNumber } catch { }
+
+        [void](Write-ArtifactJson -Name $artifactName -Object ([ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Action = $ActionName
+            Profile = $Profile
+            RequestedNavProfile = $NavProfile
+            AppliedNavProfile = $(if ([string]::IsNullOrWhiteSpace("$script:FeatureFlagProfileApplied")) { "current" } else { $script:FeatureFlagProfileApplied })
+            RuntimeFlagsFilePath = Get-FeatureFlagsFilePath
+            ResolvedEffectiveFlags = Get-FeatureFlagEffectiveSubset
+            ErrorMessage = $ErrorRecord.Exception.Message
+            ScriptLineNumber = $line
+            ScriptStackTrace = $ErrorRecord.ScriptStackTrace
+            RuntimeMode = $(if ($botStatus.Success -and $null -ne $botStatus.Result.RuntimeMode) { "$($botStatus.Result.RuntimeMode)" } else { $null })
+            AgentAvailable = $(if ($botStatus.Success -and $null -ne $botStatus.Result.AgentAvailable) { [bool]$botStatus.Result.AgentAvailable } else { $null })
+            BotStatus = $botStatus
+            SessionStats = $sessionStats
+        }))
+    }
+    catch
+    {
+        Write-WarnLine "Failed to write action failure artifact: $($_.Exception.Message)"
+    }
+}
+
+function New-ActionSummary
+{
+    param([Parameter(Mandatory = $true)][string]$ActionName)
+
+    return [ordered]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Action = $ActionName
+        Profile = $Profile
+        RequestedNavProfile = $NavProfile
+        AppliedNavProfile = $(if ([string]::IsNullOrWhiteSpace("$script:FeatureFlagProfileApplied")) { "current" } else { $script:FeatureFlagProfileApplied })
+        RuntimeFlagsFilePath = Get-FeatureFlagsFilePath
+        SessionArtifactDir = $script:SessionArtifactDir
+        Passed = $false
+        FailureReasons = @()
+    }
+}
+
+function Add-ActionFailureReason
+{
+    param(
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$Summary,
+        [string]$Reason
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Reason))
+    {
+        return
+    }
+
+    $existing = @($Summary["FailureReasons"])
+    if ($existing -contains $Reason)
+    {
+        return
+    }
+
+    $Summary["FailureReasons"] = @($existing + $Reason)
+}
+
+function Write-ActionSummaryArtifact
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$ActionName,
+        [AllowNull()][object]$Summary
+    )
+
+    if ($null -eq $Summary)
+    {
+        return
+    }
+
+    Ensure-SessionArtifactDir | Out-Null
+    $artifactName = "{0}-{1}-summary.json" -f $script:RunTag, (Get-SafeArtifactName -Name $ActionName.ToLowerInvariant())
+    [void](Write-ArtifactJson -Name $artifactName -Object $Summary)
+}
+
+function Get-ApiSafeResultOrNull
+{
+    param([AllowNull()][object]$Response)
+
+    if ($null -ne $Response -and [bool]$Response.Success -and $null -ne $Response.Result)
+    {
+        return $Response.Result
+    }
+
+    return $null
+}
+
+function Read-JsonArtifact
+{
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path))
+    {
+        return $null
+    }
+
+    return (Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json)
+}
+
+function Measure-WindowMaximum
+{
+    param(
+        [Parameter(Mandatory = $true)][object[]]$Windows,
+        [Parameter(Mandatory = $true)][string]$PropertyName
+    )
+
+    $values = @()
+    foreach ($window in $Windows)
+    {
+        try
+        {
+            $raw = $window.$PropertyName
+            if ($null -ne $raw)
+            {
+                $values += [double]$raw
+            }
+        }
+        catch { }
+    }
+
+    if ($values.Count -eq 0)
+    {
+        return 0.0
+    }
+
+    return [double](($values | Measure-Object -Maximum).Maximum)
 }
 
 function Invoke-AgentApiSafe
@@ -489,9 +725,10 @@ function Invoke-AgentApi
 
                 if ($null -ne $_.ErrorDetails -and -not [string]::IsNullOrWhiteSpace($_.ErrorDetails.Message))
                 {
-                    if ($err -notlike "*$($_.ErrorDetails.Message)*")
+                    $errorDetailsMessage = "$($_.ErrorDetails.Message)"
+                    if ([string]::IsNullOrEmpty($err) -or -not $err.Contains($errorDetailsMessage, [System.StringComparison]::Ordinal))
                     {
-                        $err = "$err`n$($_.ErrorDetails.Message)"
+                        $err = "$err`n$errorDetailsMessage"
                     }
                 }
 
@@ -554,27 +791,15 @@ function Get-FeatureFlagProfilePatch
         }
         "stable-live"
         {
-            return [ordered]@{
-                "Features.HazardAvoidance.Enabled" = $false
-                "Features.StuckSensitivity.Enabled" = $true
-                "Features.StuckSensitivity.MinDistance" = 0.08
-                "Features.StuckSensitivity.UnstuckAfterMs" = 3200
-                "Features.StuckSensitivity.EnablePredictiveDetection" = $false
-                "Features.StuckSensitivity.PredictiveRiskThreshold" = 80
-                "Features.StuckSensitivity.ApproachTimeoutMultiplier" = 1.5
-            }
+            return [ordered]@{}
         }
         "triage-baseline"
         {
-            return (Get-FeatureFlagProfilePatch -ProfileName "stable-live")
+            return [ordered]@{}
         }
         "triage-hazard"
         {
             $patch = [ordered]@{}
-            foreach ($k in (Get-FeatureFlagProfilePatch -ProfileName "stable-live").Keys)
-            {
-                $patch[$k] = (Get-FeatureFlagProfilePatch -ProfileName "stable-live")[$k]
-            }
             $patch["Features.HazardAvoidance.Enabled"] = $true
             return $patch
         }
@@ -766,38 +991,44 @@ function Apply-FeatureFlagProfile
         [switch]$VerifyViaApi
     )
 
-    if ($ProfileName -eq "current")
-    {
-        Write-Info "Nav profile 'current' selected; no runtime flag changes applied"
-        $script:FeatureFlagProfileApplied = "current"
-        return
-    }
-
-    if (-not $script:FeatureFlagSnapshotActive)
-    {
-        Save-FeatureFlagSnapshot | Out-Null
-    }
+    $patch = Get-FeatureFlagProfilePatch -ProfileName $ProfileName
+    $script:FeatureFlagProfileApplied = $ProfileName
 
     $flagsPath = Get-FeatureFlagsFilePath
-    $json = Get-Content -LiteralPath $flagsPath -Raw -Encoding UTF8 | ConvertFrom-Json -Depth 64
-    $patch = Get-FeatureFlagProfilePatch -ProfileName $ProfileName
+    $json = Read-FeatureFlagsJson
 
-    foreach ($entry in $patch.GetEnumerator())
+    if ($patch.Count -gt 0)
     {
-        Set-ObjectPathValue -Root $json -Path $entry.Key -Value $entry.Value
-    }
+        if (-not $script:FeatureFlagSnapshotActive)
+        {
+            Save-FeatureFlagSnapshot | Out-Null
+        }
 
-    $json.LastModified = (Get-Date).ToUniversalTime().ToString("o")
-    ($json | ConvertTo-Json -Depth 64) | Set-Content -LiteralPath $flagsPath -Encoding UTF8
-    $script:FeatureFlagProfileApplied = $ProfileName
+        foreach ($entry in $patch.GetEnumerator())
+        {
+            Set-ObjectPathValue -Root $json -Path $entry.Key -Value $entry.Value
+        }
+
+        $json.LastModified = (Get-Date).ToUniversalTime().ToString("o")
+        ($json | ConvertTo-Json -Depth 64) | Set-Content -LiteralPath $flagsPath -Encoding UTF8
+    }
 
     [void](Write-ArtifactJson -Name ("{0}-flags-profile-{1}.json" -f $script:RunTag, $ProfileName) -Object ([ordered]@{
             TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
-            Profile = $ProfileName
+            RequestedProfile = $ProfileName
             Patch = $patch
+            RuntimeFlagsFilePath = $flagsPath
+            EffectiveFlags = (Get-FeatureFlagEffectiveSubset -FlagsDocument $(if ($patch.Count -gt 0) { $json } else { Read-FeatureFlagsJson }))
         }))
 
-    Write-Ok "Applied nav feature-flag profile '$ProfileName'"
+    if ($patch.Count -gt 0)
+    {
+        Write-Ok "Applied nav feature-flag profile '$ProfileName'"
+    }
+    else
+    {
+        Write-Info "Nav profile '$ProfileName' matches the checked-in baseline; no runtime flag changes applied"
+    }
 
     if ($VerifyViaApi)
     {
@@ -1232,27 +1463,65 @@ function Assert-ServiceReadinessGate
 {
     param(
         [Parameter(Mandatory = $true)][string]$Context,
-        [switch]$RequireApiHealth
+        [switch]$RequireApiHealth,
+        [int]$TimeoutSec = 20
     )
 
-    if (-not (Test-PortListening -Port $WebPort))
+    $deadline = (Get-Date).AddSeconds([Math]::Max(3, $TimeoutSec))
+    $lastFailureReason = $null
+    while ((Get-Date) -lt $deadline)
     {
-        throw "Readiness gate failed ($Context): web port $WebPort is not listening"
-    }
-
-    if (-not (Test-PortListening -Port $NavigationPort))
-    {
-        throw "Readiness gate failed ($Context): navigation port $NavigationPort is not listening"
-    }
-
-    if ($RequireApiHealth)
-    {
-        $health = Invoke-AgentApiSafe -Method GET -Path "/api/health" -TimeoutSec 5
-        if (-not $health.Success -or $null -eq $health.Result)
+        if (-not (Test-PortListening -Port $WebPort))
         {
-            throw "Readiness gate failed ($Context): /api/health unavailable ($($health.Error))"
+            $lastFailureReason = "web port $WebPort is not listening"
+            Start-Sleep -Milliseconds 750
+            continue
         }
+
+        if ($RequireApiHealth)
+        {
+            $health = Invoke-AgentApiSafe -Method GET -Path "/api/health" -TimeoutSec 5
+            if (-not $health.Success -or $null -eq $health.Result)
+            {
+                $lastFailureReason = "/api/health unavailable ($($health.Error))"
+                Start-Sleep -Milliseconds 750
+                continue
+            }
+        }
+
+        $launch = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+        if (-not $launch.Success -or $null -eq $launch.Result)
+        {
+            $portListening = Test-PortListening -Port $NavigationPort
+            if ($portListening)
+            {
+                return
+            }
+
+            $lastFailureReason = "launch status unavailable and navigation port $NavigationPort is not listening ($($launch.Error))"
+            Start-Sleep -Milliseconds 750
+            continue
+        }
+
+        $navigationAssessment = Get-LaunchNavigationAssessment -Launch $launch.Result
+        if ([bool]$navigationAssessment.IsOk)
+        {
+            return
+        }
+
+        $lastFailureReason = if (-not [string]::IsNullOrWhiteSpace("$($navigationAssessment.BlockingReason)"))
+        {
+            "$($navigationAssessment.BlockingReason)"
+        }
+        else
+        {
+            "$($navigationAssessment.Message)"
+        }
+
+        Start-Sleep -Milliseconds 750
     }
+
+    throw "Readiness gate failed ($Context): $lastFailureReason"
 }
 
 function Assert-ProfileRouteReadyGate
@@ -2174,6 +2443,57 @@ function Get-LaunchStatusCode([object]$Check)
     }
 }
 
+function Get-LaunchNavigationAssessment
+{
+    param([AllowNull()][object]$Launch)
+
+    $check = Get-LaunchCheck -Launch $Launch -Title "Navigation"
+    if ($null -eq $check)
+    {
+        $portListening = Test-PortListening -Port $NavigationPort
+        return [pscustomobject]@{
+            Present = $false
+            Source = "port-check"
+            Status = $(if ($portListening) { "Ok" } else { "Unavailable" })
+            StatusCode = $(if ($portListening) { 2 } else { -1 })
+            Message = $(if ($portListening) { "Navigation port listening" } else { "Navigation port $NavigationPort is not listening" })
+            IsBlocking = (-not $portListening)
+            IsOk = $portListening
+            BlockingReason = $(if ($portListening) { $null } else { "navigation port $NavigationPort is not listening" })
+        }
+    }
+
+    $statusCode = Get-LaunchStatusCode -Check $check
+    $statusText = if ($null -ne $check.Status) { "$($check.Status)" } else { "$statusCode" }
+    $message = if ($null -ne $check.Message) { "$($check.Message)" } else { "" }
+    $isBlocking = [bool](Get-OptionalPropertyValue -Object $check -Name "IsBlocking")
+    $connectedHybrid = $message.IndexOf("RemoteV3 connected", [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+    $isOk = ($statusCode -eq 2) -or $connectedHybrid
+    $blockingReason = $null
+    if (-not $isOk)
+    {
+        $blockingReason = if (-not [string]::IsNullOrWhiteSpace($message))
+        {
+            $message
+        }
+        else
+        {
+            "launch navigation check status=$statusText"
+        }
+    }
+
+    return [pscustomobject]@{
+        Present = $true
+        Source = "launch-check"
+        Status = $statusText
+        StatusCode = $statusCode
+        Message = $message
+        IsBlocking = ([bool]$isBlocking -or -not $isOk)
+        IsOk = $isOk
+        BlockingReason = $blockingReason
+    }
+}
+
 function Get-OptionalPropertyValue
 {
     param(
@@ -2904,10 +3224,71 @@ function Wait-ForReadiness
     $actionBarBypassApplied = $false
     $keyBindingsBypassApplied = $false
     $dtcHandshakeReloadAttempted = $false
+    $webSeenListening = $false
+    $navSeenListening = $false
 
     while ((Get-Date) -lt $deadline)
     {
         $attempt++
+
+        $webListening = Test-PortListening -Port $WebPort
+        $navListening = Test-PortListening -Port $NavigationPort
+        if ($webListening)
+        {
+            $webSeenListening = $true
+        }
+        if ($navListening)
+        {
+            $navSeenListening = $true
+        }
+
+        if (-not $webListening -or -not $navListening)
+        {
+            [void](Write-ArtifactJson -Name ("{0}-readiness-listener-state-attempt-{1}.json" -f $script:RunTag, $attempt) -Object ([ordered]@{
+                    TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                    Attempt = $attempt
+                    WebPort = $WebPort
+                    WebListening = $webListening
+                    NavigationPort = $NavigationPort
+                    NavigationListening = $navListening
+                    WebSeenListening = $webSeenListening
+                    NavigationSeenListening = $navSeenListening
+                }))
+
+            $dropDetected = ($webSeenListening -and -not $webListening) -or ($navSeenListening -and -not $navListening)
+            if ($dropDetected)
+            {
+                throw ("Launch readiness failed: web/nav listener dropped during readiness (attempt {0}, web={1}, nav={2})" -f $attempt, $webListening, $navListening)
+            }
+
+            Write-WarnLine ("Readiness check detected listener offline (attempt {0}, web={1}, nav={2}); reasserting services" -f $attempt, $webListening, $navListening)
+            if (-not $webListening)
+            {
+                Start-BlazorServer
+            }
+            if (-not $navListening)
+            {
+                Start-NavigationServer
+            }
+
+            $webAfterReassert = Test-PortListening -Port $WebPort
+            $navAfterReassert = Test-PortListening -Port $NavigationPort
+            [void](Write-ArtifactJson -Name ("{0}-readiness-listener-reassert-attempt-{1}.json" -f $script:RunTag, $attempt) -Object ([ordered]@{
+                    TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                    Attempt = $attempt
+                    WebListeningAfterReassert = $webAfterReassert
+                    NavigationListeningAfterReassert = $navAfterReassert
+                }))
+
+            if (-not $webAfterReassert -or -not $navAfterReassert)
+            {
+                throw ("Launch readiness failed: web/nav listener unavailable during readiness (attempt {0}, web={1}, nav={2})" -f $attempt, $webAfterReassert, $navAfterReassert)
+            }
+
+            $webSeenListening = $true
+            $navSeenListening = $true
+        }
+
         $launch = Invoke-AgentApi -Method GET -Path "/api/launch/status" -TimeoutSec 8
     if ($launch.CanStartBot)
     {
@@ -3018,6 +3399,49 @@ function Get-CurrentSnapshot
     }
 }
 
+function Test-CharacterAlignmentSnapshot
+{
+    param([AllowNull()][object]$Snapshot)
+
+    $issues = New-Object System.Collections.Generic.List[string]
+    $isHardFail = $false
+
+    if ($null -eq $Snapshot)
+    {
+        [void]$issues.Add("Player snapshot unavailable.")
+        return [pscustomobject]@{
+            IsValid = $false
+            IsHardFail = $false
+            IsDead = $false
+            Issues = @($issues)
+        }
+    }
+
+    if ([bool]$Snapshot.ChatInputVisible)
+    {
+        [void]$issues.Add("Chat input is open (press Escape first to avoid typing automation keys into chat).")
+        $isHardFail = $true
+    }
+
+    if ([bool]$Snapshot.Swimming)
+    {
+        [void]$issues.Add("Character is swimming (likely ocean/off-route position).")
+        $isHardFail = $true
+    }
+
+    if (($Snapshot.MapX -le 0) -or ($Snapshot.MapX -gt 100) -or ($Snapshot.MapY -le 0) -or ($Snapshot.MapY -gt 100))
+    {
+        [void]$issues.Add("Character map position appears out-of-bounds (MapX=$($Snapshot.MapX), MapY=$($Snapshot.MapY)).")
+    }
+
+    return [pscustomobject]@{
+        IsValid = ($issues.Count -eq 0)
+        IsHardFail = $isHardFail
+        IsDead = [bool]$Snapshot.Dead
+        Issues = @($issues)
+    }
+}
+
 function Assert-CharacterAlignment
 {
     if ($SkipCharacterGate)
@@ -3027,38 +3451,128 @@ function Assert-CharacterAlignment
     }
 
     Write-Info "Checking active character alignment"
-    $snap = Get-CurrentSnapshot
-    if ($null -eq $snap)
+
+    $maxAttempts = 12
+    $retryDelayMs = 1000
+    $requiredStableValidSamples = 2
+    $stableValidSamples = 0
+    $finalSnapshot = $null
+    $lastAssessment = $null
+    $samples = New-Object System.Collections.Generic.List[object]
+
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++)
     {
-        throw "Unable to read player snapshot for alignment checks."
+        $snap = Get-CurrentSnapshot
+        $assessment = Test-CharacterAlignmentSnapshot -Snapshot $snap
+        $lastAssessment = $assessment
+
+        [void]$samples.Add([ordered]@{
+            Attempt = $attempt
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            SnapshotAvailable = ($null -ne $snap)
+            UIMapId = $(if ($null -ne $snap) { $snap.UIMapId } else { $null })
+            MapX = $(if ($null -ne $snap) { $snap.MapX } else { $null })
+            MapY = $(if ($null -ne $snap) { $snap.MapY } else { $null })
+            Dead = $(if ($null -ne $snap) { [bool]$snap.Dead } else { $false })
+            Swimming = $(if ($null -ne $snap) { [bool]$snap.Swimming } else { $false })
+            ChatInputVisible = $(if ($null -ne $snap) { [bool]$snap.ChatInputVisible } else { $false })
+            IsValid = [bool]$assessment.IsValid
+            IsHardFail = [bool]$assessment.IsHardFail
+            Issues = @($assessment.Issues)
+        })
+
+        if ([bool]$assessment.IsHardFail)
+        {
+            [void](Write-ArtifactJson -Name ("{0}-character-alignment.json" -f $script:RunTag) -Object ([ordered]@{
+                TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                Passed = $false
+                FailureMode = "HardFail"
+                RequiredStableValidSamples = $requiredStableValidSamples
+                StableValidSamplesObserved = $stableValidSamples
+                AttemptCount = $samples.Count
+                TransientRecoveryObserved = $false
+                Samples = @($samples.ToArray())
+            }))
+            throw (@($assessment.Issues) -join " ")
+        }
+
+        if ([bool]$assessment.IsValid)
+        {
+            $stableValidSamples++
+            $finalSnapshot = $snap
+
+            if ($stableValidSamples -ge $requiredStableValidSamples)
+            {
+                break
+            }
+
+            if ($attempt -lt $maxAttempts)
+            {
+                Write-Info "Character alignment snapshot looks valid; confirming with one additional sample"
+                Start-Sleep -Milliseconds $retryDelayMs
+            }
+
+            continue
+        }
+
+        $stableValidSamples = 0
+        if ($attempt -lt $maxAttempts)
+        {
+            Write-WarnLine "Character alignment snapshot invalid (attempt $attempt/$maxAttempts): $(@($assessment.Issues) -join ' ') Retrying."
+            Start-Sleep -Milliseconds $retryDelayMs
+        }
     }
 
-    $issues = New-Object System.Collections.Generic.List[string]
-    if ($snap.ChatInputVisible)
+    if ($null -eq $finalSnapshot -or $stableValidSamples -lt $requiredStableValidSamples)
     {
-        [void]$issues.Add("Chat input is open (press Escape first to avoid typing automation keys into chat).")
-    }
-    $isDead = [bool]$snap.Dead
-    if ($snap.Swimming)
-    {
-        [void]$issues.Add("Character is swimming (likely ocean/off-route position).")
-    }
-    if (($snap.MapX -le 0) -or ($snap.MapX -gt 100) -or ($snap.MapY -le 0) -or ($snap.MapY -gt 100))
-    {
-        [void]$issues.Add("Character map position appears out-of-bounds (MapX=$($snap.MapX), MapY=$($snap.MapY)).")
+        $failureMessage = if ($null -ne $lastAssessment -and @($lastAssessment.Issues).Count -gt 0)
+        {
+            @($lastAssessment.Issues) -join " "
+        }
+        else
+        {
+            "Unable to read a stable player snapshot for alignment checks."
+        }
+
+        [void](Write-ArtifactJson -Name ("{0}-character-alignment.json" -f $script:RunTag) -Object ([ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Passed = $false
+            FailureMode = "RetryExhausted"
+            RequiredStableValidSamples = $requiredStableValidSamples
+            StableValidSamplesObserved = $stableValidSamples
+            AttemptCount = $samples.Count
+            TransientRecoveryObserved = [bool]($samples | Where-Object { -not $_.IsValid })
+            Samples = @($samples.ToArray())
+            Message = $failureMessage
+        }))
+
+        throw $failureMessage
     }
 
-    if ($issues.Count -gt 0)
-    {
-        throw ($issues -join " ")
-    }
+    [void](Write-ArtifactJson -Name ("{0}-character-alignment.json" -f $script:RunTag) -Object ([ordered]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Passed = $true
+        RequiredStableValidSamples = $requiredStableValidSamples
+        StableValidSamplesObserved = $stableValidSamples
+        AttemptCount = $samples.Count
+        TransientRecoveryObserved = [bool]($samples | Where-Object { -not $_.IsValid })
+        Samples = @($samples.ToArray())
+        FinalSnapshot = [ordered]@{
+            UIMapId = $finalSnapshot.UIMapId
+            MapX = $finalSnapshot.MapX
+            MapY = $finalSnapshot.MapY
+            Dead = [bool]$finalSnapshot.Dead
+            Swimming = [bool]$finalSnapshot.Swimming
+            ChatInputVisible = [bool]$finalSnapshot.ChatInputVisible
+        }
+    }))
 
-    if ($isDead)
+    if ([bool]$finalSnapshot.Dead)
     {
         Write-WarnLine "Character is dead; allowing startup so corpse-recovery GOAP can run autonomously."
     }
 
-    Write-Ok "Character alignment checks passed (MapX=$([math]::Round($snap.MapX, 2)), MapY=$([math]::Round($snap.MapY, 2)), UIMapId=$($snap.UIMapId))"
+    Write-Ok "Character alignment checks passed (MapX=$([math]::Round($finalSnapshot.MapX, 2)), MapY=$([math]::Round($finalSnapshot.MapY, 2)), UIMapId=$($finalSnapshot.UIMapId), Attempts=$($samples.Count))"
 }
 
 function Start-Bot
@@ -3179,6 +3693,19 @@ function Invoke-SystemValidation
     catch
     {
         [void]$checks.Add((New-ValidationCheckResult -Name "Bot status" -Passed $false -Message $_.Exception.Message))
+    }
+
+    try
+    {
+        $sessionStats = Invoke-AgentApi -Method GET -Path "/api/session/stats" -TimeoutSec 5
+        $statsSource = "$($sessionStats.StatsSource)"
+        $runtimeMode = "$($sessionStats.RuntimeMode)"
+        $pass = -not [string]::IsNullOrWhiteSpace($statsSource) -and $statsSource -ne "unavailable"
+        [void]$checks.Add((New-ValidationCheckResult -Name "Session stats" -Passed $pass -Message "Source=$statsSource, RuntimeMode=$runtimeMode, Kills=$($sessionStats.Kills), Deaths=$($sessionStats.Deaths)" -Data $sessionStats))
+    }
+    catch
+    {
+        [void]$checks.Add((New-ValidationCheckResult -Name "Session stats" -Passed $false -Message $_.Exception.Message))
     }
 
     try
@@ -3516,6 +4043,7 @@ function Invoke-WatchNav
     param(
         [int]$DurationSeconds = $WatchSeconds,
         [int]$CadenceMs = $WatchCadenceMs,
+        [int]$RequiredAcceptedFollowSamples = 0,
         [switch]$Quiet
     )
 
@@ -3526,6 +4054,8 @@ function Invoke-WatchNav
     $sampleFile = Join-Path $script:SessionArtifactDir ("{0}-watchnav-samples.jsonl" -f $script:RunTag)
     $deadline = (Get-Date).AddSeconds([Math]::Max(1, $DurationSeconds))
     $samples = New-Object System.Collections.Generic.List[object]
+    $acceptedFollowSamples = New-Object System.Collections.Generic.List[object]
+    $rejectedSampleCountsByReason = [ordered]@{}
 
     while ((Get-Date) -lt $deadline)
     {
@@ -3552,7 +4082,36 @@ function Invoke-WatchNav
             ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
         }
 
+        $evaluation = Get-RerouteReadinessEvaluation `
+            -BotStatus $sample.BotStatus `
+            -Snapshot $sample.Snapshot `
+            -LaunchStatus $sample.LaunchStatus `
+            -SessionStats $null
+        $navigationAssessment = Get-LaunchNavigationAssessment -Launch $sample.LaunchStatus
+
+        $sample["NavigationCheckStatus"] = $navigationAssessment.Status
+        $sample["NavigationCheckMessage"] = $navigationAssessment.Message
+        $sample["NavigationSource"] = $navigationAssessment.Source
+        $sample["NavigationBlockingReason"] = $navigationAssessment.BlockingReason
+        $sample["AcceptedRouteFollowSample"] = [bool]$evaluation.SamplePassed
+        $sample["RejectedReason"] = $evaluation.RejectionReason
+        $sample["LiveStateContaminated"] = [bool]$evaluation.LiveStateContaminated
+
         [void]$samples.Add($sample)
+        if ([bool]$evaluation.SamplePassed)
+        {
+            [void]$acceptedFollowSamples.Add($sample)
+        }
+        elseif (-not [string]::IsNullOrWhiteSpace($evaluation.RejectionReason))
+        {
+            if (-not $rejectedSampleCountsByReason.Contains($evaluation.RejectionReason))
+            {
+                $rejectedSampleCountsByReason[$evaluation.RejectionReason] = 0
+            }
+
+            $rejectedSampleCountsByReason[$evaluation.RejectionReason] = [int]$rejectedSampleCountsByReason[$evaluation.RejectionReason] + 1
+        }
+
         ($sample | ConvertTo-Json -Depth 24 -Compress) | Add-Content -LiteralPath $sampleFile -Encoding UTF8
 
         if (-not $Quiet)
@@ -3583,15 +4142,21 @@ function Invoke-WatchNav
                 }
             }
 
-            Write-Info ("WatchNav: Goal={0} MaxDev={1} RepeatRate={2} LastTrigger={3} FrontBypass={4}" -f $goal, $maxDev, $repeatRate, $trigger, $bypass)
+            Write-Info ("WatchNav: Goal={0} Accepted={1} MaxDev={2} RepeatRate={3} LastTrigger={4} FrontBypass={5}" -f $goal, [bool]$sample.AcceptedRouteFollowSample, $maxDev, $repeatRate, $trigger, $bypass)
+        }
+
+        if ($RequiredAcceptedFollowSamples -gt 0 -and $acceptedFollowSamples.Count -ge $RequiredAcceptedFollowSamples)
+        {
+            break
         }
 
         Start-Sleep -Milliseconds ([Math]::Max(250, $CadenceMs))
     }
 
-    $routeFollowSamples = @($samples | Where-Object {
+    $goalFollowSamples = @($samples | Where-Object {
             $null -ne $_.BotStatus -and "$($_.BotStatus.CurrentGoal)".Trim() -like "Follow*"
         })
+    $routeFollowSamples = @($acceptedFollowSamples)
 
     function Get-TriggerStats
     {
@@ -3769,7 +4334,7 @@ function Invoke-WatchNav
     if ($null -eq $allFrontBypassAttemptCount) { $allFrontBypassAttemptCount = 0 }
 
     $invalidReason = $null
-    if ($routeFollowSamples.Count -eq 0 -and $samples.Count -gt 0)
+    if ($routeFollowSamples.Count -lt [Math]::Max(1, $RequiredAcceptedFollowSamples) -and $samples.Count -gt 0)
     {
         $goalCounts = @{}
         foreach ($s in $samples)
@@ -3810,18 +4375,27 @@ function Invoke-WatchNav
 
         if ([string]::IsNullOrWhiteSpace($invalidReason))
         {
-            $invalidReason = "No FollowRoute samples observed"
+            if ($RequiredAcceptedFollowSamples -gt 0)
+            {
+                $invalidReason = "Clean FollowRoute sample target was not reached before timeout"
+            }
+            else
+            {
+                $invalidReason = "No FollowRoute samples observed"
+            }
         }
     }
 
     $summary = [pscustomobject]@{
         SampleFile = $sampleFile
         DurationSeconds = $DurationSeconds
+        RequiredAcceptedRouteFollowSamples = $RequiredAcceptedFollowSamples
         SampleCount = $samples.Count
         RouteFollowSampleCount = $routeFollowSamples.Count
+        GoalFollowSampleCount = $goalFollowSamples.Count
         RouteFollowSamplesObserved = ($routeFollowSamples.Count -gt 0)
-        NavigationValidationValid = ($routeFollowSamples.Count -gt 0)
-        MixedGoalWindow = ($routeFollowSamples.Count -gt 0 -and $routeFollowSamples.Count -lt $samples.Count)
+        NavigationValidationValid = $(if ($RequiredAcceptedFollowSamples -gt 0) { $routeFollowSamples.Count -ge $RequiredAcceptedFollowSamples } else { $routeFollowSamples.Count -gt 0 })
+        MixedGoalWindow = ($goalFollowSamples.Count -gt 0 -and $goalFollowSamples.Count -lt $samples.Count)
         RouteFollowEstimatedDurationSeconds = $routeFollowDurationSeconds
         StuckTriggersPerMinute = if ($DurationSeconds -gt 0) { [math]::Round(($stuckTriggerCount * 60.0) / $DurationSeconds, 3) } else { 0 }
         TimeoutNoProgressTriggerRatio = if ($stuckTriggerCount -gt 0) { [math]::Round(($timeoutTriggerCount * 1.0) / $stuckTriggerCount, 3) } else { 0 }
@@ -3835,6 +4409,11 @@ function Invoke-WatchNav
         RouteFollowDeviationMetricMode = "$($routeDevStats.Mode)"
         FrontBypassAttemptCount = [int]$allFrontBypassAttemptCount
         RouteFollowFrontBypassAttemptCount = [int]$routeFrontBypassAttemptCount
+        RejectedSampleCountsByReason = $rejectedSampleCountsByReason
+        NavigationCheckStatus = $(if ($samples.Count -gt 0) { $samples[$samples.Count - 1].NavigationCheckStatus } else { $null })
+        NavigationCheckMessage = $(if ($samples.Count -gt 0) { $samples[$samples.Count - 1].NavigationCheckMessage } else { $null })
+        NavigationSource = $(if ($samples.Count -gt 0) { $samples[$samples.Count - 1].NavigationSource } else { $null })
+        NavigationBlockingReason = $(if ($samples.Count -gt 0) { $samples[$samples.Count - 1].NavigationBlockingReason } else { $null })
         InvalidReason = $invalidReason
         LastSample = $(if ($samples.Count -gt 0) { $samples[$samples.Count - 1] } else { $null })
     }
@@ -3964,9 +4543,13 @@ function Invoke-CollectEvidence
     [void](Save-ApiSnapshot -ApiPath "/api/health" -FileStem ("{0}-{1}-health.json" -f $stamp, $Stage) -TimeoutSec 6)
     [void](Save-ApiSnapshot -ApiPath "/api/launch/status" -FileStem ("{0}-{1}-launch-status.json" -f $stamp, $Stage) -TimeoutSec 8)
     [void](Save-ApiSnapshot -ApiPath "/api/bot/status" -FileStem ("{0}-{1}-bot-status.json" -f $stamp, $Stage) -TimeoutSec 6)
+    [void](Save-ApiSnapshot -ApiPath "/api/session" -FileStem ("{0}-{1}-session.json" -f $stamp, $Stage) -TimeoutSec 6)
+    [void](Save-ApiSnapshot -ApiPath "/api/session/stats" -FileStem ("{0}-{1}-session-stats.json" -f $stamp, $Stage) -TimeoutSec 6)
     [void](Save-ApiSnapshot -ApiPath "/api/test/status" -FileStem ("{0}-{1}-test-status.json" -f $stamp, $Stage) -TimeoutSec $ValidationTimeoutSeconds)
     [void](Save-ApiSnapshot -ApiPath "/api/test/frames" -FileStem ("{0}-{1}-test-frames.json" -f $stamp, $Stage) -TimeoutSec $ValidationTimeoutSeconds)
     [void](Save-ApiSnapshot -ApiPath "/api/test/snapshot" -FileStem ("{0}-{1}-test-snapshot.json" -f $stamp, $Stage) -TimeoutSec $ValidationTimeoutSeconds)
+    [void](Save-ApiSnapshot -ApiPath "/api/diagnostics/navigation/runtime" -FileStem ("{0}-{1}-navigation-runtime.json" -f $stamp, $Stage) -TimeoutSec 8)
+    [void](Save-ApiSnapshot -ApiPath "/api/diagnostics/navigation/reroute" -FileStem ("{0}-{1}-navigation-reroute.json" -f $stamp, $Stage) -TimeoutSec 8)
     [void](Save-ApiSnapshot -ApiPath "/api/diagnostics/bags?take=50" -FileStem ("{0}-{1}-bags.json" -f $stamp, $Stage) -TimeoutSec 10)
     [void](Save-ApiSnapshot -ApiPath "/api/features" -FileStem ("{0}-{1}-features.json" -f $stamp, $Stage) -TimeoutSec 8)
     [void](Save-ApiSnapshot -ApiPath "/api/diagnostics/soak/current" -FileStem ("{0}-{1}-soak-current.json" -f $stamp, $Stage) -TimeoutSec 8)
@@ -4001,11 +4584,17 @@ function Invoke-CollectEvidence
 
 function Get-ActiveRunHealthSample
 {
+    $launch = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+    $launchResult = $(if ($launch.Success) { $launch.Result } else { $null })
+    $navigationAssessment = Get-LaunchNavigationAssessment -Launch $launchResult
+
     $result = [ordered]@{
         TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
         Ports = (Get-PortStateSnapshot)
         BotStatus = $null
-        LaunchStatus = $null
+        SessionStats = $null
+        LaunchStatus = $launchResult
+        NavigationAssessment = $navigationAssessment
         Snapshot = $null
         Health = $null
         Errors = @()
@@ -4014,11 +4603,13 @@ function Get-ActiveRunHealthSample
     $health = Invoke-AgentApiSafe -Method GET -Path "/api/health" -TimeoutSec 5
     if ($health.Success) { $result.Health = $health.Result } else { $result.Errors += "health: $($health.Error)" }
 
-    $launch = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
-    if ($launch.Success) { $result.LaunchStatus = $launch.Result } else { $result.Errors += "launch: $($launch.Error)" }
+    if (-not $launch.Success) { $result.Errors += "launch: $($launch.Error)" }
 
     $bot = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
     if ($bot.Success) { $result.BotStatus = $bot.Result } else { $result.Errors += "bot: $($bot.Error)" }
+
+    $stats = Invoke-AgentApiSafe -Method GET -Path "/api/session/stats" -TimeoutSec 5
+    if ($stats.Success) { $result.SessionStats = $stats.Result } else { $result.Errors += "session-stats: $($stats.Error)" }
 
     $snap = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 10
     if ($snap.Success -and $snap.Result.Success) { $result.Snapshot = $snap.Result.Data.snapshot } else { $result.Errors += "snapshot: $($snap.Error)" }
@@ -4039,7 +4630,30 @@ function Assert-NoImmediateAbortCondition
     {
         throw "Abort: Web port $WebPort is not listening"
     }
-    if (-not $Sample.Ports.NavigationPort.Listening)
+
+    $navigationAssessment = $Sample.NavigationAssessment
+    if ($null -eq $navigationAssessment -and $null -ne $Sample.LaunchStatus)
+    {
+        $navigationAssessment = Get-LaunchNavigationAssessment -Launch $Sample.LaunchStatus
+    }
+
+    if ($null -ne $navigationAssessment)
+    {
+        if (-not [bool]$navigationAssessment.IsOk)
+        {
+            $reason = if (-not [string]::IsNullOrWhiteSpace("$($navigationAssessment.BlockingReason)"))
+            {
+                "$($navigationAssessment.BlockingReason)"
+            }
+            else
+            {
+                "$($navigationAssessment.Message)"
+            }
+
+            throw "Abort: Navigation readiness degraded during live run ($reason)"
+        }
+    }
+    elseif (-not $Sample.Ports.NavigationPort.Listening)
     {
         throw "Abort: Navigation port $NavigationPort is not listening"
     }
@@ -4097,6 +4711,411 @@ function Invoke-ShortActiveValidation
     Write-Ok "Short active validation completed"
 }
 
+function Get-LiveSessionAcceptanceSummary
+{
+    param(
+        [AllowNull()][object]$WatchSummary,
+        [AllowNull()][object]$SoakResult
+    )
+
+    $summary = New-ActionSummary -ActionName "LiveSession"
+    $summary["InitialWatchRouteFollowSampleCount"] = $(if ($null -ne $WatchSummary) { [int]$WatchSummary.RouteFollowSampleCount } else { 0 })
+    $summary["InitialWatchNavigationValid"] = $(if ($null -ne $WatchSummary) { [bool]$WatchSummary.NavigationValidationValid } else { $false })
+
+    $samples = @()
+    if ($null -ne $SoakResult -and $null -ne $SoakResult.Samples)
+    {
+        $samples = @($SoakResult.Samples)
+    }
+
+    $summary["SoakSampleCount"] = $samples.Count
+    $summary["SoakArtifactPath"] = $(if ($null -ne $SoakResult -and -not [string]::IsNullOrWhiteSpace("$($SoakResult.SoakArtifactPath)")) { "$($SoakResult.SoakArtifactPath)" } else { $null })
+
+    $windows = @()
+    if ($null -ne $SoakResult -and $null -ne $SoakResult.SoakArtifact -and $null -ne $SoakResult.SoakArtifact.Windows)
+    {
+        $windows = @($SoakResult.SoakArtifact.Windows)
+    }
+
+    $summary["CompletedWindowCount"] = $windows.Count
+    $summary["HealthErrorCount"] = @($samples | Where-Object {
+            $errs = @($_.Errors)
+            ($null -eq $_.Health) -or (@($errs | Where-Object { "$_" -like "health:*" }).Count -gt 0)
+        }).Count
+    $summary["PortFailureCount"] = @($samples | Where-Object {
+            try
+            {
+                return ($null -eq $_.Ports) -or (-not [bool]$_.Ports.WebPort.Listening) -or (-not [bool]$_.Ports.NavigationPort.Listening)
+            }
+            catch
+            {
+                return $true
+            }
+        }).Count
+
+    $summary["MaxWindowRepeatStuckRate"] = [math]::Round((Measure-WindowMaximum -Windows $windows -PropertyName "RepeatStuckRate"), 4)
+    $summary["MaxWindowMaxRouteDeviation"] = [math]::Round((Measure-WindowMaximum -Windows $windows -PropertyName "MaxRouteDeviation"), 2)
+    $summary["MaxWindowStuckEvents"] = [int](Measure-WindowMaximum -Windows $windows -PropertyName "StuckEvents")
+    $summary["MaxWindowDetourOnlyCollapseCount"] = [int](Measure-WindowMaximum -Windows $windows -PropertyName "DetourOnlyCollapseCount")
+
+    if ([int]$summary["InitialWatchRouteFollowSampleCount"] -le 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Initial watch did not observe any FollowRoute samples."
+    }
+
+    if ([int]$summary["HealthErrorCount"] -gt 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("Health endpoint was unavailable in {0} soak samples." -f [int]$summary["HealthErrorCount"])
+    }
+
+    if ([int]$summary["PortFailureCount"] -gt 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("Web or navigation listener was unavailable in {0} soak samples." -f [int]$summary["PortFailureCount"])
+    }
+
+    if ($windows.Count -eq 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "No completed soak windows were recorded."
+    }
+
+    if ([double]$summary["MaxWindowRepeatStuckRate"] -gt 0.30)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("CurrentWindowRepeatStuckRate exceeded threshold: {0}" -f $summary["MaxWindowRepeatStuckRate"])
+    }
+
+    if ([double]$summary["MaxWindowMaxRouteDeviation"] -gt 120.0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("CurrentWindowMaxRouteDeviation exceeded threshold: {0}" -f $summary["MaxWindowMaxRouteDeviation"])
+    }
+
+    if ([int]$summary["MaxWindowStuckEvents"] -gt 8)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("CurrentWindowStuckEvents exceeded threshold: {0}" -f $summary["MaxWindowStuckEvents"])
+    }
+
+    if ([int]$summary["MaxWindowDetourOnlyCollapseCount"] -gt 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("DetourOnlyCollapseCount exceeded threshold: {0}" -f $summary["MaxWindowDetourOnlyCollapseCount"])
+    }
+
+    $summary["Passed"] = (@($summary["FailureReasons"]).Count -eq 0)
+    return $summary
+}
+
+function Get-RerouteAcceptanceSummary
+{
+    param([AllowNull()][object]$Report)
+
+    $summary = New-ActionSummary -ActionName "ValidateReroute"
+    $summary["PreflightPassed"] = $false
+    $summary["StableGateFailureReason"] = $null
+    $summary["HazardGateFailureReason"] = $null
+    $summary["RearmAttempts"] = 0
+    $summary["RejectedSampleCountsByReason"] = [ordered]@{}
+    $summary["LiveStateContaminated"] = $false
+    $summary["StableWatchRouteFollowSampleCount"] = 0
+    $summary["HazardWatchRouteFollowSampleCount"] = 0
+    $summary["RerouteEvidenceClosed"] = $false
+    $summary["TriggerCount"] = 0
+    $summary["ApplyCount"] = 0
+    $summary["DropCount"] = 0
+    $summary["DetourOnlyCollapseCount"] = 0
+    $summary["ProbeDistanceXY"] = 0
+    $summary["ProbeZDelta"] = 0
+    $summary["HazardSnapshotValid"] = $false
+    $summary["CentroidToSegmentDistance"] = $null
+    $summary["NavigationCheckStatus"] = $null
+    $summary["NavigationCheckMessage"] = $null
+    $summary["NavigationSource"] = $null
+    $summary["NavigationBlockingReason"] = $null
+
+    if ($null -eq $Report)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Reroute validation report was not generated."
+        $summary["Passed"] = $false
+        return $summary
+    }
+
+    $summary["PreflightPassed"] = [bool]$Report.PreflightPassed
+    $summary["StableGateFailureReason"] = $Report.StableGateFailureReason
+    $summary["HazardGateFailureReason"] = $Report.HazardGateFailureReason
+    $summary["RearmAttempts"] = [int]$Report.RearmAttempts
+    $summary["RejectedSampleCountsByReason"] = $(if ($null -ne $Report.RejectedSampleCountsByReason) { $Report.RejectedSampleCountsByReason } else { [ordered]@{} })
+    $summary["LiveStateContaminated"] = [bool]$Report.LiveStateContaminated
+    $summary["StableWatchRouteFollowSampleCount"] = $(if ($null -ne $Report.StableWatch) { [int]$Report.StableWatch.RouteFollowSampleCount } else { 0 })
+    $summary["HazardWatchRouteFollowSampleCount"] = $(if ($null -ne $Report.HazardWatch) { [int]$Report.HazardWatch.RouteFollowSampleCount } else { 0 })
+    $summary["RerouteEvidenceClosed"] = [bool]$Report.RerouteEvidenceClosed
+    $summary["TriggerCount"] = [int]$Report.TriggerCount
+    $summary["ApplyCount"] = [int]$Report.ApplyCount
+    $summary["DropCount"] = [int]$Report.DropCount
+    $summary["DetourOnlyCollapseCount"] = [int]$Report.DetourOnlyCollapseCount
+    $summary["ProbeDistanceXY"] = [double]$Report.ProbeDistanceXY
+    $summary["ProbeZDelta"] = [double]$Report.ProbeZDelta
+    $summary["HazardSnapshotValid"] = [bool]$Report.HazardSnapshotValid
+    $summary["CentroidToSegmentDistance"] = $Report.CentroidToSegmentDistance
+    $summary["NavigationCheckStatus"] = $(if ($null -ne $Report.HazardWatch -and -not [string]::IsNullOrWhiteSpace("$($Report.HazardWatch.NavigationCheckStatus)")) { "$($Report.HazardWatch.NavigationCheckStatus)" } elseif ($null -ne $Report.StableWatch) { "$($Report.StableWatch.NavigationCheckStatus)" } else { $null })
+    $summary["NavigationCheckMessage"] = $(if ($null -ne $Report.HazardWatch -and -not [string]::IsNullOrWhiteSpace("$($Report.HazardWatch.NavigationCheckMessage)")) { "$($Report.HazardWatch.NavigationCheckMessage)" } elseif ($null -ne $Report.StableWatch) { "$($Report.StableWatch.NavigationCheckMessage)" } else { $null })
+    $summary["NavigationSource"] = $(if ($null -ne $Report.HazardWatch -and -not [string]::IsNullOrWhiteSpace("$($Report.HazardWatch.NavigationSource)")) { "$($Report.HazardWatch.NavigationSource)" } elseif ($null -ne $Report.StableWatch) { "$($Report.StableWatch.NavigationSource)" } else { $null })
+    $summary["NavigationBlockingReason"] = $(if ($null -ne $Report.HazardWatch -and -not [string]::IsNullOrWhiteSpace("$($Report.HazardWatch.NavigationBlockingReason)")) { "$($Report.HazardWatch.NavigationBlockingReason)" } elseif ($null -ne $Report.StableWatch) { "$($Report.StableWatch.NavigationBlockingReason)" } else { $null })
+
+    if (-not [bool]$summary["PreflightPassed"])
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Reroute preflight did not reach a clean FollowRoute state before validation."
+    }
+    if (-not [string]::IsNullOrWhiteSpace("$($summary["StableGateFailureReason"])"))
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "$($summary["StableGateFailureReason"])"
+    }
+    if (-not [string]::IsNullOrWhiteSpace("$($summary["HazardGateFailureReason"])"))
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "$($summary["HazardGateFailureReason"])"
+    }
+    if ([bool]$summary["LiveStateContaminated"])
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Invalid live state for reroute proof was observed during validation."
+    }
+    if ([int]$summary["StableWatchRouteFollowSampleCount"] -lt 60)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("Stable watch RouteFollowSampleCount must be >= 60 but was {0}." -f [int]$summary["StableWatchRouteFollowSampleCount"])
+    }
+    if (-not [bool]$summary["RerouteEvidenceClosed"])
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Reroute validation did not close trigger/apply/drop within the allotted window."
+    }
+    if ([int]$summary["TriggerCount"] -le 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "RerouteTriggerCount did not exceed zero."
+    }
+    if ([int]$summary["ApplyCount"] -le 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "RerouteApplyCount did not exceed zero."
+    }
+    if ([int]$summary["DropCount"] -le 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "RerouteDropCount did not exceed zero."
+    }
+    if ([int]$summary["DetourOnlyCollapseCount"] -ne 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("DetourOnlyCollapseCount must be zero but was {0}." -f [int]$summary["DetourOnlyCollapseCount"])
+    }
+    if ([int]$summary["HazardWatchRouteFollowSampleCount"] -lt 60)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("Hazard watch RouteFollowSampleCount must be >= 60 but was {0}." -f [int]$summary["HazardWatchRouteFollowSampleCount"])
+    }
+    if (-not [bool]$summary["HazardSnapshotValid"])
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Synthetic hazard snapshot did not prove route intersection."
+    }
+
+    $summary["Passed"] = (@($summary["FailureReasons"]).Count -eq 0)
+    return $summary
+}
+
+function Get-NoProgressAcceptanceSummary
+{
+    param([AllowNull()][object]$Report)
+
+    $summary = New-ActionSummary -ActionName "ValidateNoProgress"
+    $summary["TriggerObserved"] = $false
+    $summary["RecoveryObserved"] = $false
+    $summary["TriggerReason"] = $null
+    $summary["SampleCount"] = 0
+
+    if ($null -eq $Report)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "No-progress validation report was not generated."
+        $summary["Passed"] = $false
+        return $summary
+    }
+
+    $summary["TriggerObserved"] = [bool]$Report.TriggerObserved
+    $summary["RecoveryObserved"] = [bool]$Report.RecoveryObserved
+    $summary["TriggerReason"] = "$($Report.TriggerReason)"
+    $summary["SampleCount"] = [int]$Report.SampleCount
+
+    if (-not [bool]$summary["TriggerObserved"])
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "No explicit ShortNoProgress or TimeoutNoProgress trigger was observed."
+    }
+    if (-not [bool]$summary["RecoveryObserved"])
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Recovery was not observed after the no-progress trigger."
+    }
+    if ([bool]$summary["TriggerObserved"] -and ("$($summary["TriggerReason"])" -notin @("ShortNoProgress", "TimeoutNoProgress")))
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("Unexpected trigger reason observed: {0}" -f "$($summary["TriggerReason"])")
+    }
+
+    $summary["Passed"] = (@($summary["FailureReasons"]).Count -eq 0)
+    return $summary
+}
+
+function Get-CombatAcceptanceSummary
+{
+    param([AllowNull()][object]$Report)
+
+    $summary = New-ActionSummary -ActionName "ValidateCombat"
+    $summary["KillsDelta"] = 0
+    $summary["TargetKills"] = 30
+    $summary["SpellCoverageComplete"] = $false
+    $summary["PullOpenerCounts"] = [ordered]@{
+        CurseOfAgony = 0
+        Immolate = 0
+        ShadowBolt = 0
+    }
+    $summary["SpellCounts"] = [ordered]@{
+        Immolate = 0
+        Corruption = 0
+        ShadowBolt = 0
+        Shoot = 0
+    }
+    $summary["FearCastCount"] = 0
+    $summary["DrainLifeCastCount"] = 0
+    $summary["HealthstoneUseCount"] = 0
+    $summary["HealthstoneCreateCount"] = 0
+    $summary["SummonVoidwalkerCount"] = 0
+    $summary["SummonImpCount"] = 0
+    $summary["PetSummonAttemptCount"] = 0
+    $summary["FacingRecoveryCount"] = 0
+    $summary["LowHealthSampleCount"] = 0
+    $summary["CriticalHealthSampleCount"] = 0
+    $summary["SpellFailedMovingCount"] = 0
+    $summary["BadAttackFacingCount"] = 0
+    $summary["LostTargetBurstCountWindow"] = 0
+    $summary["PullFailureSoftRetryCountWindow"] = 0
+    $summary["LostTargetReacquireAttemptCountWindow"] = 0
+    $summary["LostTargetReacquireSuccessCountWindow"] = 0
+    $summary["LostTargetReacquireSuccessRatio"] = $null
+
+    if ($null -eq $Report)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Controlled combat validation report was not generated."
+        $summary["Passed"] = $false
+        return $summary
+    }
+
+    $summary["KillsDelta"] = [int]$Report.KillsDelta
+    $summary["TargetKills"] = [int]$Report.TargetKills
+    $summary["PullOpenerCounts"] = [ordered]@{
+        CurseOfAgony = [int]$Report.PullOpenerCounts.CurseOfAgony
+        Immolate = [int]$Report.PullOpenerCounts.Immolate
+        ShadowBolt = [int]$Report.PullOpenerCounts.ShadowBolt
+    }
+    $summary["SpellCounts"] = [ordered]@{
+        Immolate = [int]$Report.SpellCounts.Immolate
+        Corruption = [int]$Report.SpellCounts.Corruption
+        ShadowBolt = [int]$Report.SpellCounts.ShadowBolt
+        Shoot = [int]$Report.SpellCounts.Shoot
+    }
+    $summary["FearCastCount"] = [int]$Report.FearCastCount
+    $summary["DrainLifeCastCount"] = [int]$Report.DrainLifeCastCount
+    $summary["HealthstoneUseCount"] = [int]$Report.HealthstoneUseCount
+    $summary["HealthstoneCreateCount"] = [int]$Report.HealthstoneCreateCount
+    $summary["SummonVoidwalkerCount"] = [int]$Report.SummonVoidwalkerCount
+    $summary["SummonImpCount"] = [int]$Report.SummonImpCount
+    $summary["PetSummonAttemptCount"] = [int]$Report.SummonVoidwalkerCount + [int]$Report.SummonImpCount
+    $summary["FacingRecoveryCount"] = [int]$Report.FacingRecoveryCount
+    $summary["LowHealthSampleCount"] = [int]$Report.LowHealthSampleCount
+    $summary["CriticalHealthSampleCount"] = [int]$Report.CriticalHealthSampleCount
+    $summary["SpellFailedMovingCount"] = [int]$Report.SpellFailedMovingCount
+    $summary["BadAttackFacingCount"] = [int]$Report.BadAttackFacingCount
+
+    $runtimeResult = Get-ApiSafeResultOrNull -Response $Report.Runtime
+    $combatRuntime = $null
+    $pullRuntime = $null
+    if ($null -ne $runtimeResult)
+    {
+        $combatRuntime = $runtimeResult.Combat
+        $pullRuntime = $runtimeResult.Pull
+    }
+
+    if ($null -eq $combatRuntime -or $null -eq $pullRuntime)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Combat runtime diagnostics were unavailable at the end of validation."
+    }
+    else
+    {
+        $summary["LostTargetBurstCountWindow"] = [int]$combatRuntime.LostTargetBurstCountWindow
+        $summary["LostTargetReacquireAttemptCountWindow"] = [int]$combatRuntime.LostTargetReacquireAttemptCountWindow
+        $summary["LostTargetReacquireSuccessCountWindow"] = [int]$combatRuntime.LostTargetReacquireSuccessCountWindow
+        $summary["PullFailureSoftRetryCountWindow"] = [int]$pullRuntime.PullFailureSoftRetryCountWindow
+
+        if ([int]$summary["LostTargetReacquireAttemptCountWindow"] -gt 0)
+        {
+            $summary["LostTargetReacquireSuccessRatio"] = [math]::Round(
+                ([double]$summary["LostTargetReacquireSuccessCountWindow"] / [double]$summary["LostTargetReacquireAttemptCountWindow"]),
+                4)
+        }
+    }
+
+    $summary["SpellCoverageComplete"] =
+        ([int]$summary["SpellCounts"].Immolate -gt 0) -and
+        ([int]$summary["SpellCounts"].Corruption -gt 0) -and
+        ([int]$summary["SpellCounts"].ShadowBolt -gt 0) -and
+        ([int]$summary["SpellCounts"].Shoot -gt 0)
+
+    if ([int]$summary["KillsDelta"] -lt [int]$summary["TargetKills"])
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("KillsDelta must be >= {0} but was {1}." -f [int]$summary["TargetKills"], [int]$summary["KillsDelta"])
+    }
+
+    if (-not [bool]$summary["SpellCoverageComplete"])
+    {
+        $missingSpells = New-Object System.Collections.Generic.List[string]
+        foreach ($spellName in @("Immolate", "Corruption", "ShadowBolt", "Shoot"))
+        {
+            if ([int]$summary["SpellCounts"][$spellName] -le 0)
+            {
+                [void]$missingSpells.Add($spellName)
+            }
+        }
+
+        Add-ActionFailureReason -Summary $summary -Reason ("Required spell evidence missing: {0}" -f ($missingSpells -join ", "))
+    }
+
+    if ([int]$summary["PullOpenerCounts"].CurseOfAgony -le 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Curse of Agony pull opener evidence was not observed."
+    }
+
+    if ([int]$summary["SpellFailedMovingCount"] -gt 2)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("SpellFailedMovingCount exceeded threshold: {0}" -f [int]$summary["SpellFailedMovingCount"])
+    }
+
+    if ([int]$summary["BadAttackFacingCount"] -ne 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("BadAttackFacingCount must be zero but was {0}." -f [int]$summary["BadAttackFacingCount"])
+    }
+
+    if ([int]$summary["LostTargetBurstCountWindow"] -ne 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("LostTargetBurstCountWindow must be zero but was {0}." -f [int]$summary["LostTargetBurstCountWindow"])
+    }
+
+    if ([int]$summary["PullFailureSoftRetryCountWindow"] -ne 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("PullFailureSoftRetryCountWindow must be zero but was {0}." -f [int]$summary["PullFailureSoftRetryCountWindow"])
+    }
+
+    if ([int]$summary["LostTargetReacquireAttemptCountWindow"] -gt 0 -and [double]$summary["LostTargetReacquireSuccessRatio"] -lt 0.80)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("Lost target reacquire success ratio must be >= 0.80 but was {0}." -f $summary["LostTargetReacquireSuccessRatio"])
+    }
+
+    $defensiveEvidenceCount =
+        [int]$summary["FearCastCount"] +
+        [int]$summary["DrainLifeCastCount"] +
+        [int]$summary["HealthstoneUseCount"]
+    if ([int]$summary["CriticalHealthSampleCount"] -gt 0 -and $defensiveEvidenceCount -le 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Critical low-health combat samples were observed without Fear, Drain Life, or Healthstone evidence."
+    }
+
+    $summary["Passed"] = (@($summary["FailureReasons"]).Count -eq 0)
+    return $summary
+}
+
 function Invoke-SoakRun
 {
     Write-Info "Starting soak run (${SoakMinutes}m target, ${WindowMinutes}m windows, cadence ${EvidenceIntervalSeconds}s)"
@@ -4112,10 +5131,12 @@ function Invoke-SoakRun
 
     $deadline = (Get-Date).AddMinutes($SoakMinutes)
     $sampleIndex = 0
+    $samples = New-Object System.Collections.Generic.List[object]
     while ((Get-Date) -lt $deadline)
     {
         $sampleIndex++
         $sample = Get-ActiveRunHealthSample
+        [void]$samples.Add($sample)
         Assert-NoImmediateAbortCondition -Sample $sample
         [void](Write-ArtifactJson -Name ("{0}-soak-sample-{1:D3}.json" -f (Get-Date -Format "yyyyMMdd-HHmmss"), $sampleIndex) -Object $sample)
 
@@ -4141,7 +5162,1151 @@ function Invoke-SoakRun
     }
 
     Invoke-CollectEvidence -Stage "soak-end" -FlushSoak
+    $soakCurrent = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/soak/current" -TimeoutSec 8
+    $soakArtifact = Get-ChildItem -LiteralPath $script:LogsDir -Filter "soak-nav-*.json" -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+    $soakArtifactPath = $null
+    $soakArtifactContent = $null
+    if ($null -ne $soakArtifact)
+    {
+        $soakArtifactPath = $soakArtifact.FullName
+        $soakArtifactContent = Read-JsonArtifact -Path $soakArtifactPath
+    }
+
     Write-Ok "Soak run completed"
+    return [pscustomobject]@{
+        SampleCount = $samples.Count
+        Samples = @($samples)
+        FinalSoak = $soakCurrent
+        SoakArtifactPath = $soakArtifactPath
+        SoakArtifact = $soakArtifactContent
+    }
+}
+
+function Get-RerouteProbeContext
+{
+    $resp = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/navigation/reroute" -TimeoutSec 8
+    if (-not $resp.Success -or $null -eq $resp.Result -or $null -eq $resp.Result.Reroute)
+    {
+        throw "Reroute diagnostics unavailable: $($resp.Error)"
+    }
+
+    $reroute = $resp.Result.Reroute
+    if ($null -eq $reroute.MapId -or $null -eq $reroute.CurrentPosition -or $null -eq $reroute.ProbeTarget)
+    {
+        throw "Reroute diagnostics did not expose deterministic probe data (MapId/CurrentPosition/ProbeTarget)."
+    }
+
+    return [pscustomobject]@{
+        Snapshot = $resp.Result
+        MapId = [int]$reroute.MapId
+        CurrentPosition = $reroute.CurrentPosition
+        ProbeTarget = $reroute.ProbeTarget
+    }
+}
+
+function Get-RerouteInjectionPlan
+{
+    param([Parameter(Mandatory = $true)][object]$ProbeContext)
+
+    $currentX = [double]$ProbeContext.CurrentPosition.X
+    $currentY = [double]$ProbeContext.CurrentPosition.Y
+    $currentZ = [double]$ProbeContext.CurrentPosition.Z
+    $targetX = [double]$ProbeContext.ProbeTarget.X
+    $targetY = [double]$ProbeContext.ProbeTarget.Y
+    $targetZ = [double]$ProbeContext.ProbeTarget.Z
+
+    $probeDistanceXY = [math]::Sqrt((($targetX - $currentX) * ($targetX - $currentX)) + (($targetY - $currentY) * ($targetY - $currentY)))
+    $probeZDelta = [math]::Abs($targetZ - $currentZ)
+    $zCorrected = $false
+    if ($probeZDelta -gt 10.0 -or [math]::Abs($targetZ) -le 0.01)
+    {
+        $targetZ = $currentZ
+        $probeZDelta = [math]::Abs($targetZ - $currentZ)
+        $zCorrected = $true
+    }
+
+    if ($probeDistanceXY -lt 1.0)
+    {
+        throw ("Reroute probe geometry is invalid: probe XY distance {0:N2} is too short." -f $probeDistanceXY)
+    }
+
+    $directionX = ($targetX - $currentX) / $probeDistanceXY
+    $directionY = ($targetY - $currentY) / $probeDistanceXY
+    $effectiveDistance = [math]::Max(18.0, [math]::Min($probeDistanceXY, 40.0))
+    $normalizedTarget = [ordered]@{
+        X = [math]::Round(($currentX + ($directionX * $effectiveDistance)), 3)
+        Y = [math]::Round(($currentY + ($directionY * $effectiveDistance)), 3)
+        Z = [math]::Round($targetZ, 3)
+    }
+
+    $corridorFractions = @(0.35, 0.5, 0.65)
+    $corridorPoints = @()
+    foreach ($fraction in $corridorFractions)
+    {
+        $corridorPoints += [pscustomobject]@{
+            X = [math]::Round(($currentX + (($normalizedTarget.X - $currentX) * $fraction)), 3)
+            Y = [math]::Round(($currentY + (($normalizedTarget.Y - $currentY) * $fraction)), 3)
+            Z = [math]::Round(($currentZ + (($normalizedTarget.Z - $currentZ) * $fraction)), 3)
+        }
+    }
+
+    return [pscustomobject]@{
+        CurrentPosition = [pscustomobject]@{
+            X = [math]::Round($currentX, 3)
+            Y = [math]::Round($currentY, 3)
+            Z = [math]::Round($currentZ, 3)
+        }
+        OriginalProbeTarget = $ProbeContext.ProbeTarget
+        NormalizedProbeTarget = [pscustomobject]$normalizedTarget
+        ProbeDistanceXY = [math]::Round($probeDistanceXY, 3)
+        ProbeZDelta = [math]::Round($probeZDelta, 3)
+        ZCorrected = $zCorrected
+        CorridorPoints = @($corridorPoints)
+    }
+}
+
+function Get-PointToSegmentDistance3D
+{
+    param(
+        [Parameter(Mandatory = $true)][object]$SegmentStart,
+        [Parameter(Mandatory = $true)][object]$SegmentEnd,
+        [Parameter(Mandatory = $true)][object]$Point
+    )
+
+    $start = [System.Numerics.Vector3]::new([float]$SegmentStart.X, [float]$SegmentStart.Y, [float]$SegmentStart.Z)
+    $end = [System.Numerics.Vector3]::new([float]$SegmentEnd.X, [float]$SegmentEnd.Y, [float]$SegmentEnd.Z)
+    $pointVector = [System.Numerics.Vector3]::new([float]$Point.X, [float]$Point.Y, [float]$Point.Z)
+    $segment = $end - $start
+    $lengthSquared = $segment.LengthSquared()
+
+    if ($lengthSquared -le 0.0001)
+    {
+        return [math]::Round([double][System.Numerics.Vector3]::Distance($start, $pointVector), 3)
+    }
+
+    $projection = [System.Numerics.Vector3]::Dot(($pointVector - $start), $segment) / $lengthSquared
+    $clampedProjection = [math]::Max(0.0, [math]::Min(1.0, $projection))
+    $closest = $start + ($segment * [float]$clampedProjection)
+    return [math]::Round([double][System.Numerics.Vector3]::Distance($closest, $pointVector), 3)
+}
+
+function Invoke-HazardClusterInjectionFromProbe
+{
+    param([Parameter(Mandatory = $true)][object]$ProbeContext)
+
+    $mapId = [int]$ProbeContext.MapId
+    $plan = Get-RerouteInjectionPlan -ProbeContext $ProbeContext
+    $current = $plan.CurrentPosition
+    $target = $plan.NormalizedProbeTarget
+
+    $clear = Invoke-AgentApiSafe -Method POST -Path "/api/debug/hazards/$mapId/clear" -Body @{} -TimeoutSec 8
+    if (-not $clear.Success)
+    {
+        throw "Failed to clear hazards for map ${mapId}: $($clear.Error)"
+    }
+
+    $injectResults = @()
+    foreach ($corridorPoint in @($plan.CorridorPoints))
+    {
+        $injectBody = [ordered]@{
+            x = $corridorPoint.X
+            y = $corridorPoint.Y
+            z = $corridorPoint.Z
+            uiMapId = $mapId
+            type = 99
+            count = 4
+            zone = "Agent-BotControl-Reroute"
+            ageMinutes = 1
+        }
+
+        $inject = Invoke-AgentApiSafe -Method POST -Path "/api/debug/hazards/$mapId/inject" -Body $injectBody -TimeoutSec 8
+        if (-not $inject.Success)
+        {
+            throw "Failed to inject hazards for map ${mapId}: $($inject.Error)"
+        }
+
+        $injectResults += @($inject.Result)
+    }
+
+    $cluster = Invoke-AgentApiSafe -Method POST -Path "/api/debug/hazards/$mapId/cluster" -Body @{} -TimeoutSec 8
+    if (-not $cluster.Success)
+    {
+        throw "Failed to cluster hazards for map ${mapId}: $($cluster.Error)"
+    }
+
+    return [pscustomobject]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        MapId = $mapId
+        CurrentPosition = $current
+        ProbeTarget = $target
+        OriginalProbeTarget = $plan.OriginalProbeTarget
+        ProbeDistanceXY = $plan.ProbeDistanceXY
+        ProbeZDelta = $plan.ProbeZDelta
+        ZCorrected = $plan.ZCorrected
+        CorridorPoints = @($plan.CorridorPoints)
+        Inject = @($injectResults)
+        Cluster = $cluster.Result
+    }
+}
+
+function Get-RerouteHazardSnapshotValidation
+{
+    param([Parameter(Mandatory = $true)][object]$InjectionResult)
+
+    $mapId = [int]$InjectionResult.MapId
+    $snapshot = Invoke-AgentApiSafe -Method GET -Path "/api/debug/hazards/${mapId}?includeEvents=true&includeClusters=true&maxEvents=20&maxClusters=20&mostRecentFirst=true" -TimeoutSec 8
+    if (-not $snapshot.Success -or $null -eq $snapshot.Result)
+    {
+        throw "Failed to capture hazard snapshot for map ${mapId}: $($snapshot.Error)"
+    }
+
+    $clusters = @($snapshot.Result.Clusters)
+    $bestCluster = $null
+    $bestDistance = [double]::PositiveInfinity
+    foreach ($cluster in $clusters)
+    {
+        if ($null -eq $cluster.Centroid)
+        {
+            continue
+        }
+
+        $distance = Get-PointToSegmentDistance3D -SegmentStart $InjectionResult.CurrentPosition -SegmentEnd $InjectionResult.ProbeTarget -Point $cluster.Centroid
+        if ($distance -lt $bestDistance)
+        {
+            $bestDistance = $distance
+            $bestCluster = $cluster
+        }
+    }
+
+    $passed = ($clusters.Count -gt 0) -and $bestDistance -le 30.0
+    $failureReason = $null
+    if ($clusters.Count -le 0)
+    {
+        $failureReason = "Synthetic hazard clustering produced zero clusters."
+    }
+    elseif ($bestDistance -gt 30.0)
+    {
+        $failureReason = ("Synthetic hazard centroid did not intersect the evaluated route segment (distance={0:N2})." -f $bestDistance)
+    }
+
+    return [pscustomobject]@{
+        MapId = $mapId
+        ClusterCount = $clusters.Count
+        Passed = $passed
+        BestCluster = $bestCluster
+        CentroidToSegmentDistance = $(if ([double]::IsPositiveInfinity($bestDistance)) { $null } else { [math]::Round($bestDistance, 3) })
+        Snapshot = $snapshot.Result
+        FailureReason = $failureReason
+    }
+}
+
+function Merge-ReasonCountMaps
+{
+    param([AllowNull()][object[]]$Maps)
+
+    $merged = [ordered]@{}
+    foreach ($map in @($Maps))
+    {
+        if ($null -eq $map)
+        {
+            continue
+        }
+
+        if ($map -is [System.Collections.IDictionary])
+        {
+            $entries = $map.GetEnumerator()
+        }
+        else
+        {
+            $entries = $map.PSObject.Properties
+        }
+
+        foreach ($entry in $entries)
+        {
+            $name = $(if ($entry -is [System.Collections.DictionaryEntry]) { "$($entry.Key)" } else { "$($entry.Name)" })
+            if ([string]::IsNullOrWhiteSpace($name))
+            {
+                continue
+            }
+
+            $value = [int]$entry.Value
+            if (-not $merged.Contains($name))
+            {
+                $merged[$name] = 0
+            }
+
+            $merged[$name] = [int]$merged[$name] + $value
+        }
+    }
+
+    return $merged
+}
+
+function Get-DominantReasonCount
+{
+    param([AllowNull()][object]$Counts)
+
+    $dominantName = $null
+    $dominantCount = 0
+    if ($null -eq $Counts)
+    {
+        return [pscustomobject]@{
+            Name = $null
+            Count = 0
+        }
+    }
+
+    if ($Counts -is [System.Collections.IDictionary])
+    {
+        $entries = $Counts.GetEnumerator()
+    }
+    else
+    {
+        $entries = $Counts.PSObject.Properties
+    }
+
+    foreach ($entry in $entries)
+    {
+        $value = [int]$entry.Value
+        if ($value -gt $dominantCount)
+        {
+            $dominantName = $(if ($entry -is [System.Collections.DictionaryEntry]) { "$($entry.Key)" } else { "$($entry.Name)" })
+            $dominantCount = $value
+        }
+    }
+
+    return [pscustomobject]@{
+        Name = $dominantName
+        Count = $dominantCount
+    }
+}
+
+function Get-RerouteReadinessEvaluation
+{
+    param(
+        [AllowNull()][object]$BotStatus,
+        [AllowNull()][object]$Snapshot,
+        [AllowNull()][object]$LaunchStatus,
+        [AllowNull()][object]$SessionStats,
+        [int]$BaselineDeaths = -1,
+        [AllowNull()][string[]]$TransientGoalPrefixes = @("Pull", "Combat", "Flee", "Walk To Corpse", "Loot", "Conditional Wait")
+    )
+
+    $goal = ""
+    if ($null -ne $BotStatus -and $null -ne $BotStatus.CurrentGoal)
+    {
+        $goal = "$($BotStatus.CurrentGoal)".Trim()
+    }
+
+    $launchReady = ($null -ne $LaunchStatus) -and [bool]$LaunchStatus.IsLaunchReady -and [bool]$LaunchStatus.CanStartBot
+    $isActive = ($null -ne $BotStatus) -and [bool]$BotStatus.IsActive
+    $snapshotAvailable = $null -ne $Snapshot
+    $sessionStatsAvailable = $null -ne $SessionStats
+    $currentDeaths = if ($sessionStatsAvailable -and $null -ne $SessionStats.Deaths) { [int]$SessionStats.Deaths } else { $BaselineDeaths }
+    $deathsIncreased = ($BaselineDeaths -ge 0) -and ($currentDeaths -gt $BaselineDeaths)
+
+    $goalIsFollow = -not [string]::IsNullOrWhiteSpace($goal) -and $goal.StartsWith("Follow", [System.StringComparison]::OrdinalIgnoreCase)
+    $goalIsCorpse = -not [string]::IsNullOrWhiteSpace($goal) -and $goal.IndexOf("Corpse", [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+    $goalIsCombat = -not [string]::IsNullOrWhiteSpace($goal) -and (
+        $goal.StartsWith("Combat", [System.StringComparison]::OrdinalIgnoreCase) -or
+        $goal.StartsWith("Pull", [System.StringComparison]::OrdinalIgnoreCase) -or
+        $goal.StartsWith("Flee", [System.StringComparison]::OrdinalIgnoreCase))
+
+    $goalIsTransient = $false
+    foreach ($prefix in @($TransientGoalPrefixes))
+    {
+        if ([string]::IsNullOrWhiteSpace($prefix))
+        {
+            continue
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($goal) -and $goal.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase))
+        {
+            $goalIsTransient = $true
+            break
+        }
+    }
+
+    $isDead = $snapshotAvailable -and [bool]$Snapshot.Dead
+    $isInCombat = $snapshotAvailable -and [bool]$Snapshot.InCombat
+
+    $rejectionReason = $null
+    $liveStateContaminated = $false
+    if (-not $isActive -or -not $launchReady -or -not $snapshotAvailable -or -not $sessionStatsAvailable)
+    {
+        $rejectionReason = "api/readiness failure"
+    }
+    elseif ($deathsIncreased -or $isDead -or $goalIsCorpse)
+    {
+        $rejectionReason = "death/corpse contamination"
+        $liveStateContaminated = $true
+    }
+    elseif ($isInCombat -or $goalIsCombat)
+    {
+        $rejectionReason = "combat contamination"
+    }
+    elseif ($goalIsTransient -or -not $goalIsFollow)
+    {
+        $rejectionReason = "goal contamination"
+    }
+
+    return [pscustomobject]@{
+        Goal = $goal
+        IsActive = $isActive
+        LaunchReady = $launchReady
+        BaselineDeaths = $BaselineDeaths
+        CurrentDeaths = $currentDeaths
+        DeathsIncreased = $deathsIncreased
+        RejectionReason = $rejectionReason
+        LiveStateContaminated = $liveStateContaminated
+        SamplePassed = [string]::IsNullOrWhiteSpace($rejectionReason)
+    }
+}
+
+function Wait-ForSustainedFollowRoute
+{
+    param(
+        [int]$TimeoutSec = 180,
+        [int]$RequiredConsecutiveSamples = 8,
+        [int]$CadenceMs = 1000,
+        [int]$InitialDeaths = -1,
+        [string]$GateName = "reroute-ready"
+    )
+
+    $deadline = (Get-Date).AddSeconds([Math]::Max(15, $TimeoutSec))
+    $samples = New-Object System.Collections.Generic.List[object]
+    $consecutiveFollowSamples = 0
+    $baselineDeaths = $InitialDeaths
+    $rejectedSampleCountsByReason = [ordered]@{}
+    $liveStateContaminated = $false
+
+    while ((Get-Date) -lt $deadline)
+    {
+        $stamp = (Get-Date).ToUniversalTime().ToString("o")
+        $bot = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
+        $snap = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 8
+        $nav = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/navigation/runtime" -TimeoutSec 8
+        $launch = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 5
+        $session = Invoke-AgentApiSafe -Method GET -Path "/api/session/stats" -TimeoutSec 5
+
+        $snapshot = $null
+        if ($snap.Success -and $null -ne $snap.Result -and $snap.Result.Success)
+        {
+            $snapshot = $snap.Result.Data.snapshot
+        }
+
+        $launchStatus = Get-ApiSafeResultOrNull -Response $launch
+        $sessionStats = Get-ApiSafeResultOrNull -Response $session
+        if ($baselineDeaths -lt 0 -and $null -ne $sessionStats -and $null -ne $sessionStats.Deaths)
+        {
+            $baselineDeaths = [int]$sessionStats.Deaths
+        }
+
+        $evaluation = Get-RerouteReadinessEvaluation -BotStatus (Get-ApiSafeResultOrNull -Response $bot) -Snapshot $snapshot -LaunchStatus $launchStatus -SessionStats $sessionStats -BaselineDeaths $baselineDeaths
+        $samplePassed = [bool]$evaluation.SamplePassed
+
+        if ($samplePassed)
+        {
+            $consecutiveFollowSamples++
+        }
+        else
+        {
+            $consecutiveFollowSamples = 0
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($evaluation.RejectionReason))
+        {
+            if (-not $rejectedSampleCountsByReason.Contains($evaluation.RejectionReason))
+            {
+                $rejectedSampleCountsByReason[$evaluation.RejectionReason] = 0
+            }
+
+            $rejectedSampleCountsByReason[$evaluation.RejectionReason] = [int]$rejectedSampleCountsByReason[$evaluation.RejectionReason] + 1
+        }
+
+        if ([bool]$evaluation.LiveStateContaminated)
+        {
+            $liveStateContaminated = $true
+        }
+
+        $sample = [ordered]@{
+            TimestampUtc = $stamp
+            GateName = $GateName
+            Goal = $evaluation.Goal
+            BotStatus = $(if ($bot.Success) { $bot.Result } else { $null })
+            Snapshot = $snapshot
+            NavigationRuntime = $(if ($nav.Success) { $nav.Result } else { $null })
+            LaunchStatus = $launchStatus
+            SessionStats = $sessionStats
+            SamplePassed = $samplePassed
+            RejectionReason = $evaluation.RejectionReason
+            LiveStateContaminated = [bool]$evaluation.LiveStateContaminated
+            ConsecutiveFollowSamples = $consecutiveFollowSamples
+            BaselineDeaths = $baselineDeaths
+            CurrentDeaths = $evaluation.CurrentDeaths
+        }
+
+        [void]$samples.Add($sample)
+
+        if ($samplePassed -and $consecutiveFollowSamples -ge [Math]::Max(2, $RequiredConsecutiveSamples))
+        {
+            [object[]]$sampleArray = $samples.ToArray()
+            return [pscustomobject]@{
+                Completed = $true
+                RequiredConsecutiveSamples = [Math]::Max(2, $RequiredConsecutiveSamples)
+                FinalConsecutiveFollowSamples = $consecutiveFollowSamples
+                FailureReason = $null
+                DominantRejectionReason = $null
+                LiveStateContaminated = $liveStateContaminated
+                InitialDeaths = $baselineDeaths
+                FinalDeaths = $evaluation.CurrentDeaths
+                RejectedSampleCountsByReason = $rejectedSampleCountsByReason
+                Samples = $sampleArray
+                Final = $sample
+            }
+        }
+
+        Start-Sleep -Milliseconds ([Math]::Max(250, $CadenceMs))
+    }
+
+    [object[]]$sampleArray = $samples.ToArray()
+    $dominantRejection = Get-DominantReasonCount -Counts $rejectedSampleCountsByReason
+    $failureReason = if ($liveStateContaminated)
+    {
+        "Invalid live state for reroute proof: death/corpse contamination prevented a clean FollowRoute window."
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($dominantRejection.Name))
+    {
+        "No sustained FollowRoute window was observed; dominant rejection reason was '{0}' ({1} samples)." -f $dominantRejection.Name, $dominantRejection.Count
+    }
+    else
+    {
+        "No sustained FollowRoute window was observed before timeout."
+    }
+
+    return [pscustomobject]@{
+        Completed = $false
+        RequiredConsecutiveSamples = [Math]::Max(2, $RequiredConsecutiveSamples)
+        FinalConsecutiveFollowSamples = $consecutiveFollowSamples
+        FailureReason = $failureReason
+        DominantRejectionReason = $dominantRejection.Name
+        LiveStateContaminated = $liveStateContaminated
+        InitialDeaths = $baselineDeaths
+        FinalDeaths = $(if ($sampleArray.Length -gt 0) { $sampleArray[$sampleArray.Length - 1].CurrentDeaths } else { $baselineDeaths })
+        RejectedSampleCountsByReason = $rejectedSampleCountsByReason
+        Samples = $sampleArray
+        Final = $(if ($sampleArray.Length -gt 0) { $sampleArray[$sampleArray.Length - 1] } else { $null })
+    }
+}
+
+function Invoke-ReroutePreflight
+{
+    param(
+        [int]$TimeoutSec = 120,
+        [int]$CadenceMs = 1000
+    )
+
+    $gate = Wait-ForSustainedFollowRoute -TimeoutSec ([Math]::Max(30, $TimeoutSec)) -RequiredConsecutiveSamples 3 -CadenceMs $CadenceMs -GateName "reroute-preflight"
+    return [pscustomobject]@{
+        Completed = [bool]$gate.Completed
+        FailureReason = $(if ($gate.Completed) { $null } else { $gate.FailureReason })
+        Gate = $gate
+        InitialDeaths = $gate.InitialDeaths
+        FinalDeaths = $gate.FinalDeaths
+        LiveStateContaminated = [bool]$gate.LiveStateContaminated
+        RejectedSampleCountsByReason = $gate.RejectedSampleCountsByReason
+    }
+}
+
+function Wait-ForRerouteEvidence
+{
+    param(
+        [int]$TimeoutSec = 45,
+        [int]$InitialTriggerCount = 0,
+        [int]$InitialApplyCount = 0,
+        [int]$InitialDropCount = 0,
+        [switch]$RequireTrigger,
+        [switch]$RequireApply,
+        [switch]$RequireDrop
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    $snapshots = New-Object System.Collections.Generic.List[object]
+
+    $requireTriggerCheck = $RequireTrigger.IsPresent
+    $requireApplyCheck = $RequireApply.IsPresent
+    $requireDropCheck = $RequireDrop.IsPresent
+    if (-not $requireTriggerCheck -and -not $requireApplyCheck -and -not $requireDropCheck)
+    {
+        $requireTriggerCheck = $true
+        $requireApplyCheck = $true
+        $requireDropCheck = $true
+    }
+
+    while ((Get-Date) -lt $deadline)
+    {
+        $resp = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/navigation/reroute" -TimeoutSec 8
+        if ($resp.Success -and $null -ne $resp.Result)
+        {
+            [void]$snapshots.Add($resp.Result)
+
+            $reroute = $resp.Result.Reroute
+            if ($null -ne $reroute)
+            {
+                $triggered = if ($requireTriggerCheck) { [int]$reroute.RerouteTriggerCount -gt $InitialTriggerCount } else { $true }
+                $applied = if ($requireApplyCheck) { [int]$reroute.RerouteApplyCount -gt $InitialApplyCount } else { $true }
+                $dropped = if ($requireDropCheck) { [int]$reroute.RerouteDropCount -gt $InitialDropCount } else { $true }
+                if ($triggered -and $applied -and $dropped)
+                {
+                    [object[]]$snapshotArray = $snapshots.ToArray()
+                    return [pscustomobject]@{
+                        Completed = $true
+                        Snapshots = $snapshotArray
+                        Final = $resp.Result
+                    }
+                }
+            }
+        }
+
+        Start-Sleep -Milliseconds 1000
+    }
+
+    [object[]]$snapshotArray = $snapshots.ToArray()
+    return [pscustomobject]@{
+        Completed = $false
+        Snapshots = $snapshotArray
+        Final = $(if ($snapshotArray.Length -gt 0) { $snapshotArray[$snapshotArray.Length - 1] } else { $null })
+    }
+}
+
+function Invoke-RerouteValidation
+{
+    $report = [ordered]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        RequestedProfile = $NavProfile
+        AppliedProfiles = @("stable-live", "triage-hazard")
+        Preflight = $null
+        PreflightPassed = $false
+        StableFollowGate = $null
+        StableGateFailureReason = $null
+        StableWatch = $null
+        HazardFollowGate = $null
+        HazardFollowGateAttempts = @()
+        HazardGateFailureReason = $null
+        RearmAttempts = 0
+        HazardWatch = $null
+        Probe = $null
+        Injection = $null
+        HazardSnapshotValidation = $null
+        ProbeDistanceXY = 0
+        ProbeZDelta = 0
+        HazardSnapshotValid = $false
+        InjectedCentroid = $null
+        CentroidToSegmentDistance = $null
+        TriggerApplyObserved = $false
+        DropObserved = $false
+        RerouteEvidenceClosed = $false
+        PreReloadReroute = $null
+        PostReloadReroute = $null
+        FinalReroute = $null
+        TriggerCount = 0
+        ApplyCount = 0
+        DropCount = 0
+        DetourOnlyCollapseCount = 0
+        RejectedSampleCountsByReason = [ordered]@{}
+        LiveStateContaminated = $false
+        Snapshots = @()
+    }
+    $summary = $null
+    try
+    {
+        Ensure-SessionArtifactDir | Out-Null
+        $baseline = New-SessionManifestBaseline
+        Write-SessionManifest -Baseline $baseline
+        Assert-ServiceReadinessGate -Context "reroute-validation-start" -RequireApiHealth
+        Assert-ProfileRouteReadyGate -Context "reroute-validation-start"
+        Assert-CastingSnapshotReadyGate -Context "reroute-validation-start"
+
+        if (-not $script:FeatureFlagSnapshotActive)
+        {
+            Save-FeatureFlagSnapshot | Out-Null
+        }
+
+        $rerouteWatchDurationSeconds = 180
+
+        Apply-FeatureFlagProfile -ProfileName "stable-live" -VerifyViaApi
+        $preflight = Invoke-ReroutePreflight -TimeoutSec ([Math]::Max(60, $ValidationTimeoutSeconds)) -CadenceMs $WatchCadenceMs
+        $report["Preflight"] = $preflight
+        $report["PreflightPassed"] = [bool]$preflight.Completed
+        [void](Write-ArtifactJson -Name ("{0}-reroute-preflight.json" -f $script:RunTag) -Object $preflight)
+        if (-not $preflight.Completed)
+        {
+            $report["StableGateFailureReason"] = $preflight.FailureReason
+            $report["LiveStateContaminated"] = [bool]$preflight.LiveStateContaminated
+            $report["RejectedSampleCountsByReason"] = Merge-ReasonCountMaps -Maps @($preflight.RejectedSampleCountsByReason)
+            throw "$($preflight.FailureReason)"
+        }
+
+        $stableFollowGate = Wait-ForSustainedFollowRoute -TimeoutSec ([Math]::Max(90, $ValidationTimeoutSeconds)) -RequiredConsecutiveSamples 8 -CadenceMs $WatchCadenceMs -InitialDeaths $preflight.FinalDeaths -GateName "stable-followroute"
+        $report["StableFollowGate"] = $stableFollowGate
+        $report["StableGateFailureReason"] = $stableFollowGate.FailureReason
+        $report["LiveStateContaminated"] = [bool]$report["LiveStateContaminated"] -or [bool]$stableFollowGate.LiveStateContaminated
+        $report["RejectedSampleCountsByReason"] = Merge-ReasonCountMaps -Maps @($report["RejectedSampleCountsByReason"], $stableFollowGate.RejectedSampleCountsByReason)
+        [void](Write-ArtifactJson -Name ("{0}-stable-followroute-gate.json" -f $script:RunTag) -Object $stableFollowGate)
+        if (-not $stableFollowGate.Completed)
+        {
+            throw "$($stableFollowGate.FailureReason)"
+        }
+
+        $stableWatch = Invoke-WatchNav -DurationSeconds $rerouteWatchDurationSeconds -CadenceMs $WatchCadenceMs -RequiredAcceptedFollowSamples 60
+        $report["StableWatch"] = $stableWatch
+        if (-not [bool]$stableWatch.NavigationValidationValid)
+        {
+            $report["StableGateFailureReason"] = $stableWatch.InvalidReason
+            throw "$($stableWatch.InvalidReason)"
+        }
+
+        Apply-FeatureFlagProfile -ProfileName "triage-hazard" -VerifyViaApi
+        Write-SessionManifest -Baseline $baseline -IncludeRuntimeState
+        $hazardFollowGate = $null
+        $hazardGateAttempts = New-Object System.Collections.Generic.List[object]
+        $hazardInitialDeaths = $stableFollowGate.FinalDeaths
+        $maxHazardRearmAttempts = 3
+        for ($attempt = 1; $attempt -le $maxHazardRearmAttempts; $attempt++)
+        {
+            $gateAttempt = Wait-ForSustainedFollowRoute -TimeoutSec ([Math]::Max(90, $ValidationTimeoutSeconds)) -RequiredConsecutiveSamples 8 -CadenceMs $WatchCadenceMs -InitialDeaths $hazardInitialDeaths -GateName ("hazard-followroute-attempt-{0}" -f $attempt)
+            [void]$hazardGateAttempts.Add($gateAttempt)
+            [void](Write-ArtifactJson -Name ("{0}-hazard-followroute-gate-attempt-{1}.json" -f $script:RunTag, $attempt) -Object $gateAttempt)
+
+            if ($gateAttempt.Completed)
+            {
+                $hazardFollowGate = $gateAttempt
+                break
+            }
+
+            $hazardFollowGate = $gateAttempt
+            if ([bool]$gateAttempt.LiveStateContaminated -or $gateAttempt.DominantRejectionReason -eq "api/readiness failure")
+            {
+                break
+            }
+
+            if ($attempt -lt $maxHazardRearmAttempts)
+            {
+                Start-Sleep -Seconds 10
+                Assert-ServiceReadinessGate -Context ("reroute-validation-rearm-{0}" -f $attempt) -RequireApiHealth
+                Assert-ProfileRouteReadyGate -Context ("reroute-validation-rearm-{0}" -f $attempt)
+            }
+        }
+
+        $hazardGateAttemptsArray = $hazardGateAttempts.ToArray()
+        $hazardRejectedCounts = @()
+        foreach ($attemptResult in $hazardGateAttemptsArray)
+        {
+            $hazardRejectedCounts += @($attemptResult.RejectedSampleCountsByReason)
+        }
+
+        $hazardFollowGateAggregate = [ordered]@{
+            Completed = [bool]($null -ne $hazardFollowGate -and $hazardFollowGate.Completed)
+            FailureReason = $(if ($null -ne $hazardFollowGate) { $hazardFollowGate.FailureReason } else { "Hazard reroute validation did not execute." })
+            RearmAttempts = [Math]::Max(0, $hazardGateAttemptsArray.Length - 1)
+            Attempts = @($hazardGateAttemptsArray)
+            Final = $(if ($null -ne $hazardFollowGate) { $hazardFollowGate.Final } else { $null })
+            Samples = $(if ($null -ne $hazardFollowGate) { $hazardFollowGate.Samples } else { @() })
+            RejectedSampleCountsByReason = (Merge-ReasonCountMaps -Maps $hazardRejectedCounts)
+            LiveStateContaminated = [bool](($hazardGateAttemptsArray | Where-Object { $_.LiveStateContaminated }).Count -gt 0)
+            InitialDeaths = $hazardInitialDeaths
+            FinalDeaths = $(if ($null -ne $hazardFollowGate) { $hazardFollowGate.FinalDeaths } else { $hazardInitialDeaths })
+            DominantRejectionReason = $(if ($null -ne $hazardFollowGate) { $hazardFollowGate.DominantRejectionReason } else { $null })
+        }
+        $report["HazardFollowGate"] = $hazardFollowGateAggregate
+        $report["HazardFollowGateAttempts"] = @($hazardGateAttemptsArray)
+        $report["HazardGateFailureReason"] = $hazardFollowGateAggregate.FailureReason
+        $report["RearmAttempts"] = [int]$hazardFollowGateAggregate.RearmAttempts
+        $report["LiveStateContaminated"] = [bool]$report["LiveStateContaminated"] -or [bool]$hazardFollowGateAggregate.LiveStateContaminated
+        $report["RejectedSampleCountsByReason"] = Merge-ReasonCountMaps -Maps @($report["RejectedSampleCountsByReason"], $hazardFollowGateAggregate.RejectedSampleCountsByReason)
+        [void](Write-ArtifactJson -Name ("{0}-hazard-followroute-gate.json" -f $script:RunTag) -Object $hazardFollowGateAggregate)
+        if (-not [bool]$hazardFollowGateAggregate.Completed)
+        {
+            throw "$($hazardFollowGateAggregate.FailureReason)"
+        }
+
+        $probe = Get-RerouteProbeContext
+        $report["Probe"] = $probe
+        $injection = Invoke-HazardClusterInjectionFromProbe -ProbeContext $probe
+        $report["Injection"] = $injection
+        [void](Write-ArtifactJson -Name ("{0}-reroute-injection.json" -f $script:RunTag) -Object $injection)
+        $hazardSnapshotValidation = Get-RerouteHazardSnapshotValidation -InjectionResult $injection
+        $report["HazardSnapshotValidation"] = $hazardSnapshotValidation
+        $report["ProbeDistanceXY"] = [double]$injection.ProbeDistanceXY
+        $report["ProbeZDelta"] = [double]$injection.ProbeZDelta
+        $report["HazardSnapshotValid"] = [bool]$hazardSnapshotValidation.Passed
+        $report["InjectedCentroid"] = $(if ($null -ne $hazardSnapshotValidation.BestCluster -and $null -ne $hazardSnapshotValidation.BestCluster.Centroid) { $hazardSnapshotValidation.BestCluster.Centroid } else { $null })
+        $report["CentroidToSegmentDistance"] = $hazardSnapshotValidation.CentroidToSegmentDistance
+        [void](Write-ArtifactJson -Name ("{0}-reroute-hazard-snapshot-validation.json" -f $script:RunTag) -Object $hazardSnapshotValidation)
+        if (-not $hazardSnapshotValidation.Passed)
+        {
+            throw "$($hazardSnapshotValidation.FailureReason)"
+        }
+
+        $hazardWatch = Invoke-WatchNav -DurationSeconds $rerouteWatchDurationSeconds -CadenceMs $WatchCadenceMs -RequiredAcceptedFollowSamples 60
+        $report["HazardWatch"] = $hazardWatch
+        if (-not [bool]$hazardWatch.NavigationValidationValid)
+        {
+            $report["HazardGateFailureReason"] = $hazardWatch.InvalidReason
+            throw "$($hazardWatch.InvalidReason)"
+        }
+        $triggerApplyWait = Wait-ForRerouteEvidence -TimeoutSec ([Math]::Max(45, $ValidationTimeoutSeconds)) -RequireTrigger -RequireApply
+        [void](Write-ArtifactJson -Name ("{0}-reroute-trigger-apply-wait.json" -f $script:RunTag) -Object $triggerApplyWait)
+
+        $preReloadReroute = $(if ($null -ne $triggerApplyWait.Final) { $triggerApplyWait.Final.Reroute } else { $null })
+        $dropWait = [pscustomobject]@{
+            Completed = $false
+            Snapshots = @()
+            Final = $null
+        }
+        if ($triggerApplyWait.Completed)
+        {
+            $dropBaseline = if ($null -ne $preReloadReroute) { [int]$preReloadReroute.RerouteDropCount } else { 0 }
+            Start-Sleep -Seconds 3
+            Load-BotProfile
+            $dropWait = Wait-ForRerouteEvidence -TimeoutSec ([Math]::Max(45, $ValidationTimeoutSeconds)) -InitialDropCount $dropBaseline -RequireDrop
+            [void](Write-ArtifactJson -Name ("{0}-reroute-drop-wait.json" -f $script:RunTag) -Object $dropWait)
+        }
+
+        Invoke-CollectEvidence -Stage "reroute-validation-end"
+
+        $postReloadReroute = $(if ($null -ne $dropWait.Final) { $dropWait.Final.Reroute } else { $null })
+        $finalReroute = $(if ($null -ne $postReloadReroute) { $postReloadReroute } else { $preReloadReroute })
+        $triggerCount = [Math]::Max($(if ($null -ne $preReloadReroute) { [int]$preReloadReroute.RerouteTriggerCount } else { 0 }), $(if ($null -ne $postReloadReroute) { [int]$postReloadReroute.RerouteTriggerCount } else { 0 }))
+        $applyCount = [Math]::Max($(if ($null -ne $preReloadReroute) { [int]$preReloadReroute.RerouteApplyCount } else { 0 }), $(if ($null -ne $postReloadReroute) { [int]$postReloadReroute.RerouteApplyCount } else { 0 }))
+        $dropCount = [Math]::Max($(if ($null -ne $preReloadReroute) { [int]$preReloadReroute.RerouteDropCount } else { 0 }), $(if ($null -ne $postReloadReroute) { [int]$postReloadReroute.RerouteDropCount } else { 0 }))
+        $detourOnlyCollapseCount = [Math]::Max($(if ($null -ne $preReloadReroute) { [int]$preReloadReroute.DetourOnlyCollapseCount } else { 0 }), $(if ($null -ne $postReloadReroute) { [int]$postReloadReroute.DetourOnlyCollapseCount } else { 0 }))
+        $combinedSnapshots = @()
+        if ($null -ne $triggerApplyWait -and $null -ne $triggerApplyWait.Snapshots)
+        {
+            $combinedSnapshots += @($triggerApplyWait.Snapshots)
+        }
+        if ($null -ne $dropWait -and $null -ne $dropWait.Snapshots)
+        {
+            $combinedSnapshots += @($dropWait.Snapshots)
+        }
+
+        $report["TriggerApplyObserved"] = [bool]$triggerApplyWait.Completed
+        $report["DropObserved"] = [bool]$dropWait.Completed
+        $report["RerouteEvidenceClosed"] = [bool]($triggerApplyWait.Completed -and $dropWait.Completed)
+        $report["PreReloadReroute"] = $preReloadReroute
+        $report["PostReloadReroute"] = $postReloadReroute
+        $report["FinalReroute"] = $finalReroute
+        $report["TriggerCount"] = $triggerCount
+        $report["ApplyCount"] = $applyCount
+        $report["DropCount"] = $dropCount
+        $report["DetourOnlyCollapseCount"] = $detourOnlyCollapseCount
+        $report["Snapshots"] = @($combinedSnapshots)
+
+        [void](Write-ArtifactJson -Name ("{0}-reroute-validation.json" -f $script:RunTag) -Object $report)
+        $summary = Get-RerouteAcceptanceSummary -Report $report
+        Write-ActionSummaryArtifact -ActionName "ValidateReroute" -Summary $summary
+        if (-not [bool]$summary["Passed"])
+        {
+            throw ("Reroute validation failed acceptance: {0}" -f ([string]::Join(" | ", @($summary["FailureReasons"]))))
+        }
+
+        return $report
+    }
+    catch
+    {
+        if ($null -ne $report)
+        {
+            [void](Write-ArtifactJson -Name ("{0}-reroute-validation.json" -f $script:RunTag) -Object $report)
+        }
+
+        if ($null -eq $summary)
+        {
+            $summary = Get-RerouteAcceptanceSummary -Report $report
+        }
+
+        Add-ActionFailureReason -Summary $summary -Reason $_.Exception.Message
+        $summary["Passed"] = $false
+        Write-ActionSummaryArtifact -ActionName "ValidateReroute" -Summary $summary
+        throw
+    }
+    finally
+    {
+        if ([bool]$RestoreFlagsOnExit -and $script:FeatureFlagSnapshotActive)
+        {
+            try
+            {
+                Restore-FeatureFlagSnapshot
+                [void](Wait-ForFeatureFlagsApplied -ExpectedPatch @{} -TimeoutSec 2 -SkipIfApiUnavailable)
+            }
+            catch
+            {
+                Write-WarnLine "Failed to restore feature flags on exit: $($_.Exception.Message)"
+            }
+        }
+    }
+}
+
+function Invoke-NoProgressValidation
+{
+    $report = $null
+    $summary = $null
+    try
+    {
+        Ensure-SessionArtifactDir | Out-Null
+        $baseline = New-SessionManifestBaseline
+        Write-SessionManifest -Baseline $baseline
+        Assert-ServiceReadinessGate -Context "no-progress-validation-start" -RequireApiHealth
+        Assert-ProfileRouteReadyGate -Context "no-progress-validation-start"
+        Write-SessionManifest -Baseline $baseline -IncludeRuntimeState
+
+        $deadline = (Get-Date).AddSeconds([Math]::Max(120, $WatchSeconds))
+        $samples = New-Object System.Collections.Generic.List[object]
+        $triggerSample = $null
+        $recoveryObserved = $false
+
+        while ((Get-Date) -lt $deadline)
+        {
+            $runtime = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/navigation/runtime" -TimeoutSec 8
+            if ($runtime.Success -and $null -ne $runtime.Result)
+            {
+                [void]$samples.Add($runtime.Result)
+                $stuck = $runtime.Result.StuckDetector
+                if ($null -ne $stuck)
+                {
+                    $reason = "$($stuck.LastTriggerReason)"
+                    if ($reason -eq "ShortNoProgress" -or $reason -eq "TimeoutNoProgress")
+                    {
+                        $triggerSample = $runtime.Result
+                    }
+
+                    if ($null -ne $triggerSample -and -not [bool]$stuck.IsCurrentlyStuck)
+                    {
+                        $recoveryObserved = $true
+                        break
+                    }
+                }
+            }
+
+            Start-Sleep -Milliseconds 1000
+        }
+
+        Invoke-CollectEvidence -Stage "no-progress-validation-end"
+        $report = [ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            TriggerObserved = $null -ne $triggerSample
+            RecoveryObserved = $recoveryObserved
+            TriggerReason = $(if ($null -ne $triggerSample -and $null -ne $triggerSample.StuckDetector) { "$($triggerSample.StuckDetector.LastTriggerReason)" } else { $null })
+            SampleCount = $samples.Count
+            Samples = @($samples)
+        }
+
+        [void](Write-ArtifactJson -Name ("{0}-no-progress-validation.json" -f $script:RunTag) -Object $report)
+        $summary = Get-NoProgressAcceptanceSummary -Report $report
+        Write-ActionSummaryArtifact -ActionName "ValidateNoProgress" -Summary $summary
+        if (-not [bool]$summary["Passed"])
+        {
+            throw ("No-progress validation failed acceptance: {0}" -f ([string]::Join(" | ", @($summary["FailureReasons"]))))
+        }
+
+        return $report
+    }
+    catch
+    {
+        if ($null -eq $summary)
+        {
+            $summary = Get-NoProgressAcceptanceSummary -Report $report
+        }
+
+        Add-ActionFailureReason -Summary $summary -Reason $_.Exception.Message
+        $summary["Passed"] = $false
+        Write-ActionSummaryArtifact -ActionName "ValidateNoProgress" -Summary $summary
+        throw
+    }
+}
+
+function Get-SessionLogContent
+{
+    $logCandidates = @(
+        (Join-Path $script:LogsDir "$script:RunTag-blazor-stdout.log"),
+        (Join-Path $script:LogsDir "$script:RunTag-blazor-stderr.log")
+    )
+
+    if (Test-Path -LiteralPath $script:SessionArtifactDir)
+    {
+        $artifactCandidates = Get-ChildItem -LiteralPath $script:SessionArtifactDir -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Extension -in @(".log", ".txt") } |
+            Sort-Object LastWriteTimeUtc
+        foreach ($candidate in @($artifactCandidates))
+        {
+            $logCandidates += $candidate.FullName
+        }
+    }
+
+    $content = New-Object System.Text.StringBuilder
+    foreach ($candidate in @($logCandidates | Select-Object -Unique))
+    {
+        if (Test-Path -LiteralPath $candidate)
+        {
+            [void]$content.AppendLine((Get-Content -LiteralPath $candidate -Raw -Encoding UTF8))
+        }
+    }
+
+    return $content.ToString()
+}
+
+function Get-RegexMatchCount
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Content,
+        [Parameter(Mandatory = $true)][string]$Pattern
+    )
+
+    return ([regex]::Matches($Content, $Pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
+}
+
+function Get-CombatHealthWindowCount
+{
+    param(
+        [Parameter(Mandatory = $true)][object[]]$Samples,
+        [double]$Threshold = 35
+    )
+
+    $count = 0
+    foreach ($sample in @($Samples))
+    {
+        try
+        {
+            if ($null -eq $sample -or $null -eq $sample.Snapshot -or -not [bool]$sample.Snapshot.Success)
+            {
+                continue
+            }
+
+            $snapshotResult = $sample.Snapshot.Result
+            if ($null -eq $snapshotResult -or $null -eq $snapshotResult.Data -or $null -eq $snapshotResult.Data.snapshot)
+            {
+                continue
+            }
+
+            $healthPercent = [double]$snapshotResult.Data.snapshot.healthPercent
+            if ($healthPercent -lt $Threshold)
+            {
+                $count++
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    return $count
+}
+
+function Invoke-ControlledCombatValidation
+{
+    $report = $null
+    $summary = $null
+    try
+    {
+        Ensure-SessionArtifactDir | Out-Null
+        $baseline = New-SessionManifestBaseline
+        Write-SessionManifest -Baseline $baseline
+        Assert-ServiceReadinessGate -Context "combat-validation-start" -RequireApiHealth
+        Assert-ProfileRouteReadyGate -Context "combat-validation-start"
+        Write-SessionManifest -Baseline $baseline -IncludeRuntimeState
+
+        $targetKills = 30
+        $startStats = Invoke-AgentApi -Method GET -Path "/api/session/stats" -TimeoutSec 5
+        $startKills = [int]$startStats.Kills
+        $deadline = (Get-Date).AddSeconds([Math]::Max(900, ($ShortValidationSeconds * 2)))
+        $samples = New-Object System.Collections.Generic.List[object]
+
+        while ((Get-Date) -lt $deadline)
+        {
+            $stats = Invoke-AgentApiSafe -Method GET -Path "/api/session/stats" -TimeoutSec 5
+            $runtime = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/navigation/runtime" -TimeoutSec 8
+            $snapshot = Invoke-AgentApiSafe -Method GET -Path "/api/test/snapshot" -TimeoutSec 8
+            $sample = [ordered]@{
+                TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                SessionStats = $stats
+                Runtime = $runtime
+                Snapshot = $snapshot
+            }
+            [void]$samples.Add($sample)
+
+            if ($stats.Success -and ([int]$stats.Result.Kills - $startKills) -ge $targetKills)
+            {
+                break
+            }
+
+            Start-Sleep -Seconds ([Math]::Max(5, [Math]::Min(15, $MonitorIntervalSeconds)))
+        }
+
+        Invoke-CollectEvidence -Stage "combat-validation-end"
+        $endStats = Invoke-AgentApi -Method GET -Path "/api/session/stats" -TimeoutSec 5
+        $killsDelta = [int]$endStats.Kills - $startKills
+        $logContent = Get-SessionLogContent
+        $runtimeFinal = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/navigation/runtime" -TimeoutSec 8
+        $lowHealthSampleCount = Get-CombatHealthWindowCount -Samples @($samples) -Threshold 35
+        $criticalHealthSampleCount = Get-CombatHealthWindowCount -Samples @($samples) -Threshold 20
+
+        $report = [ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            StartKills = $startKills
+            EndKills = [int]$endStats.Kills
+            KillsDelta = $killsDelta
+            TargetKills = $targetKills
+            PullOpenerCounts = [ordered]@{
+                CurseOfAgony = (Get-RegexMatchCount -Content $logContent -Pattern "Curse of Agony")
+                Immolate = (Get-RegexMatchCount -Content $logContent -Pattern "\bImmolate\b")
+                ShadowBolt = (Get-RegexMatchCount -Content $logContent -Pattern "Shadow Bolt")
+            }
+            SpellCounts = [ordered]@{
+                Immolate = (Get-RegexMatchCount -Content $logContent -Pattern "\bImmolate\b")
+                Corruption = (Get-RegexMatchCount -Content $logContent -Pattern "\bCorruption\b")
+                ShadowBolt = (Get-RegexMatchCount -Content $logContent -Pattern "Shadow Bolt")
+                Shoot = (Get-RegexMatchCount -Content $logContent -Pattern "\bShoot\b")
+            }
+            FearCastCount = (Get-RegexMatchCount -Content $logContent -Pattern "\bFear\b")
+            DrainLifeCastCount = (Get-RegexMatchCount -Content $logContent -Pattern "Drain Life")
+            HealthstoneUseCount = (Get-RegexMatchCount -Content $logContent -Pattern "Healthstone use requested|Use Healthstone")
+            HealthstoneCreateCount = (Get-RegexMatchCount -Content $logContent -Pattern "Create Healthstone requested|Create Healthstone")
+            SummonVoidwalkerCount = (Get-RegexMatchCount -Content $logContent -Pattern "Summon Voidwalker")
+            SummonImpCount = (Get-RegexMatchCount -Content $logContent -Pattern "Summon Imp")
+            LostTargetCount = (Get-RegexMatchCount -Content $logContent -Pattern "Lost target")
+            SpellFailedMovingCount = (Get-RegexMatchCount -Content $logContent -Pattern "SPELL_FAILED_MOVING")
+            BadAttackFacingCount = (Get-RegexMatchCount -Content $logContent -Pattern "ERR_BADATTACKFACING")
+            FacingRecoveryCount = (Get-RegexMatchCount -Content $logContent -Pattern "React to ERR_BADATTACKFACING")
+            LowHealthSampleCount = $lowHealthSampleCount
+            CriticalHealthSampleCount = $criticalHealthSampleCount
+            Runtime = $runtimeFinal
+            Samples = @($samples)
+        }
+
+        [void](Write-ArtifactJson -Name ("{0}-combat-validation.json" -f $script:RunTag) -Object $report)
+        $summary = Get-CombatAcceptanceSummary -Report $report
+        Write-ActionSummaryArtifact -ActionName "ValidateCombat" -Summary $summary
+        if (-not [bool]$summary["Passed"])
+        {
+            throw ("Controlled combat validation failed acceptance: {0}" -f ([string]::Join(" | ", @($summary["FailureReasons"]))))
+        }
+
+        return $report
+    }
+    catch
+    {
+        if ($null -eq $summary)
+        {
+            $summary = Get-CombatAcceptanceSummary -Report $report
+        }
+
+        Add-ActionFailureReason -Summary $summary -Reason $_.Exception.Message
+        $summary["Passed"] = $false
+        Write-ActionSummaryArtifact -ActionName "ValidateCombat" -Summary $summary
+        throw
+    }
 }
 
 function Invoke-LiveSession
@@ -4149,20 +6314,12 @@ function Invoke-LiveSession
     Ensure-SessionArtifactDir | Out-Null
     Write-Info "Session artifact directory: $script:SessionArtifactDir"
 
-    $baseline = [ordered]@{
-        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
-        Action = $Action
-        Profile = $Profile
-        Branch = (& git rev-parse --abbrev-ref HEAD 2>$null)
-        Commit = (& git rev-parse --short HEAD 2>$null)
-        SoakMinutes = $SoakMinutes
-        WindowMinutes = $WindowMinutes
-        EvidenceIntervalSeconds = $EvidenceIntervalSeconds
-        ShortValidationSeconds = $ShortValidationSeconds
-        MaxPatchLoops = $MaxPatchLoops
-    }
-    [void](Write-ArtifactJson -Name "session-manifest.json" -Object $baseline)
+    $baseline = New-SessionManifestBaseline
+    Write-SessionManifest -Baseline $baseline
     [void](Write-ArtifactJson -Name "prestart-ports.json" -Object (Get-PortStateSnapshot))
+    $watchSummary = $null
+    $soakResult = $null
+    $summary = $null
 
     try
     {
@@ -4173,6 +6330,7 @@ function Invoke-LiveSession
         }
 
         Invoke-StartFlow -WithValidation
+        Write-SessionManifest -Baseline $baseline -IncludeRuntimeState
         Assert-ServiceReadinessGate -Context "live-session-post-start" -RequireApiHealth
         Invoke-CollectEvidence -Stage "post-start"
 
@@ -4195,6 +6353,7 @@ function Invoke-LiveSession
             {
                 Write-Info "Applying triage-recommended profile '$($triage.RecommendedProfile)' for soak run"
                 Apply-FeatureFlagProfile -ProfileName "$($triage.RecommendedProfile)" -VerifyViaApi
+                Write-SessionManifest -Baseline $baseline -IncludeRuntimeState
             }
 
             $botStatusAfterTriage = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
@@ -4206,8 +6365,27 @@ function Invoke-LiveSession
 
         Invoke-CollectEvidence -Stage "pre-soak"
         Assert-ServiceReadinessGate -Context "live-session-pre-soak" -RequireApiHealth
-        Invoke-SoakRun
+        $soakResult = Invoke-SoakRun
         Invoke-CollectEvidence -Stage "final" -FlushSoak
+
+        $summary = Get-LiveSessionAcceptanceSummary -WatchSummary $watchSummary -SoakResult $soakResult
+        Write-ActionSummaryArtifact -ActionName "LiveSession" -Summary $summary
+        if (-not [bool]$summary["Passed"])
+        {
+            throw ("Live session failed acceptance: {0}" -f ([string]::Join(" | ", @($summary["FailureReasons"]))))
+        }
+    }
+    catch
+    {
+        if ($null -eq $summary)
+        {
+            $summary = Get-LiveSessionAcceptanceSummary -WatchSummary $watchSummary -SoakResult $soakResult
+        }
+
+        Add-ActionFailureReason -Summary $summary -Reason $_.Exception.Message
+        $summary["Passed"] = $false
+        Write-ActionSummaryArtifact -ActionName "LiveSession" -Summary $summary
+        throw
     }
     finally
     {
@@ -4370,6 +6548,21 @@ try
             $report = Invoke-NavTriage
             $report | ConvertTo-Json -Depth 24
         }
+        "ValidateReroute"
+        {
+            $report = Invoke-RerouteValidation
+            $report | ConvertTo-Json -Depth 24
+        }
+        "ValidateNoProgress"
+        {
+            $report = Invoke-NoProgressValidation
+            $report | ConvertTo-Json -Depth 24
+        }
+        "ValidateCombat"
+        {
+            $report = Invoke-ControlledCombatValidation
+            $report | ConvertTo-Json -Depth 24
+        }
         "Soak"
         {
             Invoke-SoakRun
@@ -4384,6 +6577,7 @@ try
 }
 catch
 {
+    Write-ActionFailureArtifact -ActionName $Action -ErrorRecord $_
     $line = $null
     try { $line = $_.InvocationInfo.ScriptLineNumber } catch { }
     if ($line)
