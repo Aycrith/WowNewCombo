@@ -317,6 +317,7 @@ public static class DependencyInjection
     {
         s.AddSingleton<ManualResetEventSlim>(x => new(false));
         s.AddSingleton<Wait>();
+        s.TryAddSingleton<SessionStatsCache>();
 
         s.AddSingleton<StartupClientVersion>();
         s.AddSingleton<DataConfig>(x => DataConfig.Load(

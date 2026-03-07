@@ -50,6 +50,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly ActionBarMacroReader macroReader;
     private readonly IBotStartGuard botStartGuard;
     private readonly ProfileManager profileManager;
+    private readonly SessionStatsCache sessionStatsCache;
 
     private readonly NpcNameOverlay? npcNameOverlay;
 
@@ -133,7 +134,8 @@ public sealed partial class BotController : IBotController, IDisposable
         ActionBarSlotValidator slotValidator,
         ActionBarTextureReader textureReader,
         ActionBarMacroReader macroReader,
-        IBotStartGuard botStartGuard)
+        IBotStartGuard botStartGuard,
+        SessionStatsCache sessionStatsCache)
     {
         this.serviceProvider = serviceProvider;
 
@@ -151,6 +153,7 @@ public sealed partial class BotController : IBotController, IDisposable
         this.textureReader = textureReader;
         this.macroReader = macroReader;
         this.botStartGuard = botStartGuard;
+        this.sessionStatsCache = sessionStatsCache;
 
         this.minimapNodeFinder = minimapNodeFinder;
 
@@ -492,6 +495,7 @@ public sealed partial class BotController : IBotController, IDisposable
         }
         else
         {
+            CaptureCurrentSessionStats();
             RecordDeactivateReason(string.IsNullOrWhiteSpace(reason) ? "ManualToggleStop" : reason!);
         }
 
@@ -561,6 +565,8 @@ public sealed partial class BotController : IBotController, IDisposable
 
     private void CreateSession(ClassConfiguration config)
     {
+        CaptureCurrentSessionStats();
+
         IServiceCollection s = new ServiceCollection();
 
         s.AddSingleton<IBotController>(this);
@@ -629,6 +635,7 @@ public sealed partial class BotController : IBotController, IDisposable
 
     public void Dispose()
     {
+        CaptureCurrentSessionStats();
         cts.Cancel();
 
         addonThread.Join(TimeSpan.FromSeconds(3));
@@ -647,6 +654,7 @@ public sealed partial class BotController : IBotController, IDisposable
 
     public void Shutdown()
     {
+        CaptureCurrentSessionStats();
         cts.Cancel();
     }
 
@@ -736,6 +744,17 @@ public sealed partial class BotController : IBotController, IDisposable
     }
 
     #region logging
+
+    private void CaptureCurrentSessionStats()
+    {
+        GoapAgent? goapAgent = GoapAgent;
+        if (goapAgent == null)
+        {
+            return;
+        }
+
+        sessionStatsCache.Capture(goapAgent, BotRuntimeModeHelper.Live);
+    }
 
     [LoggerMessage(
         EventId = 1000,
