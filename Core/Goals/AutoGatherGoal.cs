@@ -1,4 +1,4 @@
-﻿using Core.Addon;
+using Core.Addon;
 using Core.GoalsComponent;
 using Core.GOAP;
 
@@ -50,11 +50,13 @@ public sealed class AutoGatherGoal : GoapGoal, IGoapEventListener, IRouteProvide
         key = keyAction;
 
         foundNodeListener.NodeFound += FoundNode;
+        navigation.OnNoPathFound += Navigation_OnStuck;
     }
 
     public void Dispose()
     {
         foundNodeListener.NodeFound -= FoundNode;
+        navigation.OnNoPathFound -= Navigation_OnStuck;
 
         navigation.Dispose();
     }
@@ -141,6 +143,11 @@ public sealed class AutoGatherGoal : GoapGoal, IGoapEventListener, IRouteProvide
             return;
         }
 
+        if (IsNodeBlacklisted(node))
+        {
+            return;
+        }
+
         if (key.Path.Length == 1 && key.Path[0] == node)
         {
             return;
@@ -155,5 +162,61 @@ public sealed class AutoGatherGoal : GoapGoal, IGoapEventListener, IRouteProvide
 
         key.Path = [node];
         navigation.SetWayPoints(key.Path);
+    }
+
+    private readonly System.Collections.Generic.List<(Vector3 pos, int attempts, DateTime time)> blacklistedNodes = [];
+    private const int MaxFailedAttempts = 3;
+    private const float BlacklistRadius = 5.0f;
+    private DateTime lastStuckTime;
+
+    private bool IsNodeBlacklisted(Vector3 node)
+    {
+        blacklistedNodes.RemoveAll(x => (DateTime.UtcNow - x.time).TotalMinutes > 10);
+        foreach (var blocked in blacklistedNodes)
+        {
+            if (Vector2.Distance(node.AsVector2(), blocked.pos.AsVector2()) < BlacklistRadius && blocked.attempts >= MaxFailedAttempts)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void RegisterNodeFailure()
+    {
+        if (key.Path.Length == 0) return;
+
+        Vector3 currentNode = key.Path[0];
+        
+        for (int i = 0; i < blacklistedNodes.Count; i++)
+        {
+            if (Vector2.Distance(currentNode.AsVector2(), blacklistedNodes[i].pos.AsVector2()) < BlacklistRadius)
+            {
+                var entry = blacklistedNodes[i];
+                entry.attempts++;
+                entry.time = DateTime.UtcNow;
+                blacklistedNodes[i] = entry;
+
+                if (entry.attempts >= MaxFailedAttempts)
+                {
+                    logger.LogWarning($"Node at {currentNode} blacklisted due to repeated gathering failures.");
+                    key.Path = []; // Clear current path to stop trying
+                    navigation.StopMovement();
+                    navigation.Stop();
+                }
+                return;
+            }
+        }
+
+        blacklistedNodes.Add((currentNode, 1, DateTime.UtcNow));
+    }
+
+    private void Navigation_OnStuck()
+    {
+        if ((DateTime.UtcNow - lastStuckTime).TotalSeconds > 5)
+        {
+            lastStuckTime = DateTime.UtcNow;
+            RegisterNodeFailure();
+        }
     }
 }

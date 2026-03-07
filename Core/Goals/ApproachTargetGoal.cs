@@ -1,5 +1,7 @@
 using Core.GOAP;
 
+using Game;
+
 using Microsoft.Extensions.Logging;
 
 using System;
@@ -32,6 +34,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private readonly IMountHandler mountHandler;
     private readonly IBlacklist targetBlacklist;
     private readonly CombatLog combatLog;
+    private readonly bool holdPullStandoff;
     private DateTime lastBrokenGearWarning = DateTime.MinValue;
 
     private long approachStart;
@@ -68,13 +71,21 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
         this.mountHandler = mountHandler;
         this.targetBlacklist = blacklist;
         this.combatLog = combatLog;
+        this.holdPullStandoff = ShouldHoldPullStandoff(playerReader.Class);
 
         AddPrecondition(GoapKey.hastarget, true);
         AddPrecondition(GoapKey.targetisalive, true);
         AddPrecondition(GoapKey.targethostile, true);
-        AddPrecondition(GoapKey.incombatrange, false);
-
-        AddEffect(GoapKey.incombatrange, true);
+        if (holdPullStandoff)
+        {
+            AddPrecondition(GoapKey.withinpullrange, false);
+            AddEffect(GoapKey.withinpullrange, true);
+        }
+        else
+        {
+            AddPrecondition(GoapKey.incombatrange, false);
+            AddEffect(GoapKey.incombatrange, true);
+        }
     }
 
     public void OnGoapEvent(GoapEventArgs e)
@@ -144,7 +155,13 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
             return;
         }
 
-        if (!input.Approach.OnCooldown() && (!bits.SoftInteract() || HasValidSoftInteract()))
+        if (ShouldAdvanceTowardTarget(
+            holdPullStandoff,
+            playerReader.WithInPullRange(),
+            playerReader.WithInCombatRange(),
+            bits.Combat()) &&
+            !input.Approach.OnCooldown() &&
+            (!bits.SoftInteract() || HasValidSoftInteract()))
         {
             input.PressApproach();
             wait.Update();
@@ -152,6 +169,13 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
 
         if (!bits.Combat())
         {
+            if (holdPullStandoff && playerReader.WithInPullRange())
+            {
+                stopMoving.Stop();
+                wait.Update();
+                return;
+            }
+
             NonCombatApproach();
             RandomJump();
         }
@@ -410,6 +434,27 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private void Log(string text)
     {
         logger.LogDebug(text);
+    }
+
+    internal static bool ShouldHoldPullStandoff(UnitClass unitClass)
+    {
+        return unitClass == UnitClass.Warlock;
+    }
+
+    internal static bool ShouldAdvanceTowardTarget(
+        bool holdPullStandoff,
+        bool withinPullRange,
+        bool inCombatRange,
+        bool inCombat)
+    {
+        if (inCombat)
+        {
+            return false;
+        }
+
+        return holdPullStandoff
+            ? !withinPullRange
+            : !inCombatRange;
     }
 
     private bool IsGearTooBrokenToFight()

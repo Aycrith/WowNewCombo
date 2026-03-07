@@ -17,7 +17,7 @@ namespace Core.Goals;
 public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
 {
     public override float Cost => 4f;
-    private const int FaceTargetAssistCooldownMs = 350;
+    private const int FaceTargetAssistCooldownMs = 1500;
     private const float FaceAssistDirectionDeltaRadians = MathF.PI / 36f; // ~5 deg
     private const int LostTargetRecoveryCooldownMs = 900;
     private const int LostTargetBurstRecoveryCooldownMs = 1600;
@@ -44,6 +44,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
     private readonly BehaviorTreeCombatEngine? behaviorTreeEngine;
     private readonly FeatureFlagsOptions featureFlags;
     private readonly bool prefersRangedCombat;
+    private readonly bool holdRangedStandoff;
 
     private float lastDirection;
     private float lastMinDistance;
@@ -105,6 +106,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         this.rotationOptimizer = rotationOptimizer;
         this.featureFlags = featureFlagsOptions.Value;
         this.prefersRangedCombat = HasRangedCombatPreference(classConfig);
+        this.holdRangedStandoff = ApproachTargetGoal.ShouldHoldPullStandoff(playerReader.Class);
         this.combatLog.KillCredit += HandleKillCredit;
 
         // Initialize behavior tree if enabled and factory provided
@@ -698,13 +700,40 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
 
     private bool ShouldApproachCurrentTarget()
     {
-        return
-            bits.Target() &&
-            bits.Target_Alive() &&
-            bits.Target_Hostile() &&
-            !playerReader.WithInCombatRange() &&
-            !playerReader.IsCasting() &&
-            !castingHandler.SpellInQueue();
+        return ShouldApproachCurrentTarget(
+            bits.Target(),
+            bits.Target_Alive(),
+            bits.Target_Hostile(),
+            prefersRangedCombat,
+            holdRangedStandoff,
+            playerReader.WithInCombatRange(),
+            playerReader.WithInPullRange(),
+            playerReader.IsCasting(),
+            castingHandler.SpellInQueue());
+    }
+
+    internal static bool ShouldApproachCurrentTarget(
+        bool hasTarget,
+        bool targetAlive,
+        bool targetHostile,
+        bool prefersRangedCombat,
+        bool holdRangedStandoff,
+        bool withinCombatRange,
+        bool withinPullRange,
+        bool isCasting,
+        bool spellInQueue)
+    {
+        if (!hasTarget || !targetAlive || !targetHostile || isCasting || spellInQueue)
+        {
+            return false;
+        }
+
+        if (prefersRangedCombat && holdRangedStandoff && withinPullRange)
+        {
+            return false;
+        }
+
+        return !withinCombatRange;
     }
 
     private void TryFaceTargetForRangedCombat()

@@ -1,5 +1,7 @@
 using Core.GOAP;
 
+using Game;
+
 using Microsoft.Extensions.Logging;
 
 using SharedLib.NpcFinder;
@@ -29,7 +31,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private const int RangedPullFailureAbortCount = 4;
     private const int RangedPullFailureSoftAbortWindowMs = 6000;
     private const int PullRetryApproachDelayMs = 120;
-    private const int FaceTargetAssistCooldownMs = 350;
+    private const int FaceTargetAssistCooldownMs = 1500;
     private const float FaceAssistDirectionDeltaRadians = MathF.PI / 36f; // ~5 deg
     private const int RuntimeMetricsWindowMs = 10 * 60 * 1000;
 
@@ -55,6 +57,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
     private readonly bool requiresNpcNameFinder;
     private readonly bool hasRangedPullActions;
+    private readonly bool holdRangedStandoff;
 
     private long pullStart;
     private long lastFaceTargetAssistTick;
@@ -91,6 +94,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         this.targetBlacklist = targetBlacklist;
         this.classConfig = classConfig;
         this.execGameCommand = execGameCommand;
+        this.holdRangedStandoff = ApproachTargetGoal.ShouldHoldPullStandoff(playerReader.Class);
 
         Keys = classConfig.Pull.Sequence;
 
@@ -351,6 +355,19 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
                     if (failureAction == PullFailureAction.SoftRetryApproach)
                     {
+                        if (ShouldSuppressBodyPullFallback(
+                            holdRangedStandoff,
+                            playerReader.WithInPullRange(),
+                            playerReader.IsInMeleeRange()))
+                        {
+                            Log($"Ranged pull '{keyAction.Name}' failed {consecutiveRangedPullFailures}x; standoff policy suppressing body-pull fallback.");
+                            input.PressStopAttack();
+                            input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+                            consecutiveRangedPullFailures = 0;
+                            lastFailureTargetGuid = 0;
+                            return;
+                        }
+
                         RecordSoftRetry();
                         logger.LogWarning(
                             "Ranged pull '{PullAbility}' failed {FailureCount}x; forcing short approach retry before clear",
@@ -409,9 +426,11 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             playerReader.IsCasting(),
             bits.Combat(),
             bits.AutoShot(),
+            playerReader.WithInPullRange(),
             playerReader.IsInMeleeRange(),
             HasRunnablePullAction(),
-            hasRangedPullActions))
+            hasRangedPullActions,
+            holdRangedStandoff))
         {
             return;
         }
@@ -629,11 +648,18 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         bool isCasting,
         bool inCombat,
         bool autoShotActive,
+        bool withinPullRange,
         bool isInMeleeRange,
         bool hasRunnablePullAction,
-        bool hasRangedPullActions)
+        bool hasRangedPullActions,
+        bool holdRangedStandoff)
     {
         if (castAny || spellInQueue || isCasting || inCombat || (autoShotActive && !isInMeleeRange))
+        {
+            return false;
+        }
+
+        if (ShouldSuppressBodyPullFallback(holdRangedStandoff, withinPullRange, isInMeleeRange))
         {
             return false;
         }
@@ -644,6 +670,16 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         }
 
         return true;
+    }
+
+    internal static bool ShouldSuppressBodyPullFallback(
+        bool holdRangedStandoff,
+        bool withinPullRange,
+        bool isInMeleeRange)
+    {
+        return holdRangedStandoff &&
+            withinPullRange &&
+            !isInMeleeRange;
     }
 
     private void RecordSoftRetry()

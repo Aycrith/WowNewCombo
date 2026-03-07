@@ -447,6 +447,13 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     private void AlternateGatherTypes()
     {
+        // Don't swap tracking if we are actively gathering (AutoGathering has a path)
+        bool isGathering = playerReader.IsCasting() && (Array.BinarySearch(GatherSpells.Herbalism, playerReader.CastSpellId.Value) >= 0 || Array.BinarySearch(GatherSpells.Mining, playerReader.CastSpellId.Value) >= 0);
+        if (targetBlacklist.Is() || bits.Combat() || (navigation.HasWaypoint() && isGathering))
+        {
+            return;
+        }
+
         var oldestKey = classConfig.GatherFindKeyConfig.MaxBy(x => x.SinceLastClickMs);
         if (!playerReader.IsCasting() &&
             oldestKey?.SinceLastClickMs > CYCLE_PROFESSION_PERIOD)

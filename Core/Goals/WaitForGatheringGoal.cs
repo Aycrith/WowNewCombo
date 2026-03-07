@@ -1,4 +1,4 @@
-﻿using Core.GOAP;
+using Core.GOAP;
 
 using Microsoft.Extensions.Logging;
 
@@ -98,7 +98,12 @@ public partial class WaitForGatheringGoal : GoapGoal
                 CheckCastStarted(false);
                 break;
             case CastState.Casting:
-                if (!playerReader.IsCasting())
+                if (bits.Combat())
+                {
+                    logger.LogWarning("Combat started. Aborting gathering cast.");
+                    state = CastState.Abort;
+                }
+                else if (!playerReader.IsCasting())
                 {
                     wait.Update();
                     if (playerReader.LastUIError == UI_ERROR.ERR_SPELL_FAILED_S)
@@ -137,11 +142,19 @@ public partial class WaitForGatheringGoal : GoapGoal
                 SendGoapEvent(new GoapStateEvent(GoapKey.gathering, false));
                 break;
             case CastState.WaitUserInput:
-                CheckCastStarted(true);
-
-                if (stopWatch.ElapsedMilliseconds > Timeout)
+                if (bits.Combat())
                 {
-                    SendGoapEvent(new GoapStateEvent(GoapKey.gathering, false));
+                    logger.LogWarning("Combat started. Aborting gathering cast wait.");
+                    state = CastState.Abort;
+                }
+                else
+                {
+                    CheckCastStarted(true);
+
+                    if (stopWatch.ElapsedMilliseconds > Timeout)
+                    {
+                        SendGoapEvent(new GoapStateEvent(GoapKey.gathering, false));
+                    }
                 }
                 break;
         }

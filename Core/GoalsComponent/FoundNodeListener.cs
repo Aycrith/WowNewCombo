@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 using SharedLib;
 using SharedLib.Extensions;
@@ -86,8 +86,9 @@ public sealed class FoundNodeListener : IDisposable
             v.X * cos - v.Y * sin,
             v.X * sin + v.Y * cos);
 
-        const float zoneDiameterYards = 10000f;
-        float mapUnitsPerPixel = yardsPerPixel / zoneDiameterYards * 100f;
+        // Core precision fix: Use the actual map scale provided by the settings
+        // instead of an estimated zoneDiameterYards
+        float mapUnitsPerPixel = (diametersYards[settings.Zoom] / settings.Width) * 1.5f; // Add tuning factor
         worldOffset *= mapUnitsPerPixel;
 
         Vector3 pos = playerMapPos + new Vector3(worldOffset, 0);
