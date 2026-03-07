@@ -58,10 +58,9 @@ public static class GoapPlanner
         bool[] goal,
         GoapPlannerExecutionOptions executionOptions)
     {
-        if (available.Length > 31)
+        if (available.Length > 63)
             throw new InvalidOperationException(
-                $"GoapPlanner bitmask supports at most 31 goals; got {available.Length}. " +
-                "Increase bitmask type to ulong to support up to 63 goals.");
+                $"GoapPlanner bitmask supports at most 63 goals; got {available.Length}.");
 
         int generation = Volatile.Read(ref cacheGeneration);
         int availableSignature = ComputeAvailableSignature(available);
@@ -92,7 +91,7 @@ public static class GoapPlanner
             return EmptyGoal;
 
         // Build initial mask with all usable-goal bits set
-        uint allMask = (1u << usable.Length) - 1u;
+        ulong allMask = (1UL << usable.Length) - 1UL;
 
         BuildGraph(root, leaves, usable, allMask, goal);
 
@@ -325,12 +324,12 @@ public static class GoapPlanner
         Node parent,
         PriorityQueue<Node, float> leaves,
         GoapGoal[] usable,
-        uint includeMask,
+        ulong includeMask,
         bool[] goal)
     {
         for (int i = 0; i < usable.Length; i++)
         {
-            if ((includeMask & (1u << i)) == 0)
+            if ((includeMask & (1UL << i)) == 0)
                 continue;
 
             GoapGoal action = usable[i];
@@ -348,7 +347,7 @@ public static class GoapPlanner
             else
             {
                 // Exclude this goal from deeper branches — prevents using the same goal twice
-                uint nextMask = includeMask & ~(1u << i);
+                ulong nextMask = includeMask & ~(1UL << i);
                 BuildGraph(node, leaves, usable, nextMask, goal);
             }
         }
