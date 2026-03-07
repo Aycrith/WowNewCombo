@@ -326,9 +326,11 @@ public sealed class CombatPullCastingRuntimeTests
             isCasting: false,
             inCombat: false,
             autoShotActive: false,
+            withinPullRange: true,
             isInMeleeRange: false,
             hasRunnablePullAction: false,
-            hasRangedPullActions: true);
+            hasRangedPullActions: true,
+            holdRangedStandoff: true);
 
         result.Should().BeFalse();
     }
@@ -342,11 +344,65 @@ public sealed class CombatPullCastingRuntimeTests
             isCasting: false,
             inCombat: false,
             autoShotActive: false,
+            withinPullRange: true,
             isInMeleeRange: true,
             hasRunnablePullAction: false,
-            hasRangedPullActions: true);
+            hasRangedPullActions: true,
+            holdRangedStandoff: true);
 
         result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsWarlockEffectiveRange_WhenShootOrSpellRangeMissingButTargetWithinThirtyYards_ReturnsTrue()
+    {
+        bool result = SpellInRange.IsWarlockEffectiveRange(
+            shadowBoltInRange: false,
+            shootInRange: false,
+            minRange: 25,
+            maxRange: 30);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ApproachTargetGoal_ShouldAdvanceTowardTarget_WhenWarlockAlreadyWithinPullRange_ReturnsFalse()
+    {
+        bool result = ApproachTargetGoal.ShouldAdvanceTowardTarget(
+            holdPullStandoff: true,
+            withinPullRange: true,
+            inCombatRange: false,
+            inCombat: false);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void PullTargetGoal_ShouldSuppressBodyPullFallback_WhenWarlockIsAlreadyInPullRange_ReturnsTrue()
+    {
+        bool result = PullTargetGoal.ShouldSuppressBodyPullFallback(
+            holdRangedStandoff: true,
+            withinPullRange: true,
+            isInMeleeRange: false);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CombatGoal_ShouldApproachCurrentTarget_WhenWarlockAlreadyWithinPullRange_ReturnsFalse()
+    {
+        bool result = CombatGoal.ShouldApproachCurrentTarget(
+            hasTarget: true,
+            targetAlive: true,
+            targetHostile: true,
+            prefersRangedCombat: true,
+            holdRangedStandoff: true,
+            withinCombatRange: false,
+            withinPullRange: true,
+            isCasting: false,
+            spellInQueue: false);
+
+        result.Should().BeFalse();
     }
 
     [Fact]

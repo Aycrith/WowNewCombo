@@ -2,6 +2,7 @@ using Core;
 
 using Newtonsoft.Json;
 
+using System;
 using System.IO;
 using System.Linq;
 
@@ -42,6 +43,26 @@ public sealed class WarlockProfileBehaviorTests
     }
 
     [Fact]
+    public void BloodElfWarlockProfile_CombatUsesDrainLifeBeforeFallbackDamage()
+    {
+        ClassConfiguration? config = LoadProfileOrSkip();
+        if (config == null)
+        {
+            return;
+        }
+
+        KeyAction? drainLife = config.Combat.Sequence.FirstOrDefault(static a => a.Name == "Drain Life");
+        KeyAction? shoot = config.Combat.Sequence.FirstOrDefault(static a => a.Name == "Shoot");
+        KeyAction? shadowBolt = config.Combat.Sequence.FirstOrDefault(static a => a.Name == "Shadow Bolt");
+        Assert.NotNull(drainLife);
+        Assert.NotNull(shoot);
+        Assert.NotNull(shadowBolt);
+        Assert.Contains("Health% < DRAIN_LIFE_HP", drainLife.Requirement);
+        Assert.True(Array.IndexOf(config.Combat.Sequence, drainLife) < Array.IndexOf(config.Combat.Sequence, shoot));
+        Assert.True(Array.IndexOf(config.Combat.Sequence, drainLife) < Array.IndexOf(config.Combat.Sequence, shadowBolt));
+    }
+
+    [Fact]
     public void BloodElfWarlockProfile_AdhocUsesHealthstoneWithPriorityAndKnownTbcIds()
     {
         ClassConfiguration? config = LoadProfileOrSkip();
@@ -71,6 +92,8 @@ public sealed class WarlockProfileBehaviorTests
         KeyAction? createHealthstone = config.Adhoc.Sequence.FirstOrDefault(static a => a.Name == "Create Healthstone");
         Assert.NotNull(createHealthstone);
         Assert.Equal("false", createHealthstone.InCombat);
+        Assert.Equal(1f, createHealthstone.Cost);
+        Assert.Contains("BagItem:6265:1", createHealthstone.Requirement);
         Assert.Contains("!BagItem:22105", createHealthstone.Requirement);
         Assert.Contains("!BagItem:22104", createHealthstone.Requirement);
         Assert.Contains("!BagItem:22103", createHealthstone.Requirement);
@@ -87,7 +110,7 @@ public sealed class WarlockProfileBehaviorTests
 
         KeyAction? curseOfAgony = config.Pull.Sequence.FirstOrDefault(static a => a.Name == "Curse of Agony");
         Assert.NotNull(curseOfAgony);
-        Assert.Contains("(Level < 10 || Has Pet)", curseOfAgony.Requirements);
+        Assert.Contains("(Level < 10 || (Has Pet && PetHealth% > 0))", curseOfAgony.Requirements);
         Assert.Contains("Health% >= FOOD_HP", curseOfAgony.Requirements);
     }
 
@@ -101,12 +124,16 @@ public sealed class WarlockProfileBehaviorTests
         }
 
         KeyAction? summonVoidwalker = config.Adhoc.Sequence.FirstOrDefault(static a => a.Name == "Summon Voidwalker");
-        KeyAction? food = config.Adhoc.Sequence.FirstOrDefault(static a => a.Name == "Food");
+        KeyAction? food = config.Parallel.Sequence.FirstOrDefault(static a => a.Name == "Food");
+        KeyAction? drink = config.Parallel.Sequence.FirstOrDefault(static a => a.Name == "Drink");
         Assert.NotNull(summonVoidwalker);
         Assert.NotNull(food);
+        Assert.NotNull(drink);
         Assert.Equal(1f, summonVoidwalker.Cost);
+        Assert.Contains("PetHealth% == 0", summonVoidwalker.Requirement);
+        Assert.Contains("BagItem:6265:1", summonVoidwalker.Requirement);
         Assert.Contains("Health% >= FOOD_HP", summonVoidwalker.Requirement);
-        Assert.Equal(2f, food.Cost);
+        Assert.Equal("Mana% < DRINK_MANA", drink.Requirement);
     }
 
     [Fact]
@@ -121,6 +148,42 @@ public sealed class WarlockProfileBehaviorTests
         KeyAction? autoAttack = config.Combat.Sequence.FirstOrDefault(static a => a.Name == "AutoAttack");
         Assert.NotNull(autoAttack);
         Assert.Contains("InMeleeRange", autoAttack.Requirements);
+    }
+
+    [Fact]
+    public void BloodElfWarlockProfile_UsesDrainSoulAndWandBeforeShadowBoltSpam()
+    {
+        ClassConfiguration? config = LoadProfileOrSkip();
+        if (config == null)
+        {
+            return;
+        }
+
+        KeyAction? drainSoul = config.Combat.Sequence.FirstOrDefault(static a => a.Name == "Drain Soul");
+        KeyAction? shadowBolt = config.Combat.Sequence.FirstOrDefault(static a => a.Name == "Shadow Bolt");
+        KeyAction? shoot = config.Combat.Sequence.FirstOrDefault(static a => a.Name == "Shoot");
+        Assert.NotNull(drainSoul);
+        Assert.NotNull(shadowBolt);
+        Assert.NotNull(shoot);
+        Assert.Contains("BagItem:6265:0", drainSoul.Requirements);
+        Assert.Contains("!HasRangedWeapon", shadowBolt.Requirements);
+        Assert.True(Array.IndexOf(config.Combat.Sequence, shoot) < Array.IndexOf(config.Combat.Sequence, shadowBolt));
+    }
+
+    [Fact]
+    public void BloodElfWarlockProfile_LifeTapSupportsOutOfCombatManaRecovery()
+    {
+        ClassConfiguration? config = LoadProfileOrSkip();
+        if (config == null)
+        {
+            return;
+        }
+
+        KeyAction? lifeTap = config.Adhoc.Sequence.FirstOrDefault(static a => a.Name == "Life Tap");
+        Assert.NotNull(lifeTap);
+        Assert.Equal(1f, lifeTap.Cost);
+        Assert.Contains("Mana% < LIFETAP_MANA", lifeTap.Requirement);
+        Assert.Contains("Health% > LIFETAP_HP", lifeTap.Requirement);
     }
 
     private static ClassConfiguration? LoadProfileOrSkip()

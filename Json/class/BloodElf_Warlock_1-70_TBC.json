@@ -22,7 +22,8 @@
 
   "IntVariables": {
     "MIN_MANA_DRAIN": 25,
-    "LIFETAP_HP": 92,
+    "LIFETAP_HP": 70,
+    "LIFETAP_MANA": 80,
     "DRAIN_LIFE_HP": 60,
     "FEAR_HP": 40,
     "FEAR_MOB_COUNT": 2,
@@ -30,6 +31,7 @@
     "FLEE_MOB_COUNT": 3,
     "HEALTHSTONE_HP": 45,
     "FOOD_HP": 90,
+    "DRINK_MANA": 90,
     "DOT_MIN_HEALTH%": 35
   },
 
@@ -188,7 +190,7 @@
         "Requirements": [
           "Level >= 8",
           "!Curse of Agony",
-          "(Level < 10 || Has Pet)",
+          "(Level < 10 || (Has Pet && PetHealth% > 0))",
           "Health% >= FOOD_HP"
         ],
         "MinMana": 25,
@@ -232,8 +234,9 @@
         "HasCastBar": true,
         "Cost": 1,
         "Requirements": [
-          "!Has Pet",
+          "(!Has Pet || PetHealth% == 0)",
           "Level >= 10",
+          "BagItem:6265:1",
           "Health% >= FOOD_HP"
         ]
       },
@@ -243,8 +246,8 @@
         "HasCastBar": true,
         "Cost": 1,
         "Requirements": [
-          "!Has Pet",
-          "Level < 10",
+          "(!Has Pet || PetHealth% == 0)",
+          "(Level < 10 || !BagItem:6265:1)",
           "Health% >= FOOD_HP"
         ]
       },
@@ -299,13 +302,15 @@
         "School": "Shadow"
       },
       {
-        "Name": "Shadow Bolt",
-        "Key": "2",
+        "Name": "Drain Soul",
+        "Key": "N3",
         "HasCastBar": true,
-        "ResetOnNewTarget": true,
-        "MinMana": 25,
-        "School": "Shadow",
-        "Cooldown": 8000
+        "Requirements": [
+          "Level >= 10",
+          "TargetHealth% < 20",
+          "BagItem:6265:0"
+        ],
+        "School": "Shadow"
       },
       {
         "Name": "Shoot",
@@ -316,6 +321,17 @@
           "!Shooting",
           "SpellInRange:1"
         ]
+      },
+      {
+        "Name": "Shadow Bolt",
+        "Key": "2",
+        "HasCastBar": true,
+        "ResetOnNewTarget": true,
+        "Requirements": [
+          "!HasRangedWeapon"
+        ],
+        "MinMana": 25,
+        "School": "Shadow"
       },
       {
         "Name": "AutoAttack",
@@ -351,14 +367,14 @@
         "Key": "N8",
         "HasCastBar": true,
         "Cost": 1,
-        "Requirement": "!Has Pet && Level >= 10 && Health% >= FOOD_HP"
+        "Requirement": "(!Has Pet || PetHealth% == 0) && Level >= 10 && BagItem:6265:1 && Health% >= FOOD_HP"
       },
       {
         "Name": "Summon Imp",
         "Key": "N9",
         "HasCastBar": true,
         "Cost": 1,
-        "Requirement": "!Has Pet && Level < 10 && Health% >= FOOD_HP"
+        "Requirement": "(!Has Pet || PetHealth% == 0) && (Level < 10 || !BagItem:6265:1) && Health% >= FOOD_HP"
       },
       {
         "Name": "Use Healthstone",
@@ -369,9 +385,10 @@
       },
       {
         "Name": "Create Healthstone",
+        "Cost": 1,
         "HasCastBar": true,
         "InCombat": "false",
-        "Requirement": "Level >= 10 && !InCombat && !BagItem:34062 && !BagItem:30703 && !BagItem:22044 && !BagItem:22105 && !BagItem:22104 && !BagItem:22103 && !BagItem:19013 && !BagItem:19012 && !BagItem:9421 && !BagItem:19011 && !BagItem:19010 && !BagItem:5510 && !BagItem:19009 && !BagItem:19008 && !BagItem:5509 && !BagItem:19007 && !BagItem:19006 && !BagItem:5511 && !BagItem:19005 && !BagItem:19004 && !BagItem:5512",
+        "Requirement": "Level >= 10 && BagItem:6265:1 && !InCombat && !BagItem:34062 && !BagItem:30703 && !BagItem:22044 && !BagItem:22105 && !BagItem:22104 && !BagItem:22103 && !BagItem:19013 && !BagItem:19012 && !BagItem:9421 && !BagItem:19011 && !BagItem:19010 && !BagItem:5510 && !BagItem:19009 && !BagItem:19008 && !BagItem:5509 && !BagItem:19007 && !BagItem:19006 && !BagItem:5511 && !BagItem:19005 && !BagItem:19004 && !BagItem:5512",
         "Cooldown": 60000
       },
       {
@@ -402,14 +419,23 @@
         "Name": "Life Tap",
         "Key": "-",
         "WhenUsable": true,
-        "Requirement": "Mana% < 30 && Health% > LIFETAP_HP && !InCombat",
-        "Cost": 3
-      },
+        "Requirement": "Mana% < LIFETAP_MANA && Health% > LIFETAP_HP && !InCombat",
+        "Cost": 1
+      }
+    ]
+  },
+
+  "Parallel": {
+    "Sequence": [
       {
         "Name": "Food",
         "Key": "=",
-        "Requirement": "Health% < FOOD_HP && !InCombat",
-        "Cost": 2
+        "Requirement": "Health% < FOOD_HP"
+      },
+      {
+        "Name": "Drink",
+        "Key": "F3",
+        "Requirement": "Mana% < DRINK_MANA"
       }
     ]
   },
