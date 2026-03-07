@@ -324,9 +324,13 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
             DealWithSoftInteract();
         }
 
+        bool hasTarget = bits.Target();
+        bool targetDead = hasTarget && bits.Target_Dead();
+        bool targetMissing = !hasTarget;
+
         // Debounce target-loss: require 2 consecutive ticks to absorb single-frame
         // addon latency gaps that transiently report no target during active combat.
-        if (!bits.Target() || (bits.Target() && bits.Target_Dead()))
+        if (targetMissing || targetDead)
         {
             targetLostConsecutiveTicks++;
             if (targetLostConsecutiveTicks < 2)
@@ -339,7 +343,13 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
             ResetLostTargetRecoveryState();
         }
 
-        if (!bits.Target() || (bits.Target() && bits.Target_Dead()))
+        if (targetDead)
+        {
+            HandleDeadTargetLoss(Environment.TickCount64);
+            return;
+        }
+
+        if (targetMissing)
         {
             long nowTick = Environment.TickCount64;
             bool burstActive = RecordLostTargetAndCheckBurst(nowTick);
@@ -381,6 +391,31 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
             input.ForceAggressiveClearTarget(wait, bits);
             ResetLostTargetRecoveryState();
         }
+    }
+
+    private void HandleDeadTargetLoss(long nowTick)
+    {
+        logger.LogInformation("Clear current dead target!");
+        input.ForceAggressiveClearTarget(wait, bits);
+
+        if (ShouldAttemptPetTargetRecoveryAfterDeadTarget(bits.Pet(), playerReader.PetTarget(), bits.PetTarget_Alive()) &&
+            TryAdoptPetTargetAsCombatThreat())
+        {
+            logger.LogInformation("Recovered combat target via pet handoff after dead target clear.");
+            targetLostConsecutiveTicks = 0;
+            ResetLostTargetRecoveryState();
+            return;
+        }
+
+        if (HasRecentCombatProgress(nowTick))
+        {
+            RecordTargetlessCombatGraceUsed(nowTick);
+            wait.Fixed(Math.Max(TargetlessCombatGraceHoldMs, playerReader.NetworkLatency));
+        }
+
+        targetLostConsecutiveTicks = 0;
+        lastLostTargetHandlingTick = 0;
+        ResetLostTargetRecoveryState();
     }
 
     private bool HasValidCombatTarget()
@@ -567,6 +602,14 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
             !shooting &&
             !inMeleeRange &&
             withinCombatRange;
+    }
+
+    internal static bool ShouldAttemptPetTargetRecoveryAfterDeadTarget(
+        bool hasPet,
+        bool petHasTarget,
+        bool petTargetAlive)
+    {
+        return hasPet && petHasTarget && petTargetAlive;
     }
 
     internal static bool HasRangedCombatPreference(ClassConfiguration classConfiguration)

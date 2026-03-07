@@ -31,13 +31,15 @@ internal sealed class FakeBotController : IBotController
     public RouteInfo? RouteInfo { get; set; }
     public double AvgScreenLatency { get; set; }
     public double AvgNPCLatency { get; set; }
+    public IEnumerable<string> ClassFileList { get; set; } = Array.Empty<string>();
+    public IEnumerable<string> PathFileList { get; set; } = Array.Empty<string>();
 
     public event Action? ProfileLoaded;
     public event Action? StatusChanged;
 
-    public IEnumerable<string> ClassFiles() => Array.Empty<string>();
+    public IEnumerable<string> ClassFiles() => ClassFileList;
 
-    public IEnumerable<string> PathFiles() => Array.Empty<string>();
+    public IEnumerable<string> PathFiles() => PathFileList;
 
     public void LoadClassProfile(string classFilename)
     {

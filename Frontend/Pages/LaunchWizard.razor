@@ -500,9 +500,15 @@
                                     </AccordionItem>
                                 </Accordion>
                             }
+                            else if (botController.ClassConfig?.Paths.ElementAtOrDefault(0) is PathSettings defaultPath)
+                            {
+                                <PathSelectorComponent Target="@(defaultPath)" TargetIndex="0" />
+                            }
                             else if (botController.ClassConfig != null)
                             {
-                                <PathSelectorComponent Target="@(botController.ClassConfig!.Paths.First())" TargetIndex="0" />
+                                <div class="alert alert-warning mb-0">
+                                    The selected profile has no route paths configured.
+                                </div>
                             }
 
                             <div class="card mt-3">

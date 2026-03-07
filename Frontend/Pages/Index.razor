@@ -111,11 +111,17 @@
                             </AccordionItem>
                         </Accordion>
                     }
-                    else
+                    else if (botController.ClassConfig!.Paths.ElementAtOrDefault(0) is PathSettings defaultPath)
                     {
                         <PathSelectorComponent Hide="@(botController.IsBotActive)"
-                                               Target="@(botController.ClassConfig!.Paths.First())"
+                                               Target="@(defaultPath)"
                                                TargetIndex="0" />
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            No route paths are configured for the selected profile.
+                        </div>
                     }
                 }
 

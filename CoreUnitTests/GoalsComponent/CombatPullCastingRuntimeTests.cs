@@ -432,6 +432,28 @@ public sealed class CombatPullCastingRuntimeTests
     }
 
     [Fact]
+    public void ShouldAttemptPetTargetRecoveryAfterDeadTarget_WhenPetHasLiveTarget_ReturnsTrue()
+    {
+        bool result = CombatGoal.ShouldAttemptPetTargetRecoveryAfterDeadTarget(
+            hasPet: true,
+            petHasTarget: true,
+            petTargetAlive: true);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldAttemptPetTargetRecoveryAfterDeadTarget_WhenNoLivePetTarget_ReturnsFalse()
+    {
+        bool result = CombatGoal.ShouldAttemptPetTargetRecoveryAfterDeadTarget(
+            hasPet: true,
+            petHasTarget: true,
+            petTargetAlive: false);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
     public void AdhocGoal_ShouldSuppressDuringRecovery_WhenNonRecoveryActionAndFoodBuffActive_ReturnsTrue()
     {
         bool result = AdhocGoal.ShouldSuppressDuringRecovery(

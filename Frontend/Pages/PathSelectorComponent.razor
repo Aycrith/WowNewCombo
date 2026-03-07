@@ -26,7 +26,7 @@
                 TItem="AutoCompleteItem"
                 DataProvider="DataProvider"
                 PropertyName="@nameof(AutoCompleteItem.Name)"
-                Placeholder="@(Files.First() ?? string.Empty)"
+                Placeholder="@DefaultFile"
                 OnChanged="(AutoCompleteItem selected) => OnSelectedPathChanged(selected)"
                 Disabled="ButtonDisabled" />
             </div>
@@ -50,6 +50,7 @@
     public int TargetIndex { get; set; } = 0;
 
     private IEnumerable<string> Files { get; set; } = null!;
+    private string DefaultFile => Files?.FirstOrDefault() ?? string.Empty;
 
     private string Selected { get; set; } = new("");
     private bool ButtonDisabled { get; set; } = true;
@@ -148,7 +149,7 @@
     {
         string name = pick?.Name ?? string.Empty;
 
-        if (string.IsNullOrEmpty(name) || name == Files.First())
+        if (string.IsNullOrEmpty(name) || name == DefaultFile)
         {
             Selected = string.Empty;
         }
