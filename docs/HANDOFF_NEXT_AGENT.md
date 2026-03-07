@@ -1,5 +1,11 @@
 # Autonomous Operations Handoff (Next Agent)
 
+## Current Entry Point
+- Read this first: `docs/HANDOFF_2026-03-07_LIVE_RECOVERY_AUTONOMOUS.md`
+- Current branch baseline: `dev`
+- Current frozen commit: `c88dc7b91`
+- Current active blocker: combat target-loss / reacquire accounting during kill-to-loot transitions
+
 ## Operator Kickoff Prompt (Copy/Paste)
 Use this at the start of each iteration:
 
