@@ -43,6 +43,9 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     private const int TIMEOUT = 5000;
     private const float NPC_DESTINATION_PROXIMITY = 12f;
     private const int MAX_FAR_DESTINATION_RETRIES = 3;
+    private const int KEYBOARD_ONLY_VENDOR_ACQUIRE_MAX_ATTEMPTS = 4;
+    private const int KEYBOARD_ONLY_VENDOR_TURN_MS = 180;
+    private const int KEYBOARD_ONLY_VENDOR_TARGET_WAIT_MS = 220;
     // Keep broad enough to reach nearby town service NPCs from common grind loops,
     // but still reject obviously remote candidates before pathing.
     private const float MAX_AUTO_NPC_TRAVEL_DISTANCE = 750f;
@@ -469,16 +472,42 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         if (!hasTarget)
         {
-            Log($"Use KeyAction.Key macro to acquire target");
-            input.PressRandom(key);
-            wait.Update();
+            if (input.KeyboardOnly)
+            {
+                bool keyboardOnlyPathUsed = true;
+                bool acquiredByKeyboardOnly = TryAcquireVendorTargetKeyboardOnly(
+                    out int attemptCount,
+                    out int turnAdjustCount,
+                    out string failureReason);
+
+                hasTarget = acquiredByKeyboardOnly;
+
+                if (!hasTarget)
+                {
+                    string candidateName = npc == default ? string.Empty : npc.Name;
+                    LogWarn($"Vendor acquisition failed. Candidate='{candidateName}', KeyboardOnlyPathUsed={keyboardOnlyPathUsed}, AttemptCount={attemptCount}, TurnAdjustCount={turnAdjustCount}, FailureReason={failureReason}");
+                }
+            }
+            else
+            {
+                Log($"Use KeyAction.Key macro to acquire target");
+                input.PressRandom(key);
+                wait.Update();
+            }
         }
 
-        wait.Until(400, bits.Target);
-        if (!bits.Target())
+        wait.Until(400, () => bits.Target() || bits.SoftInteract());
+        if (!bits.Target() && !bits.SoftInteract())
         {
-            LogWarn("No target found! Turn left to find NPC");
-            input.PressFixed(input.TurnLeftKey, 250, token);
+            LogWarn("No target found! Vendor acquisition exhausted.");
+
+            if (tryFindClosestNPC)
+            {
+                input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+                Resume();
+                return;
+            }
+
             return;
         }
 
@@ -550,6 +579,53 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     internal static bool ShouldSkipVendorApproachForSoftInteract(bool hasSoftInteract, bool softInteractHostile)
         => hasSoftInteract && !softInteractHostile;
+
+    internal static bool ShouldApplyVendorAcquireTurnAdjust(int attemptIndex)
+        => attemptIndex < KEYBOARD_ONLY_VENDOR_ACQUIRE_MAX_ATTEMPTS - 1;
+
+    internal static ConsoleKey GetVendorAcquireTurnKey(int turnAdjustCount, ConsoleKey turnLeftKey, ConsoleKey turnRightKey)
+        => turnAdjustCount % 2 == 0 ? turnLeftKey : turnRightKey;
+
+    private bool TryAcquireVendorTargetKeyboardOnly(out int attemptCount, out int turnAdjustCount, out string failureReason)
+    {
+        attemptCount = 0;
+        turnAdjustCount = 0;
+        failureReason = "target_not_acquired_keyboard_only";
+
+        for (int attemptIndex = 0; attemptIndex < KEYBOARD_ONLY_VENDOR_ACQUIRE_MAX_ATTEMPTS; attemptIndex++)
+        {
+            attemptCount = attemptIndex + 1;
+
+            if (bits.Target() || ShouldSkipVendorApproachForSoftInteract(bits.SoftInteract(), bits.SoftInteract_Hostile()))
+            {
+                return true;
+            }
+
+            stopMoving.Stop();
+
+            Log($"KeyboardOnly vendor acquire attempt {attemptCount}/{KEYBOARD_ONLY_VENDOR_ACQUIRE_MAX_ATTEMPTS}");
+            input.PressRandom(key);
+            wait.Update();
+            input.PressInteract();
+            wait.Update();
+
+            float targetWait = wait.Until(KEYBOARD_ONLY_VENDOR_TARGET_WAIT_MS, () => bits.Target() || bits.SoftInteract());
+            if (targetWait >= 0)
+            {
+                return true;
+            }
+
+            if (ShouldApplyVendorAcquireTurnAdjust(attemptIndex))
+            {
+                ConsoleKey turnKey = GetVendorAcquireTurnKey(turnAdjustCount, input.TurnLeftKey, input.TurnRightKey);
+                turnAdjustCount++;
+                input.PressFixed(turnKey, KEYBOARD_ONLY_VENDOR_TURN_MS, token);
+                wait.Update();
+            }
+        }
+
+        return bits.Target() || bits.SoftInteract();
+    }
 
     private void MountIfPossible()
     {

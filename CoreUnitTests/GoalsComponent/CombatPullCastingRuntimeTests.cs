@@ -3,6 +3,8 @@ using Core.Goals;
 
 using FluentAssertions;
 
+using System;
+
 using Xunit;
 
 namespace CoreUnitTests.GoalsComponent;
@@ -536,5 +538,43 @@ public sealed class CombatPullCastingRuntimeTests
             softInteractHostile: true);
 
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AdhocNpcGoal_ShouldApplyVendorAcquireTurnAdjust_OnNonFinalAttempt_ReturnsTrue()
+    {
+        bool result = AdhocNPCGoal.ShouldApplyVendorAcquireTurnAdjust(attemptIndex: 1);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AdhocNpcGoal_ShouldApplyVendorAcquireTurnAdjust_OnFinalAttempt_ReturnsFalse()
+    {
+        bool result = AdhocNPCGoal.ShouldApplyVendorAcquireTurnAdjust(attemptIndex: 3);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AdhocNpcGoal_GetVendorAcquireTurnKey_FirstAdjust_UsesLeft()
+    {
+        ConsoleKey result = AdhocNPCGoal.GetVendorAcquireTurnKey(
+            turnAdjustCount: 0,
+            turnLeftKey: ConsoleKey.LeftArrow,
+            turnRightKey: ConsoleKey.RightArrow);
+
+        result.Should().Be(ConsoleKey.LeftArrow);
+    }
+
+    [Fact]
+    public void AdhocNpcGoal_GetVendorAcquireTurnKey_SecondAdjust_UsesRight()
+    {
+        ConsoleKey result = AdhocNPCGoal.GetVendorAcquireTurnKey(
+            turnAdjustCount: 1,
+            turnLeftKey: ConsoleKey.LeftArrow,
+            turnRightKey: ConsoleKey.RightArrow);
+
+        result.Should().Be(ConsoleKey.RightArrow);
     }
 }
