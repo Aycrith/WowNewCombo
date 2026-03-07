@@ -16,16 +16,16 @@
     },
     "PathSmoothing": {
       "Enabled": true,
-      "RDPTolerance": 2.0,
+      "RDPTolerance": 1.5,
       "MinWaypointsToSimplify": 5,
       "Description": "Applies Ramer-Douglas-Peucker algorithm to reduce path complexity"
     },
     "StuckRecoveryV2": {
-      "Enabled": false,
+      "Enabled": true,
       "BreadcrumbTrailSize": 50,
       "BacktrackSteps": 3,
       "EmergencyHearthstoneThreshold": 10,
-      "Description": "DISABLED for nav recovery baseline. Enhanced stuck recovery with breadcrumb tracking — re-enable after baseline stability proven."
+      "Description": "Enhanced stuck recovery with breadcrumb tracking. Enabled after baseline stability proven."
     },
     "HazardAvoidance": {
       "Enabled": false,
@@ -36,7 +36,7 @@
       "MaxEventsBeforePrune": 10000,
       "ClusteringIntervalSeconds": 15,
       "SaveIntervalMinutes": 3,
-      "Description": "DISABLED for nav recovery baseline. Self-learning hazard avoidance — re-enable after baseline stability proven."
+      "Description": "Inline detour stitching: prepends hazard-avoidance waypoints to the front of the current route without replacing it. Enable after baseline soak validation."
     },
     "Humanization": {
       "Enabled": false,
@@ -45,10 +45,10 @@
         "KeyHoldStdDevMs": 15,
         "KeyHoldMinMs": 30,
         "KeyHoldMaxMs": 200,
-        "ReactionMaxMs": 500
+        "ReactionMaxMs": 800
       },
       "MouseMovement": {
-        "Enabled": true,
+        "Enabled": false,
         "StepsPerMovement": 15,
         "CurveIntensity": 0.3,
         "MicroJitterPixels": 2,
@@ -57,20 +57,20 @@
         "StepDelayMaxMs": 6
       },
       "Fatigue": {
-        "Enabled": true,
+        "Enabled": false,
         "BreakIntervalMinutes": 45,
-        "BreakDurationMinMinutes": 1.0,
-        "BreakDurationMaxMinutes": 5.0,
+        "BreakDurationMinMinutes": 1,
+        "BreakDurationMaxMinutes": 5,
         "FatigueRatePerHour": 0.1,
         "MaxFatigueMultiplier": 1.5
       },
       "Behavior": {
-        "MicroPauseEnabled": true,
+        "MicroPauseEnabled": false,
         "MicroPauseIntervalSeconds": 60,
         "MicroPauseMinMs": 200,
         "MicroPauseMaxMs": 2000
       },
-      "Description": "Opt-in human-like timing, mouse movement, micro-pauses, and scheduled breaks"
+      "Description": "Mouse/keyboard timing randomization for natural-looking input. Disabled pending anti-detection review."
     },
     "AIProfileGenerator": {
       "Enabled": true,
@@ -89,7 +89,7 @@
       "Description": "Community profile browser and downloader from GitHub repository"
     },
     "BehaviorTreeCombat": {
-      "Enabled": true,
+      "Enabled": false,
       "FallbackToGOAP": true,
       "EnableVisualization": false,
       "Description": "Alternative combat system using behavior trees instead of GOAP"
@@ -108,7 +108,7 @@
       "FocusGuard": true,
       "HybridModifiers": true,
       "KeyRepeat": false,
-      "BurstDampening": false,
+      "BurstDampening": true,
       "ModifierStaggerMinMs": 4,
       "ModifierStaggerMaxMs": 12,
       "ModifierReleaseStaggerMinMs": 2,
@@ -129,16 +129,16 @@
       "EnableSwingTimerAlignment": false,
       "MetricsFlushIntervalSeconds": 30,
       "MetricsOutputPath": "logs/rotation_metrics.json",
-      "Description": "Weighted-scoring overlay for combat rotation optimization. Reorders ability priority list based on game state without removing static fallback."
+      "Description": "Dynamic rotation weighting with resource forecasting. Disabled pending integration testing."
     },
     "StuckSensitivity": {
       "Enabled": true,
-      "MinDistance": 0.2,
-      "UnstuckAfterMs": 5000,
+      "MinDistance": 0.08,
+      "UnstuckAfterMs": 3200,
       "EnablePredictiveDetection": false,
-      "PredictiveRiskThreshold": 70,
-      "ApproachTimeoutMultiplier": 2.0,
-      "Description": "Conservative stuck thresholds for nav recovery baseline. Gives heading corrections ample time to complete before triggering stuck recovery."
+      "PredictiveRiskThreshold": 80,
+      "ApproachTimeoutMultiplier": 1.5,
+      "Description": "Validated stable-live navigation baseline from March 4-5 live testing. Keeps hazard avoidance off while using faster, still-stable stuck escalation."
     },
     "NavigationExperiments": {
       "EnableOscillationConfidenceThrottle": false,
@@ -178,7 +178,7 @@
     }
   },
   "GlobalKillSwitch": false,
-  "DebugMode": false,
+  "DebugMode": true,
   "Version": "1.0.0",
-  "LastModified": "2026-02-05T00:00:00Z"
+  "LastModified": "2026-03-06T00:00:00Z"
 }

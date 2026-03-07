@@ -1,4 +1,4 @@
-{
+﻿{
   "Features": {
     "ObjectPooling": {
       "Enabled": true,
@@ -137,12 +137,12 @@
     },
     "StuckSensitivity": {
       "Enabled": true,
-      "MinDistance": 0.2,
-      "UnstuckAfterMs": 5000,
+      "MinDistance": 0.08,
+      "UnstuckAfterMs": 3200,
       "EnablePredictiveDetection": false,
-      "PredictiveRiskThreshold": 70,
-      "ApproachTimeoutMultiplier": 2.0,
-      "Description": "Conservative stuck thresholds for navigation reliability. Allows turn-heavy segments and heading corrections to complete before recovery actions."
+      "PredictiveRiskThreshold": 80,
+      "ApproachTimeoutMultiplier": 1.5,
+      "Description": "Validated stable-live navigation baseline from March 4-5 live testing. Keeps hazard avoidance off while using faster, still-stable stuck escalation."
     },
     "NavigationExperiments": {
       "EnableOscillationConfidenceThrottle": false,
@@ -184,5 +184,6 @@
   "GlobalKillSwitch": false,
   "DebugMode": true,
   "Version": "1.0.0",
-  "LastModified": "2026-03-02T22:44:33Z"
+  "LastModified": "2026-03-06T00:00:00Z"
 }
+

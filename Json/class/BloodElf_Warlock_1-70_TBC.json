@@ -28,6 +28,7 @@
     "FEAR_MOB_COUNT": 2,
     "FLEE_HP": 15,
     "FLEE_MOB_COUNT": 3,
+    "HEALTHSTONE_HP": 35,
     "FOOD_HP": 50,
     "DOT_MIN_HEALTH%": 35
   },
@@ -181,10 +182,24 @@
   "Pull": {
     "Sequence": [
       {
+        "Name": "Curse of Agony",
+        "Key": "5",
+        "ResetOnNewTarget": true,
+        "Requirements": [
+          "Level >= 8",
+          "!Curse of Agony"
+        ],
+        "MinMana": 25,
+        "School": "Shadow"
+      },
+      {
         "Name": "Immolate",
         "Key": "6",
         "HasCastBar": true,
         "ResetOnNewTarget": true,
+        "Requirements": [
+          "Level < 8"
+        ],
         "MinMana": 25,
         "School": "Fire"
       },
@@ -193,6 +208,9 @@
         "Key": "2",
         "HasCastBar": true,
         "ResetOnNewTarget": true,
+        "Requirements": [
+          "Level < 8"
+        ],
         "MinMana": 25,
         "School": "Shadow"
       },
@@ -225,7 +243,7 @@
       {
         "Name": "Fear",
         "Key": "7",
-        "Requirement": "MobCount > 1 && Health% < FEAR_HP",
+        "Requirement": "Health% < FEAR_HP",
         "HasCastBar": true,
         "Cooldown": 100
       },
@@ -319,6 +337,32 @@
 
   "Adhoc": {
     "Sequence": [
+      {
+        "Name": "Summon Voidwalker",
+        "Key": "N8",
+        "HasCastBar": true,
+        "Requirement": "!Has Pet && Level >= 10"
+      },
+      {
+        "Name": "Summon Imp",
+        "Key": "N9",
+        "HasCastBar": true,
+        "Requirement": "!Has Pet && Level < 10"
+      },
+      {
+        "Name": "Use Healthstone",
+        "Cost": 1,
+        "InCombat": "true",
+        "Requirement": "Health% < HEALTHSTONE_HP && (BagItem:34062 || BagItem:30703 || BagItem:22044 || BagItem:22105 || BagItem:22104 || BagItem:22103 || BagItem:19013 || BagItem:19012 || BagItem:9421 || BagItem:19011 || BagItem:19010 || BagItem:5510 || BagItem:19009 || BagItem:19008 || BagItem:5509 || BagItem:19007 || BagItem:19006 || BagItem:5511 || BagItem:19005 || BagItem:19004 || BagItem:5512)",
+        "Cooldown": 120000
+      },
+      {
+        "Name": "Create Healthstone",
+        "HasCastBar": true,
+        "InCombat": "false",
+        "Requirement": "Level >= 10 && !InCombat && !BagItem:34062 && !BagItem:30703 && !BagItem:22044 && !BagItem:22105 && !BagItem:22104 && !BagItem:22103 && !BagItem:19013 && !BagItem:19012 && !BagItem:9421 && !BagItem:19011 && !BagItem:19010 && !BagItem:5510 && !BagItem:19009 && !BagItem:19008 && !BagItem:5509 && !BagItem:19007 && !BagItem:19006 && !BagItem:5511 && !BagItem:19005 && !BagItem:19004 && !BagItem:5512",
+        "Cooldown": 60000
+      },
       {
         "Cost": 2,
         "Name": "Demon Skin",
