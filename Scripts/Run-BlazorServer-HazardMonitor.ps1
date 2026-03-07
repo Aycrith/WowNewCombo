@@ -1,3 +1,4 @@
+[CmdletBinding()]
 param(
     [int]$Port = 5055,
     [switch]$EnableHazards,
@@ -19,7 +20,8 @@ if (-not (Test-Path $flagsPath)) {
 function Invoke-Get([string]$Url) {
     try {
         $resp = Invoke-WebRequest -UseBasicParsing -TimeoutSec 10 $Url
-        return @{ StatusCode = $resp.StatusCode; ContentLength = ($resp.Content ?? '').Length }
+        $content = if ($null -ne $resp.Content) { "$($resp.Content)" } else { "" }
+        return @{ StatusCode = $resp.StatusCode; ContentLength = $content.Length }
     } catch {
         return @{ StatusCode = -1; ContentLength = 0; Error = $_.Exception.Message }
     }

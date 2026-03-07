@@ -1,3 +1,4 @@
+[CmdletBinding()]
 param(
     [int]$Port = 5055,
     [string]$BotPath = "C:\\WowClassicGrindBot",
