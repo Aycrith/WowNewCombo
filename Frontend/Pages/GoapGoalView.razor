@@ -17,7 +17,11 @@
     <td>
         @if (goal.Keys.Length == 1)
         {
-            <input type="checkbox" @bind="goal.Keys[0].Enabled" style="margin-right:4px;vertical-align:middle;" title="Enable/Disable" />
+            <input type="checkbox"
+                   checked="@goal.Keys[0].Enabled"
+                   @onchange="args => OnKeyEnabledChanged(goal.Keys[0], args)"
+                   style="margin-right:4px;vertical-align:middle;"
+                   title="Enable/Disable" />
         }
         <b style="color:@DisplayCanRun(goal.CanRun())">@goal.Cost: @GoalName(goal)</b>
     </td>
@@ -60,7 +64,11 @@
 
         <tr class="@ActionClass(goal == botController.GoapAgent!.CurrentGoal && lastKey == key.ConsoleKeyFormHash, cooldown) goal-child-row">
             <td class="goal-child-cell">
-                <input type="checkbox" @bind="key.Enabled" style="margin-right:4px;vertical-align:middle;" title="Enable/Disable" />
+                <input type="checkbox"
+                       checked="@key.Enabled"
+                       @onchange="args => OnKeyEnabledChanged(key, args)"
+                       style="margin-right:4px;vertical-align:middle;"
+                       title="Enable/Disable" />
                 @if (key.HasForm)
                 {
                     <img style="margin-right:4px" src="@FormResourceName(key.FormValue)" />
@@ -197,5 +205,18 @@
             return new MarkupString($"{keyAction.Name}{keyPart}");
 
         return new($"<a href=\"{api.SpellId}{keyAction.SpellId}\" target=\"_blank\" data-wowhead=\"spell={keyAction.SpellId}\" style=\"text-decoration:none;color:inherit\">{keyAction.Name}{keyPart}</a>");
+    }
+
+    private void OnKeyEnabledChanged(KeyAction keyAction, ChangeEventArgs args)
+    {
+        bool enabled = args.Value switch
+        {
+            bool boolValue => boolValue,
+            string stringValue when bool.TryParse(stringValue, out bool parsed) => parsed,
+            _ => keyAction.Enabled
+        };
+
+        keyAction.Enabled = enabled;
+        botController.SaveClassConfig();
     }
 }
