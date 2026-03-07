@@ -4983,6 +4983,8 @@ function Get-CombatAcceptanceSummary
     $summary["FacingRecoveryCount"] = 0
     $summary["LowHealthSampleCount"] = 0
     $summary["CriticalHealthSampleCount"] = 0
+    $summary["FocusRestoreFailureCount"] = 0
+    $summary["FocusContaminated"] = $false
     $summary["SpellFailedMovingCount"] = 0
     $summary["BadAttackFacingCount"] = 0
     $summary["LostTargetBurstCountWindow"] = 0
@@ -5023,6 +5025,8 @@ function Get-CombatAcceptanceSummary
     $summary["FacingRecoveryCount"] = [int]$Report.FacingRecoveryCount
     $summary["LowHealthSampleCount"] = [int]$Report.LowHealthSampleCount
     $summary["CriticalHealthSampleCount"] = [int]$Report.CriticalHealthSampleCount
+    $summary["FocusRestoreFailureCount"] = [int]$Report.FocusRestoreFailureCount
+    $summary["FocusContaminated"] = [int]$summary["FocusRestoreFailureCount"] -gt 0
     $summary["SpellFailedMovingCount"] = [int]$Report.SpellFailedMovingCount
     $summary["BadAttackFacingCount"] = [int]$Report.BadAttackFacingCount
 
@@ -5109,7 +5113,13 @@ function Get-CombatAcceptanceSummary
         Add-ActionFailureReason -Summary $summary -Reason ("BadAttackFacingCount must be zero but was {0}." -f [int]$summary["BadAttackFacingCount"])
     }
 
-    if ([int]$summary["LostTargetBurstCountWindow"] -ne 0)
+    if ([bool]$summary["FocusContaminated"] -and
+        (([int]$summary["LostTargetBurstCountWindow"] -ne 0) -or ([int]$summary["LostTargetReacquireAttemptCountWindow"] -gt 0)))
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("Combat evidence was contaminated by {0} WoW focus restore failures." -f [int]$summary["FocusRestoreFailureCount"])
+    }
+
+    if (-not [bool]$summary["FocusContaminated"] -and [int]$summary["LostTargetBurstCountWindow"] -ne 0)
     {
         Add-ActionFailureReason -Summary $summary -Reason ("LostTargetBurstCountWindow must be zero but was {0}." -f [int]$summary["LostTargetBurstCountWindow"])
     }
@@ -5119,7 +5129,7 @@ function Get-CombatAcceptanceSummary
         Add-ActionFailureReason -Summary $summary -Reason ("PullFailureSoftRetryCountWindow must be zero but was {0}." -f [int]$summary["PullFailureSoftRetryCountWindow"])
     }
 
-    if ([int]$summary["LostTargetReacquireAttemptCountWindow"] -gt 0 -and [double]$summary["LostTargetReacquireSuccessRatio"] -lt 0.80)
+    if (-not [bool]$summary["FocusContaminated"] -and [int]$summary["LostTargetReacquireAttemptCountWindow"] -gt 0 -and [double]$summary["LostTargetReacquireSuccessRatio"] -lt 0.80)
     {
         Add-ActionFailureReason -Summary $summary -Reason ("Lost target reacquire success ratio must be >= 0.80 but was {0}." -f $summary["LostTargetReacquireSuccessRatio"])
     }
@@ -6475,6 +6485,7 @@ function Invoke-ControlledCombatValidation
             FacingRecoveryCount = (Get-RegexMatchCount -Content $logContent -Pattern "React to ERR_BADATTACKFACING")
             LowHealthSampleCount = $lowHealthSampleCount
             CriticalHealthSampleCount = $criticalHealthSampleCount
+            FocusRestoreFailureCount = (Get-RegexMatchCount -Content $logContent -Pattern "Failed to restore WoW focus")
             Runtime = $runtimeFinal
             SampleCount = @($sampleTelemetry).Count
             Samples = @($sampleTelemetry)
