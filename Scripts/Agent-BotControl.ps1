@@ -6195,7 +6195,7 @@ function Get-RegexMatchCount
 function Get-CombatHealthWindowCount
 {
     param(
-        [Parameter(Mandatory = $true)]$Samples,
+        [Parameter(Mandatory = $true)][object[]]$Samples,
         [double]$Threshold = 35
     )
 
@@ -6204,7 +6204,24 @@ function Get-CombatHealthWindowCount
     {
         try
         {
-            if ($null -eq $sample -or $null -eq $sample.Snapshot)
+            if ($null -eq $sample)
+            {
+                continue
+            }
+
+            $healthPercent = 0.0
+            if (($sample.PSObject.Properties.Name -contains 'HealthPercent') -and
+                [double]::TryParse([string]$sample.HealthPercent, [ref]$healthPercent))
+            {
+                if ($healthPercent -lt $Threshold)
+                {
+                    $count++
+                }
+
+                continue
+            }
+
+            if ($null -eq $sample.Snapshot)
             {
                 continue
             }
@@ -6246,7 +6263,6 @@ function Get-CombatHealthWindowCount
                 continue
             }
 
-            $healthPercent = 0.0
             if (-not [double]::TryParse([string]$snapshotData.snapshot.healthPercent, [ref]$healthPercent))
             {
                 continue
@@ -6263,6 +6279,120 @@ function Get-CombatHealthWindowCount
     }
 
     return $count
+}
+
+function Convert-CombatSamplesToTelemetry
+{
+    param(
+        [Parameter(Mandatory = $true)][object[]]$Samples
+    )
+
+    $telemetry = New-Object System.Collections.Generic.List[object]
+    foreach ($sample in @($Samples))
+    {
+        $statsKills = $null
+        $statsDeaths = $null
+        $runtimeGoal = $null
+        $snapshotGoal = $null
+        $healthPercent = $null
+        $inCombat = $null
+
+        try
+        {
+            if ($null -ne $sample.SessionStats)
+            {
+                $statsEnvelope = $sample.SessionStats
+                if (($statsEnvelope.PSObject.Properties.Name -contains 'Result') -and $null -ne $statsEnvelope.Result)
+                {
+                    $statsPayload = $statsEnvelope.Result
+                }
+                elseif (($statsEnvelope.PSObject.Properties.Name -contains 'Data') -and $null -ne $statsEnvelope.Data)
+                {
+                    $statsPayload = $statsEnvelope.Data
+                }
+
+                if ($null -ne $statsPayload)
+                {
+                    $statsKills = $statsPayload.Kills
+                    $statsDeaths = $statsPayload.Deaths
+                    $snapshotGoal = $statsPayload.CurrentGoal
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            if ($null -ne $sample.Runtime)
+            {
+                $runtimeEnvelope = $sample.Runtime
+                if (($runtimeEnvelope.PSObject.Properties.Name -contains 'Result') -and $null -ne $runtimeEnvelope.Result)
+                {
+                    $runtimePayload = $runtimeEnvelope.Result
+                }
+                elseif (($runtimeEnvelope.PSObject.Properties.Name -contains 'Data') -and $null -ne $runtimeEnvelope.Data)
+                {
+                    $runtimePayload = $runtimeEnvelope.Data
+                }
+
+                if ($null -ne $runtimePayload)
+                {
+                    $runtimeGoal = $runtimePayload.CurrentGoal
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            if ($null -ne $sample.Snapshot)
+            {
+                $snapshotEnvelope = $sample.Snapshot
+                if (($snapshotEnvelope.PSObject.Properties.Name -contains 'Result') -and $null -ne $snapshotEnvelope.Result)
+                {
+                    $snapshotPayload = $snapshotEnvelope.Result
+                }
+                elseif (($snapshotEnvelope.PSObject.Properties.Name -contains 'Data') -and $null -ne $snapshotEnvelope.Data)
+                {
+                    $snapshotPayload = $snapshotEnvelope.Data
+                }
+
+                if (($snapshotPayload.PSObject.Properties.Name -contains 'data') -and $null -ne $snapshotPayload.data)
+                {
+                    $snapshotData = $snapshotPayload.data
+                }
+                elseif (($snapshotPayload.PSObject.Properties.Name -contains 'Data') -and $null -ne $snapshotPayload.Data)
+                {
+                    $snapshotData = $snapshotPayload.Data
+                }
+
+                if ($null -ne $snapshotData -and $null -ne $snapshotData.snapshot)
+                {
+                    $healthPercent = $snapshotData.snapshot.healthPercent
+                    $inCombat = $snapshotData.snapshot.inCombat
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        [void]$telemetry.Add([pscustomobject][ordered]@{
+                TimestampUtc = $sample.TimestampUtc
+                Kills = $statsKills
+                Deaths = $statsDeaths
+                SessionGoal = $snapshotGoal
+                RuntimeGoal = $runtimeGoal
+                HealthPercent = $healthPercent
+                InCombat = $inCombat
+            })
+    }
+
+    return $telemetry.ToArray()
 }
 
 function Invoke-ControlledCombatValidation
@@ -6310,8 +6440,9 @@ function Invoke-ControlledCombatValidation
         $killsDelta = [int]$endStats.Kills - $startKills
         $logContent = Get-SessionLogContent
         $runtimeFinal = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/navigation/runtime" -TimeoutSec 8
-        $lowHealthSampleCount = Get-CombatHealthWindowCount -Samples @($samples) -Threshold 35
-        $criticalHealthSampleCount = Get-CombatHealthWindowCount -Samples @($samples) -Threshold 20
+        $sampleTelemetry = Convert-CombatSamplesToTelemetry -Samples $samples.ToArray()
+        $lowHealthSampleCount = Get-CombatHealthWindowCount -Samples $sampleTelemetry -Threshold 35
+        $criticalHealthSampleCount = Get-CombatHealthWindowCount -Samples $sampleTelemetry -Threshold 20
 
         $report = [ordered]@{
             TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
@@ -6345,7 +6476,8 @@ function Invoke-ControlledCombatValidation
             LowHealthSampleCount = $lowHealthSampleCount
             CriticalHealthSampleCount = $criticalHealthSampleCount
             Runtime = $runtimeFinal
-            Samples = @($samples)
+            SampleCount = @($sampleTelemetry).Count
+            Samples = @($sampleTelemetry)
         }
 
         [void](Write-ArtifactJson -Name ("{0}-combat-validation.json" -f $script:RunTag) -Object $report)
