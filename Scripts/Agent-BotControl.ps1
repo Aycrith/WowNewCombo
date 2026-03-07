@@ -305,6 +305,7 @@ function New-SessionManifestBaseline
         EvidenceIntervalSeconds = $EvidenceIntervalSeconds
         ShortValidationSeconds = $ShortValidationSeconds
         MaxPatchLoops = $MaxPatchLoops
+        RuntimeLogSnapshot = Get-LatestRuntimeLogFileSnapshot
     }
 }
 
@@ -605,6 +606,77 @@ function Save-LatestLogTail
     [void](Write-ArtifactJson -Name ("{0}-meta.json" -f $Label) -Object $file)
     [void](Write-ArtifactText -Name ("{0}-tail.txt" -f $Label) -Content "$($tailResp.Result.Content)")
     Write-Info "Saved log tail for $Label from $($file.Relative)"
+}
+
+function Get-LatestRuntimeLogFileSnapshot
+{
+    $filesResp = Invoke-AgentApiSafe -Method GET -Path "/api/logs/files" -TimeoutSec 8
+    if (-not $filesResp.Success -or $null -eq $filesResp.Result -or $null -eq $filesResp.Result.Files)
+    {
+        return $null
+    }
+
+    $runtimeFile = $filesResp.Result.Files |
+        Where-Object { "$($_.Relative)" -like "out*.log" -or "$($_.Name)" -like "out*.log" } |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+
+    if ($null -eq $runtimeFile)
+    {
+        return $null
+    }
+
+    $contentRoot = "$($filesResp.Result.ContentRoot)"
+    $relative = "$($runtimeFile.Relative)"
+    $fullPath = $null
+    if (-not [string]::IsNullOrWhiteSpace($contentRoot) -and -not [string]::IsNullOrWhiteSpace($relative))
+    {
+        $normalizedRelative = $relative -replace '/', '\'
+        $fullPath = Join-Path $contentRoot $normalizedRelative
+    }
+
+    return [ordered]@{
+        Name = "$($runtimeFile.Name)"
+        Relative = $relative
+        ContentRoot = $contentRoot
+        FullPath = $fullPath
+        SizeBytes = [long]$runtimeFile.SizeBytes
+        LastWriteTimeUtc = "$($runtimeFile.LastWriteTimeUtc)"
+    }
+}
+
+function Get-FileContentFromOffset
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [long]$StartOffset = 0
+    )
+
+    if (-not (Test-Path -LiteralPath $Path))
+    {
+        return $null
+    }
+
+    $fileInfo = Get-Item -LiteralPath $Path -ErrorAction Stop
+    $offset = [Math]::Max(0L, [Math]::Min([long]$StartOffset, [long]$fileInfo.Length))
+    $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+    try
+    {
+        [void]$stream.Seek($offset, [System.IO.SeekOrigin]::Begin)
+        $reader = New-Object System.IO.StreamReader($stream, [System.Text.Encoding]::UTF8, $true, 4096, $true)
+        try
+        {
+            return $reader.ReadToEnd()
+        }
+        finally
+        {
+            $reader.Dispose()
+        }
+    }
+    finally
+    {
+        $stream.Dispose()
+    }
 }
 
 function Invoke-AgentApi
@@ -4954,6 +5026,7 @@ function Get-CombatAcceptanceSummary
 {
     param([AllowNull()][object]$Report)
 
+    $focusContaminationThreshold = 3
     $summary = New-ActionSummary -ActionName "ValidateCombat"
     $summary["KillsDelta"] = 0
     $summary["TargetKills"] = 30
@@ -4984,6 +5057,7 @@ function Get-CombatAcceptanceSummary
     $summary["LowHealthSampleCount"] = 0
     $summary["CriticalHealthSampleCount"] = 0
     $summary["FocusRestoreFailureCount"] = 0
+    $summary["FocusContaminationThreshold"] = $focusContaminationThreshold
     $summary["FocusContaminated"] = $false
     $summary["SpellFailedMovingCount"] = 0
     $summary["BadAttackFacingCount"] = 0
@@ -5026,7 +5100,7 @@ function Get-CombatAcceptanceSummary
     $summary["LowHealthSampleCount"] = [int]$Report.LowHealthSampleCount
     $summary["CriticalHealthSampleCount"] = [int]$Report.CriticalHealthSampleCount
     $summary["FocusRestoreFailureCount"] = [int]$Report.FocusRestoreFailureCount
-    $summary["FocusContaminated"] = [int]$summary["FocusRestoreFailureCount"] -gt 0
+    $summary["FocusContaminated"] = [int]$summary["FocusRestoreFailureCount"] -ge $focusContaminationThreshold
     $summary["SpellFailedMovingCount"] = [int]$Report.SpellFailedMovingCount
     $summary["BadAttackFacingCount"] = [int]$Report.BadAttackFacingCount
 
@@ -5116,7 +5190,7 @@ function Get-CombatAcceptanceSummary
     if ([bool]$summary["FocusContaminated"] -and
         (([int]$summary["LostTargetBurstCountWindow"] -ne 0) -or ([int]$summary["LostTargetReacquireAttemptCountWindow"] -gt 0)))
     {
-        Add-ActionFailureReason -Summary $summary -Reason ("Combat evidence was contaminated by {0} WoW focus restore failures." -f [int]$summary["FocusRestoreFailureCount"])
+        Add-ActionFailureReason -Summary $summary -Reason ("Combat evidence was contaminated by {0} WoW focus restore failures (threshold {1})." -f [int]$summary["FocusRestoreFailureCount"], [int]$summary["FocusContaminationThreshold"])
     }
 
     if (-not [bool]$summary["FocusContaminated"] -and [int]$summary["LostTargetBurstCountWindow"] -ne 0)
@@ -6164,6 +6238,10 @@ function Invoke-NoProgressValidation
 
 function Get-SessionLogContent
 {
+    $manifestPath = Join-Path $script:SessionArtifactDir "session-manifest.json"
+    $manifest = $(if (Test-Path -LiteralPath $manifestPath) { Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null })
+    $runtimeLogSnapshot = $(if ($null -ne $manifest) { $manifest.RuntimeLogSnapshot } else { $null })
+
     $logCandidates = @(
         (Join-Path $script:LogsDir "$script:RunTag-blazor-stdout.log"),
         (Join-Path $script:LogsDir "$script:RunTag-blazor-stderr.log")
@@ -6181,6 +6259,19 @@ function Get-SessionLogContent
     }
 
     $content = New-Object System.Text.StringBuilder
+    if ($null -ne $runtimeLogSnapshot)
+    {
+        $runtimeLogPath = "$($runtimeLogSnapshot.FullPath)"
+        if (-not [string]::IsNullOrWhiteSpace($runtimeLogPath))
+        {
+            $runtimeContent = Get-FileContentFromOffset -Path $runtimeLogPath -StartOffset ([long]$runtimeLogSnapshot.SizeBytes)
+            if (-not [string]::IsNullOrWhiteSpace($runtimeContent))
+            {
+                [void]$content.AppendLine($runtimeContent)
+            }
+        }
+    }
+
     foreach ($candidate in @($logCandidates | Select-Object -Unique))
     {
         if (Test-Path -LiteralPath $candidate)
@@ -6471,12 +6562,12 @@ function Invoke-ControlledCombatValidation
                 ShadowBolt = (Get-RegexMatchCount -Content $logContent -Pattern "Shadow Bolt")
                 Shoot = (Get-RegexMatchCount -Content $logContent -Pattern "\bShoot\b")
             }
-            FearCastCount = (Get-RegexMatchCount -Content $logContent -Pattern "\bFear\b")
-            DrainLifeCastCount = (Get-RegexMatchCount -Content $logContent -Pattern "Drain Life")
-            HealthstoneUseCount = (Get-RegexMatchCount -Content $logContent -Pattern "Healthstone use requested|Use Healthstone")
-            HealthstoneCreateCount = (Get-RegexMatchCount -Content $logContent -Pattern "Create Healthstone requested|Create Healthstone")
-            SummonVoidwalkerCount = (Get-RegexMatchCount -Content $logContent -Pattern "Summon Voidwalker")
-            SummonImpCount = (Get-RegexMatchCount -Content $logContent -Pattern "Summon Imp")
+            FearCastCount = (Get-RegexMatchCount -Content $logContent -Pattern 'DataToColor:PS\("Fear"|CastingHandler\s+\]\s+\[Fear')
+            DrainLifeCastCount = (Get-RegexMatchCount -Content $logContent -Pattern 'DataToColor:PS\("Drain Life"|CastingHandler\s+\]\s+\[Drain Life')
+            HealthstoneUseCount = (Get-RegexMatchCount -Content $logContent -Pattern 'Healthstone use requested|Use Healthstone requested|/use item:(34062|30703|22044|22105|22104|22103|19013|19012|9421|19011|19010|5510|19009|19008|5509|19007|19006|5511|19005|19004|5512)')
+            HealthstoneCreateCount = (Get-RegexMatchCount -Content $logContent -Pattern 'Create Healthstone requested via command cast|/cast Create Healthstone|CastingHandler\s+\]\s+\[Create Healthstone')
+            SummonVoidwalkerCount = (Get-RegexMatchCount -Content $logContent -Pattern 'DataToColor:PS\("Summon Voidwalker"|CastingHandler\s+\]\s+\[Summon Voidwalker')
+            SummonImpCount = (Get-RegexMatchCount -Content $logContent -Pattern 'DataToColor:PS\("Summon Imp"|CastingHandler\s+\]\s+\[Summon Imp')
             ApproachAssistCount = (Get-RegexMatchCount -Content $logContent -Pattern "New Plan=\s+Approach Target")
             BodyPullFallbackCount = (Get-RegexMatchCount -Content $logContent -Pattern "forcing short approach retry before clear")
             LostTargetCount = (Get-RegexMatchCount -Content $logContent -Pattern "Lost target")

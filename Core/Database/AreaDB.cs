@@ -190,6 +190,102 @@ public sealed class AreaDB : IDisposable
         }
     }
 
+    public int GetNearestAreaServiceCandidates(
+        PlayerFaction faction,
+        NpcServiceKind service,
+        Vector3 playerPosW,
+        string[] allowedNames,
+        Span<NpcServiceCandidate> destination,
+        out int written)
+    {
+        if (CurrentArea == null || CurrentWorldMapArea == null)
+        {
+            written = 0;
+            return 0;
+        }
+
+        return CollectCuratedServiceCandidates(
+            CurrentArea,
+            CurrentWorldMapArea.Value,
+            NpcWorldLocations,
+            faction,
+            service,
+            playerPosW,
+            allowedNames,
+            destination,
+            out written);
+    }
+
+    internal static int CollectCuratedServiceCandidates(
+        Area area,
+        in WorldMapArea worldMapArea,
+        FrozenDictionary<int, Vector3[]> npcWorldLocations,
+        PlayerFaction faction,
+        NpcServiceKind service,
+        Vector3 playerPosW,
+        string[] allowedNames,
+        Span<NpcServiceCandidate> destination,
+        out int written)
+    {
+        written = 0;
+
+        List<NPC>? serviceNpcs = GetAreaServiceNpcs(area, service);
+        if (serviceNpcs == null || serviceNpcs.Count == 0)
+        {
+            return 0;
+        }
+
+        var pool = ArrayPool<NpcServiceCandidate>.Shared;
+        NpcServiceCandidate[] rented = pool.Rent(serviceNpcs.Count);
+        int count = 0;
+
+        try
+        {
+            for (int i = 0; i < serviceNpcs.Count; i++)
+            {
+                NPC npc = serviceNpcs[i];
+
+                if (allowedNames.Length != 0 &&
+                    !allowedNames.Contains(npc.name, StringComparer.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (!FriendlyToPlayer(npc, faction) || ShouldSkipCuratedServiceNpc(npc, service))
+                {
+                    continue;
+                }
+
+                if (!TryResolveCuratedServiceWorldPosition(npc, npcWorldLocations, playerPosW, worldMapArea, out Vector3 worldPosition, out Vector3 mapPosition))
+                {
+                    continue;
+                }
+
+                rented[count++] = new NpcServiceCandidate(
+                    service,
+                    NpcServiceCandidateSource.AreaCurated,
+                    npc.id,
+                    npc.name,
+                    worldPosition,
+                    mapPosition,
+                    GetServiceFlags(service),
+                    npc.description ?? string.Empty);
+            }
+
+            Array.Sort(rented, 0, count, Comparer<NpcServiceCandidate>.Create(
+                (a, b) => playerPosW.WorldDistanceXYTo(a.WorldPosition).CompareTo(playerPosW.WorldDistanceXYTo(b.WorldPosition))));
+
+            int toCopy = Math.Min(count, destination.Length);
+            rented.AsSpan(0, toCopy).CopyTo(destination);
+            written = toCopy;
+            return count;
+        }
+        finally
+        {
+            pool.Return(rented, clearArray: false);
+        }
+    }
+
     static bool FriendlyToPlayer(Creature npc, PlayerFaction playerFaction, FactionTemplateDB factionDB)
     {
         if (!factionDB.Factions.TryGetValue(npc.Faction, out int friendGroup))
@@ -208,6 +304,99 @@ public sealed class AreaDB : IDisposable
             PlayerFaction.Alliance => (friendGroup & allianceOurMask) != 0,
             PlayerFaction.Horde => (friendGroup & hordeOurMask) != 0,
             _ => false
+        };
+    }
+
+    internal static bool FriendlyToPlayer(NPC npc, PlayerFaction playerFaction)
+    {
+        return playerFaction switch
+        {
+            PlayerFaction.Alliance => npc.reactalliance == 1,
+            PlayerFaction.Horde => npc.reacthorde == 1,
+            _ => false
+        };
+    }
+
+    internal static bool ShouldSkipCuratedServiceNpc(NPC npc, NpcServiceKind service)
+    {
+        return service != NpcServiceKind.Trainer &&
+            !string.IsNullOrWhiteSpace(npc.description) &&
+            npc.description.Contains(NpcServiceKind.Trainer.ToStringF(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static bool TryResolveCuratedServiceWorldPosition(
+        NPC npc,
+        FrozenDictionary<int, Vector3[]> npcWorldLocations,
+        Vector3 playerPosW,
+        in WorldMapArea worldMapArea,
+        out Vector3 worldPosition,
+        out Vector3 mapPosition)
+    {
+        if (npcWorldLocations.TryGetValue(npc.id, out Vector3[]? spawnWorldPositions) &&
+            spawnWorldPositions.Length > 0)
+        {
+            float bestDistance = float.MaxValue;
+            Vector3 bestWorldPosition = Vector3.Zero;
+
+            for (int i = 0; i < spawnWorldPositions.Length; i++)
+            {
+                Vector3 candidateWorldPosition = spawnWorldPositions[i];
+                if (candidateWorldPosition.Z == 0)
+                {
+                    continue;
+                }
+
+                float distance = playerPosW.WorldDistanceXYTo(candidateWorldPosition);
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    bestWorldPosition = candidateWorldPosition;
+                }
+            }
+
+            if (bestDistance < float.MaxValue)
+            {
+                worldPosition = bestWorldPosition;
+                mapPosition = WorldMapAreaDB.ToMap_FlipXY(bestWorldPosition, worldMapArea);
+                return true;
+            }
+        }
+
+        if (npc.MapCoords.Length == 0)
+        {
+            worldPosition = Vector3.Zero;
+            mapPosition = Vector3.Zero;
+            return false;
+        }
+
+        mapPosition = npc.MapCoords[0];
+        worldPosition = WorldMapAreaDB.ToWorld_FlipXY(mapPosition, worldMapArea);
+        return worldPosition != Vector3.Zero;
+    }
+
+    internal static List<NPC>? GetAreaServiceNpcs(Area area, NpcServiceKind service)
+    {
+        return service switch
+        {
+            NpcServiceKind.Vendor => area.vendor,
+            NpcServiceKind.Repair => area.repair,
+            NpcServiceKind.Innkeeper => area.innkeeper,
+            NpcServiceKind.Trainer => area.trainer,
+            NpcServiceKind.FlightMaster => area.flightmaster,
+            _ => null
+        };
+    }
+
+    internal static NpcFlags GetServiceFlags(NpcServiceKind service)
+    {
+        return service switch
+        {
+            NpcServiceKind.Vendor => NpcFlags.Vendor,
+            NpcServiceKind.Repair => NpcFlags.Repair | NpcFlags.Vendor,
+            NpcServiceKind.Innkeeper => NpcFlags.Innkeeper,
+            NpcServiceKind.Trainer => NpcFlags.Trainer | NpcFlags.ClassTrainer | NpcFlags.ProfessionTrainer,
+            NpcServiceKind.FlightMaster => NpcFlags.FlightMaster,
+            _ => NpcFlags.None
         };
     }
 
@@ -243,4 +432,3 @@ public sealed class AreaDB : IDisposable
         return creatures.Entries.TryGetValue(entry, out creature);
     }
 }
-

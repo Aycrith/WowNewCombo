@@ -456,6 +456,30 @@ public sealed class CombatPullCastingRuntimeTests
     }
 
     [Fact]
+    public void ShouldAttemptPetTargetRecoveryWhileTargetMissing_WhenPetHasLiveTargetAndRecentProgress_ReturnsTrue()
+    {
+        bool result = CombatGoal.ShouldAttemptPetTargetRecoveryWhileTargetMissing(
+            hasPet: true,
+            petHasTarget: true,
+            petTargetAlive: true,
+            hasRecentCombatProgress: true);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldAttemptPetTargetRecoveryWhileTargetMissing_WhenRecentProgressMissing_ReturnsFalse()
+    {
+        bool result = CombatGoal.ShouldAttemptPetTargetRecoveryWhileTargetMissing(
+            hasPet: true,
+            petHasTarget: true,
+            petTargetAlive: true,
+            hasRecentCombatProgress: false);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
     public void AdhocGoal_ShouldSuppressDuringRecovery_WhenNonRecoveryActionAndFoodBuffActive_ReturnsTrue()
     {
         bool result = AdhocGoal.ShouldSuppressDuringRecovery(

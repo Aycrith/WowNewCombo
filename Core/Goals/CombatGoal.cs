@@ -427,6 +427,26 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
 
     private bool TryRecoverTargetAfterLoss(long nowTick, bool burstActive)
     {
+        if (lostTargetRecoveryStep == LostTargetRecoveryStep.None &&
+            ShouldAttemptPetTargetRecoveryWhileTargetMissing(
+                bits.Pet(),
+                playerReader.PetTarget(),
+                bits.PetTarget_Alive(),
+                HasRecentCombatProgress(nowTick)))
+        {
+            RecordLostTargetReacquireAttempt(nowTick);
+            RecordReacquireFallbackAttempt(nowTick);
+            if (TryAdoptPetTargetAsCombatThreat())
+            {
+                RecordLostTargetReacquireSuccess(nowTick);
+                RecordReacquireFallbackSuccess(nowTick);
+                logger.LogInformation("Recovered combat target via immediate pet handoff.");
+                targetLostConsecutiveTicks = 0;
+                ResetLostTargetRecoveryState();
+                return true;
+            }
+        }
+
         if (lostTargetRecoveryStep == LostTargetRecoveryStep.None)
         {
             RecordLostTargetReacquireAttempt(nowTick);
@@ -455,10 +475,12 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         if (lostTargetRecoveryStep == LostTargetRecoveryStep.LastTargetAttempted)
         {
             RecordReacquireFallbackAttempt(nowTick);
-            input.PressNearestTarget();
-            wait.Update();
+            bool nearestTargetFound = input.PressNearestTargetAndWait(
+                wait,
+                bits.Target,
+                timeoutMs: LostTargetReacquireTimeoutMs);
 
-            if (TryAdoptCurrentTargetAsCombatThreat())
+            if (nearestTargetFound && TryAdoptCurrentTargetAsCombatThreat())
             {
                 RecordLostTargetReacquireSuccess(nowTick);
                 RecordReacquireFallbackSuccess(nowTick);
@@ -610,6 +632,16 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         bool petTargetAlive)
     {
         return hasPet && petHasTarget && petTargetAlive;
+    }
+
+    internal static bool ShouldAttemptPetTargetRecoveryWhileTargetMissing(
+        bool hasPet,
+        bool petHasTarget,
+        bool petTargetAlive,
+        bool hasRecentCombatProgress)
+    {
+        return hasRecentCombatProgress &&
+            ShouldAttemptPetTargetRecoveryAfterDeadTarget(hasPet, petHasTarget, petTargetAlive);
     }
 
     internal static bool HasRangedCombatPreference(ClassConfiguration classConfiguration)

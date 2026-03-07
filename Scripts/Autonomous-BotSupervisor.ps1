@@ -43,7 +43,7 @@ param(
     [int]$MaxAgentControlRuntimeSeconds = 5400,
     [int]$StableGoalObservationSeconds = 120,
     [int]$LegacyHarnessEveryNCycles = 4,
-    [string]$PriorityGateOrder = "ValidateReroute,ValidateNoProgress,ValidateCombat,LiveSession",
+    [string]$PriorityGateOrder = "ValidateCombat,ValidateReroute,ValidateNoProgress,LiveSession",
     [string]$LegacyHarnessStages = "PreFlight",
     [switch]$EnableMutations,
     [switch]$DryRun,
@@ -965,7 +965,7 @@ function Get-GateOrder
 
     if ($order.Count -eq 0)
     {
-        return @("ValidateReroute", "ValidateNoProgress", "ValidateCombat", "LiveSession")
+        return @("ValidateCombat", "ValidateReroute", "ValidateNoProgress", "LiveSession")
     }
 
     return $order
@@ -1527,7 +1527,7 @@ function Get-HypothesesForFindings
                 "launch readiness incomplete" { "One or more launch prerequisites are unresolved. Running Doctor or collecting readiness evidence should identify the missing subsystem." }
                 "route-follow not restored" { "The live bot is not settling into FollowRoute, likely because a transient goal or recovery path is still active." }
                 "ValidateReroute" { "Reroute acceptance is failing because synthetic hazards are not intersecting the route strongly enough or reroute counters are not advancing." }
-                "ValidateCombat" { "Combat acceptance is failing due to incomplete spell coverage or runtime regressions in pull/reacquire behavior." }
+                "ValidateCombat" { "Combat acceptance is failing due to pull/reacquire regressions, incomplete combat evidence, or focus/input contamination." }
                 "ValidateNoProgress" { "The no-progress scenario is not generating an explicit trigger-and-recover sequence in the current route segment." }
                 "LiveSession" { "Soak acceptance is exceeding health, route-deviation, or repeat-stuck thresholds over time." }
                 default { "A targeted validation rerun with tighter evidence focus should isolate the smallest reproducible cause." }

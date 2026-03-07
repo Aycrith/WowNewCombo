@@ -11,8 +11,6 @@ using SharedLib.Extensions;
 using SharedLib.NpcFinder;
 
 using System;
-using System.Buffers;
-using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -31,7 +29,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         Finished,
     }
 
-    private enum MerchantResult
+    private enum ServiceInteractionResult
     {
         Success,
         Failed,
@@ -46,12 +44,11 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     private const int KEYBOARD_ONLY_VENDOR_ACQUIRE_MAX_ATTEMPTS = 4;
     private const int KEYBOARD_ONLY_VENDOR_TURN_MS = 180;
     private const int KEYBOARD_ONLY_VENDOR_TARGET_WAIT_MS = 220;
+    private const int MAX_TIME_TO_REACH_SERVICE_TARGET = 2000;
     // Keep broad enough to reach nearby town service NPCs from common grind loops,
     // but still reject obviously remote candidates before pathing.
     private const float MAX_AUTO_NPC_TRAVEL_DISTANCE = 750f;
     private const float MAX_AUTO_NPC_VERTICAL_DELTA = 60f;
-
-    private readonly FrozenDictionary<NpcFlags, SearchValues<string>> npcSearchPatterns;
 
     public override float Cost => key.Cost;
 
@@ -77,11 +74,13 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     private PathState pathState = PathState.Finished;
 
     private bool tryFindClosestNPC => key.Path.Length == 0;
-    private Creature npc;
-    private readonly HashSet<string> rejectedVendorCandidates = new(StringComparer.OrdinalIgnoreCase);
-    private NpcSearchResult[] searchResult = [];
+    private readonly NpcServiceKind requestedServiceKind;
+    private NpcServiceCandidate currentCandidate;
+    private readonly HashSet<string> rejectedServiceCandidates = new(StringComparer.OrdinalIgnoreCase);
+    private NpcServiceCandidate[] searchResult = [];
     private int searchCount;
     private int searchIndex;
+    private bool fallbackSearchLoaded;
 
     private static readonly TimeSpan NoPathRetryDelay = TimeSpan.FromSeconds(30);
     private DateTime noPathBackoffUntilUtc;
@@ -153,18 +152,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         }
 
         Keys = [key];
-
-        npcSearchPatterns = Enum.GetValues<NpcFlags>().Select(static flag =>
-        {
-            string[] strings = flag switch
-            {
-                NpcFlags.Vendor => [flag.ToStringF(), "Sell"],
-                _ => [flag.ToStringF()]
-            };
-
-            return new KeyValuePair<NpcFlags, SearchValues<string>>(flag, SearchValues.Create(strings, StringComparison.OrdinalIgnoreCase));
-        })
-        .ToFrozenDictionary(pair => pair.Key, pair => pair.Value);
+        requestedServiceKind = GetRequestedServiceKind(key.Name);
     }
 
     public void Dispose()
@@ -270,7 +258,11 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         if (tryFindClosestNPC)
         {
             key.Path = [];
-            npc = default;
+            currentCandidate = default;
+            searchResult = [];
+            searchCount = 0;
+            searchIndex = 0;
+            fallbackSearchLoaded = false;
         }
     }
 
@@ -328,23 +320,106 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         }
     }
 
-    private void UpdateClosestNPC(NpcFlags npcFlag)
+    internal static NpcServiceKind GetRequestedServiceKind(string actionName)
     {
-        if (searchResult.Length == 0 || searchCount == 0)
-            return;
+        if (actionName.Contains(nameof(NpcServiceKind.Repair), StringComparison.OrdinalIgnoreCase))
+        {
+            return NpcServiceKind.Repair;
+        }
 
-        npc = searchResult[searchIndex].Creature;
-        Vector3 worldPos = searchResult[searchIndex].WorldPosition;
-        key.Path = [worldPos];
+        if (actionName.Contains(nameof(NpcServiceKind.Innkeeper), StringComparison.OrdinalIgnoreCase))
+        {
+            return NpcServiceKind.Innkeeper;
+        }
 
-        LogFoundCloesestNPCByType(logger, npc.Name, npcFlag.ToStringF(), worldPos);
+        if (actionName.Contains(nameof(NpcServiceKind.Trainer), StringComparison.OrdinalIgnoreCase))
+        {
+            return NpcServiceKind.Trainer;
+        }
+
+        if (actionName.Contains(nameof(NpcServiceKind.FlightMaster), StringComparison.OrdinalIgnoreCase) ||
+            actionName.Contains("Flightmaster", StringComparison.OrdinalIgnoreCase) ||
+            actionName.Contains(nameof(Gossip.Taxi), StringComparison.OrdinalIgnoreCase))
+        {
+            return NpcServiceKind.FlightMaster;
+        }
+
+        if (actionName.Contains(nameof(NpcServiceKind.Vendor), StringComparison.OrdinalIgnoreCase) ||
+            actionName.Contains("Sell", StringComparison.OrdinalIgnoreCase))
+        {
+            return NpcServiceKind.Vendor;
+        }
+
+        return NpcServiceKind.None;
     }
 
-    private bool IsReasonableAutoNpcCandidate(in NpcSearchResult candidate, out string reason)
+    internal static NpcFlags GetFallbackSearchFlags(NpcServiceKind serviceKind)
     {
-        if (rejectedVendorCandidates.Contains(candidate.Creature.Name))
+        return serviceKind switch
         {
-            reason = "previously rejected due to missing vendor gossip option";
+            NpcServiceKind.Vendor => NpcFlags.Vendor,
+            NpcServiceKind.Repair => NpcFlags.Repair | NpcFlags.Vendor,
+            NpcServiceKind.Innkeeper => NpcFlags.Innkeeper,
+            NpcServiceKind.Trainer => NpcFlags.Trainer | NpcFlags.ClassTrainer | NpcFlags.ProfessionTrainer,
+            NpcServiceKind.FlightMaster => NpcFlags.FlightMaster,
+            _ => NpcFlags.None
+        };
+    }
+
+    internal static string BuildRejectedServiceCandidateKey(NpcServiceKind serviceKind, int entry, string candidateName)
+        => $"{(int)serviceKind}:{entry}:{candidateName}";
+
+    internal static bool ShouldAttemptSingleOptionVendorFallback(NpcServiceKind serviceKind, int gossipCount, bool hasVendorOption)
+        => (serviceKind == NpcServiceKind.Vendor || serviceKind == NpcServiceKind.Repair) &&
+           gossipCount == 1 &&
+           !hasVendorOption;
+
+    internal static bool HasExpectedServiceGossip(
+        NpcServiceKind serviceKind,
+        IReadOnlyDictionary<Gossip, int> gossips,
+        bool merchantWindowOpened)
+    {
+        return serviceKind switch
+        {
+            NpcServiceKind.Vendor => merchantWindowOpened || gossips.ContainsKey(Gossip.Vendor),
+            NpcServiceKind.Repair => merchantWindowOpened || gossips.ContainsKey(Gossip.Vendor),
+            NpcServiceKind.Trainer => gossips.ContainsKey(Gossip.Trainer),
+            NpcServiceKind.FlightMaster => gossips.ContainsKey(Gossip.Taxi),
+            NpcServiceKind.Innkeeper => merchantWindowOpened ||
+                                        gossips.ContainsKey(Gossip.Binder) ||
+                                        gossips.ContainsKey(Gossip.Vendor) ||
+                                        gossips.Count > 0,
+            _ => false
+        };
+    }
+
+    private void UpdateClosestCandidate()
+    {
+        if (searchResult.Length == 0 || searchCount == 0)
+        {
+            return;
+        }
+
+        currentCandidate = searchResult[searchIndex];
+        key.Path = [currentCandidate.WorldPosition];
+
+        LogFoundCloesestNPCByType(logger, currentCandidate.Name, requestedServiceKind.ToStringF(), currentCandidate.WorldPosition);
+        logger.LogInformation(
+            "Service candidate selected Service={Service} Source={Source} Entry={Entry} Name={Name} World={World} Map={Map} Flags={Flags}",
+            requestedServiceKind.ToStringF(),
+            currentCandidate.Source.ToStringF(),
+            currentCandidate.Entry,
+            currentCandidate.Name,
+            currentCandidate.WorldPosition,
+            currentCandidate.MapPosition,
+            currentCandidate.Flags);
+    }
+
+    private bool IsReasonableAutoNpcCandidate(in NpcServiceCandidate candidate, out string reason)
+    {
+        if (rejectedServiceCandidates.Contains(candidate.IdentityKey))
+        {
+            reason = "previously rejected after service validation";
             return false;
         }
 
@@ -352,7 +427,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         // on the live client route being tested (bot runs into terrain/zonewall near the target point).
         // Skip this candidate during auto NPC selection to prevent suicidal repair/vendor runs.
         if (playerReader.UIMapId.Value == 1942 &&
-            candidate.Creature.Name.Equals("Samir", StringComparison.OrdinalIgnoreCase))
+            candidate.Name.Equals("Samir", StringComparison.OrdinalIgnoreCase))
         {
             reason = "known bad Ghostlands service target";
             return false;
@@ -438,9 +513,9 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
 
-        if (tryFindClosestNPC && npc != default)
+        if (tryFindClosestNPC && currentCandidate != default)
         {
-            execGameCommand.Run($"/target {npc.Name}");
+            execGameCommand.Run($"/target {currentCandidate.Name}");
             wait.Update();
         }
 
@@ -493,8 +568,8 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
                 if (!hasTarget)
                 {
-                    string candidateName = npc == default ? string.Empty : npc.Name;
-                    LogWarn($"Vendor acquisition failed. Candidate='{candidateName}', KeyboardOnlyPathUsed={keyboardOnlyPathUsed}, AttemptCount={attemptCount}, TurnAdjustCount={turnAdjustCount}, FailureReason={failureReason}");
+                    string candidateName = currentCandidate.Name ?? string.Empty;
+                    LogWarn($"Service acquisition failed. Service={requestedServiceKind.ToStringF()}, Candidate='{candidateName}', Source={currentCandidate.Source.ToStringF()}, KeyboardOnlyPathUsed={keyboardOnlyPathUsed}, AttemptCount={attemptCount}, TurnAdjustCount={turnAdjustCount}, FailureReason={failureReason}");
                 }
             }
             else
@@ -508,7 +583,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         wait.Until(400, () => bits.Target() || bits.SoftInteract());
         if (!bits.Target() && !bits.SoftInteract())
         {
-            LogWarn("No target found! Vendor acquisition exhausted.");
+            LogWarn($"No target found! Service acquisition exhausted for {requestedServiceKind.ToStringF()}.");
 
             if (tryFindClosestNPC)
             {
@@ -524,15 +599,15 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         input.PressInteract();
         wait.Update();
 
-        MerchantResult merchantResult = OpenMerchantWindow(out bool performedVendorWork);
-        if (merchantResult == MerchantResult.TryNextNPC && tryFindClosestNPC)
+        ServiceInteractionResult interactionResult = CompleteServiceInteraction(out bool performedVendorWork);
+        if (interactionResult == ServiceInteractionResult.TryNextNPC && tryFindClosestNPC)
         {
             input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
             Resume();
             return;
         }
 
-        if (merchantResult != MerchantResult.Success)
+        if (interactionResult != ServiceInteractionResult.Success)
             return;
 
         noPathBackoffUntilUtc = default;
@@ -650,7 +725,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     private void FaceNpcCandidateForKeyboardOnlyAcquire()
     {
-        if (!ShouldUseKeyboardOnlyVendorFacing(input.KeyboardOnly, npc != default))
+        if (!ShouldUseKeyboardOnlyVendorFacing(input.KeyboardOnly, currentCandidate != default))
         {
             return;
         }
@@ -675,7 +750,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     private bool TryTargetVendorByNameCommand()
     {
-        string candidateName = npc == default ? string.Empty : npc.Name;
+        string candidateName = currentCandidate.Name;
         if (!ShouldUseVendorNameTargetCommand(input.KeyboardOnly, candidateName))
         {
             return false;
@@ -694,6 +769,152 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         wait.Update();
         wait.Until(120, () => bits.Target() || bits.SoftInteract());
         return bits.Target() || bits.SoftInteract();
+    }
+
+    private ServiceInteractionResult CompleteServiceInteraction(out bool performedServiceWork)
+    {
+        performedServiceWork = false;
+
+        ServiceInteractionResult interactionResult = OpenExpectedServiceWindow(out performedServiceWork, out string failureReason);
+        if (interactionResult == ServiceInteractionResult.Success)
+        {
+            return interactionResult;
+        }
+
+        bool approachVerified = PerformServiceApproachVerification();
+        logger.LogInformation(
+            "Service interaction verification Service={Service} CandidateSource={Source} Entry={Entry} Name={Name} ApproachVerified={ApproachVerified} TargetId={TargetId} TargetName={TargetName} FailureReason={FailureReason}",
+            requestedServiceKind.ToStringF(),
+            currentCandidate.Source.ToStringF(),
+            currentCandidate.Entry,
+            currentCandidate.Name,
+            approachVerified,
+            playerReader.TargetId,
+            ResolveTargetName(playerReader.TargetId),
+            failureReason);
+
+        if (!approachVerified)
+        {
+            RejectCurrentServiceCandidate("approach_verification_failed");
+            return tryFindClosestNPC
+                ? ServiceInteractionResult.TryNextNPC
+                : ServiceInteractionResult.Failed;
+        }
+
+        input.PressInteract();
+        wait.Update();
+
+        ServiceInteractionResult retryResult = OpenExpectedServiceWindow(out performedServiceWork, out string retryFailureReason);
+        if (retryResult == ServiceInteractionResult.Success)
+        {
+            return retryResult;
+        }
+
+        RejectCurrentServiceCandidate(retryFailureReason);
+        return tryFindClosestNPC
+            ? ServiceInteractionResult.TryNextNPC
+            : ServiceInteractionResult.Failed;
+    }
+
+    private bool PerformServiceApproachVerification()
+    {
+        if (!bits.Target())
+        {
+            return false;
+        }
+
+        stopMoving.Stop();
+
+        if (!playerReader.MinRangeZero())
+        {
+            bool reached = MoveToTargetAndReached();
+            wait.Update();
+            return reached;
+        }
+
+        FaceNpcCandidateForKeyboardOnlyAcquire();
+        wait.Update();
+        return true;
+    }
+
+    private bool MoveToTargetAndReached()
+    {
+        if (!bits.Moving())
+        {
+            wait.While(input.Approach.OnCooldown);
+            TryPressServiceApproachOnCooldownIfNeeded();
+            wait.Until(input.Approach.PressDuration, bits.Moving);
+        }
+
+        wait.Until(
+            MAX_TIME_TO_REACH_SERVICE_TARGET,
+            StopMovingOrReachedServiceTarget,
+            TryPressServiceApproachOnCooldownIfNeeded);
+
+        return bits.Target() && playerReader.MinRangeZero();
+    }
+
+    private bool StopMovingOrReachedServiceTarget() => !bits.Target() || bits.NotMoving() || playerReader.MinRangeZero();
+
+    private void TryPressServiceApproachOnCooldownIfNeeded()
+    {
+        if (bits.Target() && !bits.Moving() && !playerReader.IsInMeleeRange())
+        {
+            if (input.PressedApproachOnCooldown())
+            {
+                wait.Update();
+            }
+        }
+    }
+
+    private string ResolveTargetName(int targetId)
+    {
+        if (targetId == 0)
+        {
+            return string.Empty;
+        }
+
+        if (currentCandidate.Entry != 0 && currentCandidate.Entry == targetId)
+        {
+            return currentCandidate.Name;
+        }
+
+        return areaDB.TryGetCreature(targetId, out Creature creature)
+            ? creature.Name
+            : string.Empty;
+    }
+
+    private string DescribeGossipOptions()
+    {
+        if (gossipReader.Gossips.Count == 0)
+        {
+            return "none";
+        }
+
+        return string.Join(
+            ", ",
+            gossipReader.Gossips
+                .OrderBy(static option => option.Value)
+                .Select(static option => $"{option.Key.ToStringF()}:{option.Value}"));
+    }
+
+    private void RejectCurrentServiceCandidate(string reason)
+    {
+        if (currentCandidate == default)
+        {
+            return;
+        }
+
+        string rejectedKey = BuildRejectedServiceCandidateKey(requestedServiceKind, currentCandidate.Entry, currentCandidate.Name);
+        rejectedServiceCandidates.Add(rejectedKey);
+
+        logger.LogWarning(
+            "Rejecting service candidate Service={Service} CandidateSource={Source} Entry={Entry} Name={Name} Reason={Reason}",
+            requestedServiceKind.ToStringF(),
+            currentCandidate.Source.ToStringF(),
+            currentCandidate.Entry,
+            currentCandidate.Name,
+            reason);
     }
 
     private void MountIfPossible()
@@ -723,39 +944,144 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         }
     }
 
-    private MerchantResult OpenMerchantWindow(out bool performedVendorWork)
+    private ServiceInteractionResult OpenExpectedServiceWindow(out bool performedServiceWork, out string failureReason)
     {
-        performedVendorWork = false;
-        float e = wait.Until(TIMEOUT, gossipReader.GossipStartOrMerchantWindowOpened);
+        return requestedServiceKind switch
+        {
+            NpcServiceKind.Vendor => OpenMerchantWindow(out performedServiceWork, out failureReason),
+            NpcServiceKind.Repair => OpenMerchantWindow(out performedServiceWork, out failureReason),
+            NpcServiceKind.Trainer => OpenServiceGossip(Gossip.Trainer, out performedServiceWork, out failureReason),
+            NpcServiceKind.FlightMaster => OpenServiceGossip(Gossip.Taxi, out performedServiceWork, out failureReason),
+            NpcServiceKind.Innkeeper => OpenInnkeeperService(out performedServiceWork, out failureReason),
+            _ => OpenServiceGossip(Gossip.Gossip, out performedServiceWork, out failureReason)
+        };
+    }
+
+    private ServiceInteractionResult OpenInnkeeperService(out bool performedServiceWork, out string failureReason)
+    {
+        ServiceInteractionResult result = OpenServiceGossip(Gossip.Binder, out performedServiceWork, out failureReason);
+        if (result == ServiceInteractionResult.Success)
+        {
+            return result;
+        }
+
         if (gossipReader.MerchantWindowOpened())
         {
-            LogWarn($"Gossip no options! {e}ms");
+            performedServiceWork = false;
+            failureReason = string.Empty;
+            return ServiceInteractionResult.Success;
         }
-        else
+
+        if (gossipReader.Gossips.Count > 0)
+        {
+            performedServiceWork = false;
+            failureReason = string.Empty;
+            return ServiceInteractionResult.Success;
+        }
+
+        return result;
+    }
+
+    private ServiceInteractionResult OpenServiceGossip(
+        Gossip expectedGossip,
+        out bool performedServiceWork,
+        out string failureReason)
+    {
+        performedServiceWork = false;
+        float e = wait.Until(TIMEOUT, gossipReader.GossipStartOrMerchantWindowOpened);
+        if (HasExpectedServiceGossip(requestedServiceKind, gossipReader.Gossips, gossipReader.MerchantWindowOpened()))
+        {
+            failureReason = string.Empty;
+            return ServiceInteractionResult.Success;
+        }
+
+        e = wait.Until(TIMEOUT, gossipReader.GossipEnd);
+        if (e < 0)
+        {
+            failureReason = "gossip_end_timeout";
+            LogWarn($"Gossip - {nameof(gossipReader.GossipEnd)} not fired after {e}ms");
+            return ServiceInteractionResult.Failed;
+        }
+
+        if (HasExpectedServiceGossip(requestedServiceKind, gossipReader.Gossips, gossipReader.MerchantWindowOpened()))
+        {
+            failureReason = string.Empty;
+            return ServiceInteractionResult.Success;
+        }
+
+        failureReason = $"missing_{expectedGossip.ToStringF().ToLowerInvariant()}_gossip";
+        logger.LogWarning(
+            "Service validation failed Service={Service} CandidateSource={Source} Entry={Entry} Name={Name} TargetId={TargetId} TargetName={TargetName} ExpectedGossip={ExpectedGossip} MerchantOpened={MerchantOpened} GossipCount={GossipCount} GossipOptions={GossipOptions}",
+            requestedServiceKind.ToStringF(),
+            currentCandidate.Source.ToStringF(),
+            currentCandidate.Entry,
+            currentCandidate.Name,
+            playerReader.TargetId,
+            ResolveTargetName(playerReader.TargetId),
+            expectedGossip.ToStringF(),
+            gossipReader.MerchantWindowOpened(),
+            gossipReader.Gossips.Count,
+            DescribeGossipOptions());
+        return ServiceInteractionResult.Failed;
+    }
+
+    private ServiceInteractionResult OpenMerchantWindow(out bool performedVendorWork, out string failureReason)
+    {
+        performedVendorWork = false;
+        failureReason = string.Empty;
+
+        float e = wait.Until(TIMEOUT, gossipReader.GossipStartOrMerchantWindowOpened);
+        if (!gossipReader.MerchantWindowOpened())
         {
             e = wait.Until(TIMEOUT, gossipReader.GossipEnd);
             if (e < 0)
             {
+                failureReason = "gossip_end_timeout";
                 LogWarn($"Gossip - {nameof(gossipReader.GossipEnd)} not fired after {e}ms");
-                return MerchantResult.Failed;
+                return ServiceInteractionResult.Failed;
             }
-            else
+
+            if (gossipReader.Gossips.TryGetValue(Gossip.Vendor, out int orderNum))
             {
-                if (gossipReader.Gossips.TryGetValue(Gossip.Vendor, out int orderNum))
-                {
-                    Log($"Picked {orderNum}th for {Gossip.Vendor.ToStringF()}");
-                    execGameCommand.Run($"/run SelectGossipOption({orderNum})--");
-                }
-                else
-                {
-                    LogWarn($"Target({playerReader.TargetId}) has no {Gossip.Vendor.ToStringF()} option!");
-                    if (!string.IsNullOrWhiteSpace(npc.Name))
-                    {
-                        rejectedVendorCandidates.Add(npc.Name);
-                    }
-                    return MerchantResult.TryNextNPC;
-                }
+                Log($"Picked {orderNum}th for {Gossip.Vendor.ToStringF()}");
+                execGameCommand.Run($"/run SelectGossipOption({orderNum})--");
+                wait.Update();
+                wait.Until(TIMEOUT, gossipReader.MerchantWindowOpened);
             }
+            else if (ShouldAttemptSingleOptionVendorFallback(requestedServiceKind, gossipReader.Gossips.Count, gossipReader.Gossips.ContainsKey(Gossip.Vendor)))
+            {
+                int fallbackOrder = gossipReader.Gossips.Values.First();
+                logger.LogWarning(
+                    "Vendor gossip fallback Service={Service} CandidateSource={Source} Entry={Entry} Name={Name} TargetId={TargetId} TargetName={TargetName} FallbackOrder={FallbackOrder} GossipOptions={GossipOptions}",
+                    requestedServiceKind.ToStringF(),
+                    currentCandidate.Source.ToStringF(),
+                    currentCandidate.Entry,
+                    currentCandidate.Name,
+                    playerReader.TargetId,
+                    ResolveTargetName(playerReader.TargetId),
+                    fallbackOrder,
+                    DescribeGossipOptions());
+                execGameCommand.Run($"/run SelectGossipOption({fallbackOrder})--");
+                wait.Update();
+                wait.Until(TIMEOUT, gossipReader.MerchantWindowOpened);
+            }
+        }
+
+        if (!gossipReader.MerchantWindowOpened())
+        {
+            failureReason = "merchant_window_not_open";
+            logger.LogWarning(
+                "Merchant validation failed Service={Service} CandidateSource={Source} Entry={Entry} Name={Name} TargetId={TargetId} TargetName={TargetName} MerchantOpened={MerchantOpened} GossipCount={GossipCount} GossipOptions={GossipOptions}",
+                requestedServiceKind.ToStringF(),
+                currentCandidate.Source.ToStringF(),
+                currentCandidate.Entry,
+                currentCandidate.Name,
+                playerReader.TargetId,
+                ResolveTargetName(playerReader.TargetId),
+                gossipReader.MerchantWindowOpened(),
+                gossipReader.Gossips.Count,
+                DescribeGossipOptions());
+            return ServiceInteractionResult.Failed;
         }
 
         Log($"Merchant window opened after {e}ms");
@@ -766,7 +1092,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         if (key.ConsoleKey != default)
             input.PressRandom(key);
 
-        if (hadGreyToSell)
+        if (!hadGreyToSell)
         {
             Log($"Merchant sell nothing! {e}ms");
             goto exit;
@@ -793,87 +1119,54 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         }
 
         performedVendorWork = hadRepairNeed || hadGreyToSell;
-        return MerchantResult.Success;
+        return ServiceInteractionResult.Success;
     }
 
     private bool TryAutoSelectNPCAndSetPath()
     {
-        if (areaDB.CurrentArea == null)
+        if (areaDB.CurrentArea == null || requestedServiceKind == NpcServiceKind.None)
         {
             return false;
         }
 
-        ReadOnlySpan<char> name = key.Name;
-
-        NpcFlags npcFlag = NpcFlags.None;
-        foreach ((NpcFlags type, SearchValues<string> pattern) in npcSearchPatterns)
-        {
-            if (name.ContainsAny(pattern))
-            {
-                npcFlag = type;
-                break;
-            }
-        }
-
-        string[] allowedNames = [];
-
-        // Parse NPC name pattern: [TYPE][ ][npc1 | npc2 | npc3]
-        // Supports multiple NPC names separated by pipe character
-        // Note: Faction-specific filtering could be added here in the future
-        int separator = name.IndexOf(' ');
-        if (separator != -1)
-        {
-            allowedNames = name[(separator + 1)..]
-                .ToString()
-                .Split('|', options: StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-
-            if (allowedNames.Length > 0)
-                logger.LogInformation($"Search for {npcFlag} like {string.Join(',', allowedNames)}");
-        }
-
-        NpcFlags searchFlags = npcFlag;
-        if (npcFlag == NpcFlags.Repair)
-        {
-            // Some valid repair NPCs are only tagged as Vendor in the DB.
-            searchFlags = NpcFlags.Repair | NpcFlags.Vendor;
-        }
-
+        string[] allowedNames = GetAllowedServiceNames(key.Name);
         if (searchResult.Length == 0)
         {
-            searchResult = new NpcSearchResult[8];
-
-            int found = areaDB.GetNearestNpcs(playerReader.Faction, searchFlags, playerReader.WorldPos, allowedNames, searchResult.AsSpan(), out searchCount);
-            if (found == 0 || searchCount == 0)
+            if (!TryLoadAreaCuratedCandidates(allowedNames) &&
+                !TryLoadFallbackCandidates(allowedNames))
             {
                 return false;
             }
-
-            LogFoundPotentialNPCByType(logger, searchCount, npcFlag.ToStringF());
-            searchIndex = 0;
         }
         else
         {
             searchIndex++;
         }
 
-        while (searchIndex < searchCount)
+        while (true)
         {
-            ref readonly NpcSearchResult candidate = ref searchResult[searchIndex];
-            if (IsReasonableAutoNpcCandidate(candidate, out string reason))
+            while (searchIndex < searchCount)
             {
-                break;
+                ref readonly NpcServiceCandidate candidate = ref searchResult[searchIndex];
+                if (IsReasonableAutoNpcCandidate(candidate, out string reason))
+                {
+                    LogWarn($"Try next closest NPC -- {searchIndex}");
+                    UpdateClosestCandidate();
+                    return true;
+                }
+
+                LogWarn($"Skipping NPC candidate '{candidate.Name}' ({candidate.WorldPosition}) - {reason}");
+                searchIndex++;
             }
 
-            LogWarn($"Skipping NPC candidate '{candidate.Creature.Name}' ({candidate.WorldPosition}) - {reason}");
-            searchIndex++;
-        }
-
-        if (searchIndex >= searchCount)
-        {
-            // Fallback: Try hard-coded vendor locations when auto-search exhausted
-            if (TryUseHardCodedVendor(npcFlag))
+            if (!fallbackSearchLoaded && TryLoadFallbackCandidates(allowedNames))
             {
-                LogWarn("Auto-search exhausted - using hard-coded vendor fallback");
+                continue;
+            }
+
+            if (TryUseHardCodedVendor(requestedServiceKind))
+            {
+                LogWarn("Auto-search exhausted - using hard-coded service fallback");
                 return true;
             }
 
@@ -887,21 +1180,89 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
             return false;
         }
+    }
 
-        LogWarn($"Try next closest NPC -- {searchIndex}");
+    private bool TryLoadAreaCuratedCandidates(string[] allowedNames)
+    {
+        searchResult = new NpcServiceCandidate[8];
+        int found = areaDB.GetNearestAreaServiceCandidates(
+            playerReader.Faction,
+            requestedServiceKind,
+            playerReader.WorldPos,
+            allowedNames,
+            searchResult.AsSpan(),
+            out searchCount);
+        if (found == 0 || searchCount == 0)
+        {
+            searchResult = [];
+            searchCount = 0;
+            searchIndex = 0;
+            return false;
+        }
 
-        UpdateClosestNPC(npcFlag);
+        fallbackSearchLoaded = false;
+        searchIndex = 0;
+        logger.LogInformation(
+            "Found {Count} potential {Service} NPC from {Source}.",
+            searchCount,
+            requestedServiceKind.ToStringF(),
+            NpcServiceCandidateSource.AreaCurated.ToStringF());
+        return true;
+    }
 
+    private bool TryLoadFallbackCandidates(string[] allowedNames)
+    {
+        NpcFlags searchFlags = GetFallbackSearchFlags(requestedServiceKind);
+        if (searchFlags == NpcFlags.None)
+        {
+            return false;
+        }
+
+        NpcSearchResult[] fallbackResults = new NpcSearchResult[8];
+        int found = areaDB.GetNearestNpcs(
+            playerReader.Faction,
+            searchFlags,
+            playerReader.WorldPos,
+            allowedNames,
+            fallbackResults.AsSpan(),
+            out int written);
+        if (found == 0 || written == 0)
+        {
+            return false;
+        }
+
+        searchResult = new NpcServiceCandidate[written];
+        for (int i = 0; i < written; i++)
+        {
+            NpcSearchResult fallbackResult = fallbackResults[i];
+            searchResult[i] = new NpcServiceCandidate(
+                requestedServiceKind,
+                NpcServiceCandidateSource.MapWideSearch,
+                fallbackResult.Creature.Entry,
+                fallbackResult.Creature.Name,
+                fallbackResult.WorldPosition,
+                WorldMapAreaDB.ToMap_FlipXY(fallbackResult.WorldPosition, playerReader.WorldMapArea),
+                fallbackResult.Creature.NpcFlag,
+                fallbackResult.Creature.SubName ?? string.Empty);
+        }
+
+        searchCount = written;
+        searchIndex = 0;
+        fallbackSearchLoaded = true;
+        logger.LogInformation(
+            "Found {Count} potential {Service} NPC from {Source}.",
+            searchCount,
+            requestedServiceKind.ToStringF(),
+            NpcServiceCandidateSource.MapWideSearch.ToStringF());
         return true;
     }
 
     /// <summary>
     /// Fallback method: Try to use hard-coded vendor locations when auto-search fails
     /// </summary>
-    private bool TryUseHardCodedVendor(NpcFlags npcFlag)
+    private bool TryUseHardCodedVendor(NpcServiceKind serviceKind)
     {
-        // Only use fallback for vendors
-        if (npcFlag != NpcFlags.Vendor)
+        if (serviceKind != NpcServiceKind.Vendor && serviceKind != NpcServiceKind.Repair)
             return false;
 
         if (areaDB.CurrentWorldMapArea == null)
@@ -915,20 +1276,23 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             return false;
         }
 
-        var closestVendor = VendorLocations.FindClosestVendor(vendors, playerReader.WorldPos);
+        Predicate<VendorLocations.VendorInfo> predicate = serviceKind == NpcServiceKind.Repair
+            ? static vendor => vendor.CanRepair
+            : static vendor => vendor.CanSell;
+        var closestVendor = VendorLocations.FindClosestVendor(vendors, playerReader.WorldPos, predicate);
         if (closestVendor == null)
             return false;
 
-        // Create a temporary creature for the vendor
-        npc = new Creature
-        {
-            Name = closestVendor.Name,
-            Entry = 0, // Unknown entry
-            Faction = 0, // Assume friendly
-            NpcFlag = NpcFlags.Vendor
-        };
-
-        // Set the vendor position as the path
+        Vector3 mapPosition = WorldMapAreaDB.ToMap_FlipXY(closestVendor.WorldPosition, playerReader.WorldMapArea);
+        currentCandidate = new NpcServiceCandidate(
+            serviceKind,
+            NpcServiceCandidateSource.HardCodedFallback,
+            0,
+            closestVendor.Name,
+            closestVendor.WorldPosition,
+            mapPosition,
+            serviceKind == NpcServiceKind.Repair ? NpcFlags.Repair | NpcFlags.Vendor : NpcFlags.Vendor,
+            closestVendor.Notes ?? string.Empty);
         key.Path = [closestVendor.WorldPosition];
 
         logger.LogInformation($"Using hard-coded vendor: {closestVendor.Name} at {closestVendor.WorldPosition} (Priority {closestVendor.Priority})");
@@ -938,6 +1302,18 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         }
 
         return true;
+    }
+
+    private static string[] GetAllowedServiceNames(string keyName)
+    {
+        int separator = keyName.IndexOf(' ');
+        if (separator == -1)
+        {
+            return [];
+        }
+
+        return keyName[(separator + 1)..]
+            .Split('|', options: StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
     }
 
 

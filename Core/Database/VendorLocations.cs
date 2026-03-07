@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -410,11 +411,21 @@ public static class VendorLocations
     /// </summary>
     public static VendorInfo? FindClosestVendor(List<VendorInfo> vendors, Vector3 playerPosition)
     {
+        return FindClosestVendor(vendors, playerPosition, static _ => true);
+    }
+
+    public static VendorInfo? FindClosestVendor(List<VendorInfo> vendors, Vector3 playerPosition, Predicate<VendorInfo> predicate)
+    {
         VendorInfo? closest = null;
         float closestDistance = float.MaxValue;
 
         foreach (var vendor in vendors)
         {
+            if (!predicate(vendor))
+            {
+                continue;
+            }
+
             float distance = Vector3.Distance(playerPosition, vendor.WorldPosition);
             if (distance < closestDistance)
             {
