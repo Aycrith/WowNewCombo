@@ -430,4 +430,48 @@ public sealed class CombatPullCastingRuntimeTests
 
         result.Should().BeFalse();
     }
+
+    [Fact]
+    public void AdhocGoal_ShouldSuppressDuringRecovery_WhenNonRecoveryActionAndFoodBuffActive_ReturnsTrue()
+    {
+        bool result = AdhocGoal.ShouldSuppressDuringRecovery(
+            actionName: "Life Tap",
+            hasFoodBuff: true,
+            hasDrinkBuff: false);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AdhocGoal_ShouldSuppressDuringRecovery_WhenPetSummonAndDrinkBuffActive_ReturnsTrue()
+    {
+        bool result = AdhocGoal.ShouldSuppressDuringRecovery(
+            actionName: "Summon Voidwalker",
+            hasFoodBuff: false,
+            hasDrinkBuff: true);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AdhocGoal_ShouldSuppressDuringRecovery_WhenFoodAction_ReturnsFalse()
+    {
+        bool result = AdhocGoal.ShouldSuppressDuringRecovery(
+            actionName: "Food",
+            hasFoodBuff: true,
+            hasDrinkBuff: false);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AdhocGoal_ShouldSuppressDuringRecovery_WhenNoRecoveryBuffs_ReturnsFalse()
+    {
+        bool result = AdhocGoal.ShouldSuppressDuringRecovery(
+            actionName: "Create Healthstone",
+            hasFoodBuff: false,
+            hasDrinkBuff: false);
+
+        result.Should().BeFalse();
+    }
 }

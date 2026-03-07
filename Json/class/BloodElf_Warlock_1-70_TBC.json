@@ -308,7 +308,7 @@
         "Requirements": [
           "Level >= 10",
           "TargetHealth% < 20",
-          "BagItem:6265:0"
+          "!BagItem:6265:5"
         ],
         "School": "Shadow"
       },
@@ -419,7 +419,7 @@
         "Name": "Life Tap",
         "Key": "-",
         "WhenUsable": true,
-        "Requirement": "Mana% < LIFETAP_MANA && Health% > LIFETAP_HP && !InCombat",
+        "Requirement": "Mana% < LIFETAP_MANA && Health% > LIFETAP_HP && !InCombat && !Food && !Drink",
         "Cost": 1
       }
     ]

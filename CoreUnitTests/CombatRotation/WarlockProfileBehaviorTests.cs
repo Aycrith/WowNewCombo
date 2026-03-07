@@ -151,7 +151,7 @@ public sealed class WarlockProfileBehaviorTests
     }
 
     [Fact]
-    public void BloodElfWarlockProfile_UsesDrainSoulAndWandBeforeShadowBoltSpam()
+    public void BloodElfWarlockProfile_UsesDrainSoulOnlyWhenSoulShardsAreLow_AndWandBeforeShadowBoltSpam()
     {
         ClassConfiguration? config = LoadProfileOrSkip();
         if (config == null)
@@ -165,7 +165,7 @@ public sealed class WarlockProfileBehaviorTests
         Assert.NotNull(drainSoul);
         Assert.NotNull(shadowBolt);
         Assert.NotNull(shoot);
-        Assert.Contains("BagItem:6265:0", drainSoul.Requirements);
+        Assert.Contains("!BagItem:6265:5", drainSoul.Requirements);
         Assert.Contains("!HasRangedWeapon", shadowBolt.Requirements);
         Assert.True(Array.IndexOf(config.Combat.Sequence, shoot) < Array.IndexOf(config.Combat.Sequence, shadowBolt));
     }
@@ -184,6 +184,8 @@ public sealed class WarlockProfileBehaviorTests
         Assert.Equal(1f, lifeTap.Cost);
         Assert.Contains("Mana% < LIFETAP_MANA", lifeTap.Requirement);
         Assert.Contains("Health% > LIFETAP_HP", lifeTap.Requirement);
+        Assert.Contains("!Food", lifeTap.Requirement);
+        Assert.Contains("!Drink", lifeTap.Requirement);
     }
 
     private static ClassConfiguration? LoadProfileOrSkip()
