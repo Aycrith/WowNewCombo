@@ -275,6 +275,52 @@ public class GoapPlannerTests
     }
 
     [Fact]
+    public void Plan_SixtyThreeAvailableGoals_DoesNotThrowAndFindsPlan()
+    {
+        GoapPlanner.InvalidateCache();
+
+        List<GoapGoal> goals = new(63);
+        for (int i = 0; i < 62; i++)
+        {
+            goals.Add(CreateGoal($"Disabled{i}", canRun: false));
+        }
+
+        GoapGoal directGoal = CreateGoal("DirectCombat",
+            effects: new Dictionary<GoapKey, bool> { [GoapKey.incombat] = true },
+            cost: 1.0f);
+        goals.Add(directGoal);
+
+        BitVector32 worldState = CreateWorldState();
+        bool[] goalState = CreateGoalState((GoapKey.incombat, true));
+
+        Stack<GoapGoal> plan = GoapPlanner.Plan(goals.ToArray(), worldState, goalState);
+
+        plan.Should().NotBeNull();
+        plan.Should().HaveCount(1);
+        plan.Peek().Should().Be(directGoal);
+    }
+
+    [Fact]
+    public void Plan_MoreThanSixtyThreeAvailableGoals_ThrowsExplicitLimit()
+    {
+        GoapPlanner.InvalidateCache();
+
+        List<GoapGoal> goals = new(64);
+        for (int i = 0; i < 64; i++)
+        {
+            goals.Add(CreateGoal($"Goal{i}", canRun: false));
+        }
+
+        BitVector32 worldState = CreateWorldState();
+        bool[] goalState = CreateGoalState((GoapKey.incombat, true));
+
+        Action act = () => GoapPlanner.Plan(goals.ToArray(), worldState, goalState);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("GoapPlanner bitmask supports at most 63 goals; got 64.");
+    }
+
+    [Fact]
     public void Plan_ChoosesCheaperPath()
     {
         // Arrange - two ways to achieve incombat

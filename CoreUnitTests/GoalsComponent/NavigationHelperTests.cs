@@ -549,6 +549,23 @@ public class NavigationHelperTests
         selected.Should().BeFalse();
     }
 
+    [Fact]
+    public void GetRerouteProbeTarget_WhenAnchorExists_ReturnsSelectedAnchor()
+    {
+        Vector3 player = new(0, 0, 0);
+        Vector3[] routeTopFirst =
+        [
+            new(2, 0, 0),
+            new(6, 0, 0),
+            new(10, 0, 0),
+            new(15, 0, 0)
+        ];
+
+        Vector3? probe = NavigationGoal.GetRerouteProbeTarget(routeTopFirst, player);
+
+        probe.Should().Be(new Vector3(10, 0, 0));
+    }
+
     // ---- Pending reroute guards ----
 
     [Fact]
