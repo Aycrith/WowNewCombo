@@ -517,4 +517,24 @@ public sealed class CombatPullCastingRuntimeTests
 
         result.Should().BeFalse();
     }
+
+    [Fact]
+    public void AdhocNpcGoal_ShouldSkipVendorApproachForFriendlySoftInteract_ReturnsTrue()
+    {
+        bool result = AdhocNPCGoal.ShouldSkipVendorApproachForSoftInteract(
+            hasSoftInteract: true,
+            softInteractHostile: false);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AdhocNpcGoal_ShouldSkipVendorApproachForHostileSoftInteract_ReturnsFalse()
+    {
+        bool result = AdhocNPCGoal.ShouldSkipVendorApproachForSoftInteract(
+            hasSoftInteract: true,
+            softInteractHostile: true);
+
+        result.Should().BeFalse();
+    }
 }

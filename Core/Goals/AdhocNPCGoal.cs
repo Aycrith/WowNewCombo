@@ -40,7 +40,6 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     private const bool debug = false;
 
-    private const int MAX_TIME_TO_REACH_MELEE = GoalTimeouts.MaxTimeToReachMeleeMs;
     private const int TIMEOUT = 5000;
     private const float NPC_DESTINATION_PROXIMITY = 12f;
     private const int MAX_FAR_DESTINATION_RETRIES = 3;
@@ -435,15 +434,15 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         bool hasTarget = bits.Target();
 
-        if (bits.SoftInteract() &&
-            !bits.SoftInteract_Hostile())
+        if (ShouldSkipVendorApproachForSoftInteract(bits.SoftInteract(), bits.SoftInteract_Hostile()))
         {
             input.PressInteract();
             wait.Update();
 
             LogWarn($"Soft Interact found NPC with id {playerReader.SoftInteract_Id}");
-
-            hasTarget = MoveToTargetAndReached();
+            // When soft-interact already points to a friendly NPC, avoid approach loops.
+            // At this point we're close enough to attempt direct gossip/vendor interaction.
+            hasTarget = bits.Target() || bits.SoftInteract();
         }
 
         if (!hasTarget && !input.KeyboardOnly)
@@ -549,17 +548,8 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         MountIfPossible();
     }
 
-    private bool MoveToTargetAndReached()
-    {
-        wait.While(input.Approach.OnCooldown);
-
-        float elapsedMs = wait.Until(MAX_TIME_TO_REACH_MELEE,
-            bits.NotMoving, input.PressApproachOnCooldown);
-
-        //LogReachedCorpse(logger, bits.Target(), elapsedMs);
-
-        return bits.Target() && playerReader.MinRangeZero();
-    }
+    internal static bool ShouldSkipVendorApproachForSoftInteract(bool hasSoftInteract, bool softInteractHostile)
+        => hasSoftInteract && !softInteractHostile;
 
     private void MountIfPossible()
     {
