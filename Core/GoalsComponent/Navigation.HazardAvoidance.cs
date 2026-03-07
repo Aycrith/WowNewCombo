@@ -115,6 +115,15 @@ public sealed partial class Navigation
         return true;
     }
 
+    internal static Vector3? GetRerouteProbeTarget(
+        IReadOnlyList<Vector3> routeTopFirst,
+        Vector3 playerPosition)
+    {
+        return TrySelectDetourAnchor(routeTopFirst, playerPosition, out Vector3 detourAnchor)
+            ? detourAnchor
+            : null;
+    }
+
     internal static bool ShouldApplyPendingReroute(
         RerouteInfo pendingReroute,
         IReadOnlyList<Vector3> routeTopFirst,

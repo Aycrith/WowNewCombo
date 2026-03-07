@@ -1312,6 +1312,21 @@ public sealed partial class Navigation : IDisposable
     public NavigationRerouteRuntimeSnapshot GetRerouteRuntimeSnapshot()
     {
         RerouteInfo? active = routeRerouter?.GetActiveReroute();
+        int? mapId = null;
+        Vector3? currentPosition = null;
+        Vector3? probeTarget = null;
+
+        if (playerReader != null)
+        {
+            currentPosition = playerReader.WorldPos;
+            mapId = playerReader.UIMapId.Value;
+        }
+
+        if (currentPosition.HasValue && routeToNextWaypoint != null && routeToNextWaypoint.Count > 0)
+        {
+            probeTarget = GetRerouteProbeTarget(routeToNextWaypoint.ToArray(), currentPosition.Value);
+        }
+
         return new NavigationRerouteRuntimeSnapshot(
             RerouteTriggerCount: rerouteTriggerCount,
             RerouteApplyCount: rerouteApplyCount,
@@ -1319,6 +1334,9 @@ public sealed partial class Navigation : IDisposable
             DetourOnlyCollapseCount: detourOnlyCollapseCount,
             LastRerouteDropReason: lastRerouteDropReason,
             LastRerouteAnchorDistance: lastRerouteAnchorDistance,
+            MapId: mapId,
+            CurrentPosition: currentPosition,
+            ProbeTarget: probeTarget,
             HasActiveReroute: active != null,
             ActiveRerouteId: active?.Id,
             ActiveRerouteStartedAt: active?.StartedAt,
