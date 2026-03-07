@@ -63,6 +63,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
     private readonly StopMoving stopMoving;
+    private readonly PlayerDirection playerDirection;
     private readonly ClassConfiguration classConfig;
     private readonly NpcNameTargeting npcNameTargeting;
     private readonly IMountHandler mountHandler;
@@ -77,6 +78,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     private bool tryFindClosestNPC => key.Path.Length == 0;
     private Creature npc;
+    private readonly HashSet<string> rejectedVendorCandidates = new(StringComparer.OrdinalIgnoreCase);
     private NpcSearchResult[] searchResult = [];
     private int searchCount;
     private int searchIndex;
@@ -113,7 +115,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     public AdhocNPCGoal(KeyAction key, ILogger<AdhocNPCGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, GossipReader gossipReader, AddonBits bits,
-        Navigation navigation, StopMoving stopMoving, AreaDB areaDB,
+        Navigation navigation, StopMoving stopMoving, PlayerDirection playerDirection, AreaDB areaDB,
         NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig,
         BagReader bagReader, SessionStat sessionStat,
         IMountHandler mountHandler, ExecGameCommand exec, CancellationTokenSource cts)
@@ -126,6 +128,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         this.playerReader = playerReader;
         this.bits = bits;
         this.stopMoving = stopMoving;
+        this.playerDirection = playerDirection;
         this.areaDB = areaDB;
         this.npcNameTargeting = npcNameTargeting;
         this.classConfig = classConfig;
@@ -339,6 +342,12 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     private bool IsReasonableAutoNpcCandidate(in NpcSearchResult candidate, out string reason)
     {
+        if (rejectedVendorCandidates.Contains(candidate.Creature.Name))
+        {
+            reason = "previously rejected due to missing vendor gossip option";
+            return false;
+        }
+
         // Ghostlands service data currently includes "Samir" at a location that is not safely reachable
         // on the live client route being tested (bot runs into terrain/zonewall near the target point).
         // Skip this candidate during auto NPC selection to prevent suicidal repair/vendor runs.
@@ -583,6 +592,12 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     internal static bool ShouldApplyVendorAcquireTurnAdjust(int attemptIndex)
         => attemptIndex < KEYBOARD_ONLY_VENDOR_ACQUIRE_MAX_ATTEMPTS - 1;
 
+    internal static bool ShouldUseKeyboardOnlyVendorFacing(bool keyboardOnly, bool hasNpcCandidate)
+        => keyboardOnly && hasNpcCandidate;
+
+    internal static bool ShouldUseVendorNameTargetCommand(bool keyboardOnly, string candidateName)
+        => keyboardOnly && !string.IsNullOrWhiteSpace(candidateName);
+
     internal static ConsoleKey GetVendorAcquireTurnKey(int turnAdjustCount, ConsoleKey turnLeftKey, ConsoleKey turnRightKey)
         => turnAdjustCount % 2 == 0 ? turnLeftKey : turnRightKey;
 
@@ -602,6 +617,12 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             }
 
             stopMoving.Stop();
+            FaceNpcCandidateForKeyboardOnlyAcquire();
+
+            if (TryTargetVendorByNameCommand())
+            {
+                return true;
+            }
 
             Log($"KeyboardOnly vendor acquire attempt {attemptCount}/{KEYBOARD_ONLY_VENDOR_ACQUIRE_MAX_ATTEMPTS}");
             input.PressRandom(key);
@@ -624,6 +645,54 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
             }
         }
 
+        return bits.Target() || bits.SoftInteract();
+    }
+
+    private void FaceNpcCandidateForKeyboardOnlyAcquire()
+    {
+        if (!ShouldUseKeyboardOnlyVendorFacing(input.KeyboardOnly, npc != default))
+        {
+            return;
+        }
+
+        if (key.Path.Length == 0)
+        {
+            return;
+        }
+
+        Vector3 candidateWorldPosition = key.Path[^1];
+        Vector3 playerMap = playerReader.MapPos;
+        Vector3 npcMap = WorldMapAreaDB.ToMap_FlipXY(candidateWorldPosition, playerReader.WorldMapArea);
+        float heading = DirectionCalculator.CalculateMapHeading(playerMap, npcMap);
+        if (float.IsNaN(heading) || float.IsInfinity(heading))
+        {
+            return;
+        }
+
+        // Ignore-distance 0 ensures we still nudge facing when already next to the vendor.
+        playerDirection.SetDirection(heading, candidateWorldPosition, 0f, token);
+    }
+
+    private bool TryTargetVendorByNameCommand()
+    {
+        string candidateName = npc == default ? string.Empty : npc.Name;
+        if (!ShouldUseVendorNameTargetCommand(input.KeyboardOnly, candidateName))
+        {
+            return false;
+        }
+
+        string escapedName = candidateName.Replace("\"", string.Empty, StringComparison.Ordinal);
+        execGameCommand.Run($"/targetexact {escapedName}");
+        wait.Update();
+        wait.Until(180, () => bits.Target() || bits.SoftInteract());
+        if (bits.Target() || bits.SoftInteract())
+        {
+            return true;
+        }
+
+        execGameCommand.Run("/targetfriend");
+        wait.Update();
+        wait.Until(120, () => bits.Target() || bits.SoftInteract());
         return bits.Target() || bits.SoftInteract();
     }
 
@@ -680,6 +749,10 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
                 else
                 {
                     LogWarn($"Target({playerReader.TargetId}) has no {Gossip.Vendor.ToStringF()} option!");
+                    if (!string.IsNullOrWhiteSpace(npc.Name))
+                    {
+                        rejectedVendorCandidates.Add(npc.Name);
+                    }
                     return MerchantResult.TryNextNPC;
                 }
             }

@@ -577,4 +577,44 @@ public sealed class CombatPullCastingRuntimeTests
 
         result.Should().Be(ConsoleKey.RightArrow);
     }
+
+    [Fact]
+    public void AdhocNpcGoal_ShouldUseKeyboardOnlyVendorFacing_WhenKeyboardOnlyAndNpcCandidatePresent_ReturnsTrue()
+    {
+        bool result = AdhocNPCGoal.ShouldUseKeyboardOnlyVendorFacing(
+            keyboardOnly: true,
+            hasNpcCandidate: true);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AdhocNpcGoal_ShouldUseKeyboardOnlyVendorFacing_WhenNotKeyboardOnly_ReturnsFalse()
+    {
+        bool result = AdhocNPCGoal.ShouldUseKeyboardOnlyVendorFacing(
+            keyboardOnly: false,
+            hasNpcCandidate: true);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AdhocNpcGoal_ShouldUseVendorNameTargetCommand_WhenKeyboardOnlyAndCandidateNamePresent_ReturnsTrue()
+    {
+        bool result = AdhocNPCGoal.ShouldUseVendorNameTargetCommand(
+            keyboardOnly: true,
+            candidateName: "Rathis Tomber");
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AdhocNpcGoal_ShouldUseVendorNameTargetCommand_WhenCandidateNameMissing_ReturnsFalse()
+    {
+        bool result = AdhocNPCGoal.ShouldUseVendorNameTargetCommand(
+            keyboardOnly: true,
+            candidateName: "");
+
+        result.Should().BeFalse();
+    }
 }
