@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -214,11 +215,31 @@ public class TestController : ControllerBase
             checks.Add(TestHelpers.CreateBoolCheck("Frame 13 (PowerCurrent)", powerCurrent >= 0 && powerCurrent <= powerMax));
             frameData["power"] = $"{powerCurrent}/{powerMax}";
 
-            // Frame 46: Race/Class
-            int expectedRace = 10; // BloodElf
-            int expectedClass = 4;  // Rogue
-            checks.Add(TestHelpers.CreateCheck("Frame 46 (Race)", expectedRace, (int)_playerReader.Race, "Expected BloodElf"));
-            checks.Add(TestHelpers.CreateCheck("Frame 46 (Class)", expectedClass, (int)_playerReader.Class, "Expected Rogue"));
+            // Frame 46: Race/Class derived from the active profile when available.
+            bool identityResolved = TryResolveExpectedCharacterIdentity(out UnitRace expectedRace, out UnitClass expectedClass, out string identitySource);
+            checks.Add(TestHelpers.CreateBoolCheck(
+                "Profile Identity Resolved",
+                identityResolved,
+                identityResolved
+                    ? $"Expected identity source: {identitySource}"
+                    : $"Unable to resolve expected race/class from profile '{identitySource}'."));
+
+            if (identityResolved)
+            {
+                checks.Add(TestHelpers.CreateCheck("Frame 46 (Race)", (int)expectedRace, (int)_playerReader.Race, $"Expected {expectedRace.ToStringF()}"));
+                checks.Add(TestHelpers.CreateCheck("Frame 46 (Class)", (int)expectedClass, (int)_playerReader.Class, $"Expected {expectedClass.ToStringF()}"));
+                frameData["expectedRace"] = expectedRace.ToStringF();
+                frameData["expectedClass"] = expectedClass.ToStringF();
+            }
+            else
+            {
+                checks.Add(TestHelpers.CreateCheck("Frame 46 (Race)", (int)_playerReader.Race, (int)_playerReader.Race, "Profile identity unavailable; race check downgraded to live player value"));
+                checks.Add(TestHelpers.CreateCheck("Frame 46 (Class)", (int)_playerReader.Class, (int)_playerReader.Class, "Profile identity unavailable; class check downgraded to live player value"));
+                frameData["expectedRace"] = null!;
+                frameData["expectedClass"] = null!;
+            }
+
+            frameData["profileIdentitySource"] = identitySource;
             frameData["race"] = _playerReader.Race.ToString();
             frameData["class"] = _playerReader.Class.ToString();
 
@@ -281,6 +302,48 @@ public class TestController : ControllerBase
             sw.Stop();
             return StatusCode(500, TestResult.FromException("Frame Data Validation", sw.Elapsed, ex));
         }
+    }
+
+    private bool TryResolveExpectedCharacterIdentity(out UnitRace expectedRace, out UnitClass expectedClass, out string identitySource)
+    {
+        expectedRace = UnitRace.None;
+        expectedClass = UnitClass.None;
+        identitySource = string.Empty;
+
+        string? profileName = null;
+        try
+        {
+            profileName = _botController.SelectedClassFilename;
+        }
+        catch (NotImplementedException ex)
+        {
+            _logger.LogWarning(ex, "SelectedClassFilename not implemented while resolving expected test identity");
+        }
+
+        if (string.IsNullOrWhiteSpace(profileName))
+        {
+            profileName = _botController.ClassConfig?.FileName;
+        }
+
+        if (string.IsNullOrWhiteSpace(profileName))
+        {
+            identitySource = "<none>";
+            return false;
+        }
+
+        identitySource = profileName;
+        string[] tokens = Path.GetFileNameWithoutExtension(profileName)
+            .Split('_', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (tokens.Length < 2)
+        {
+            return false;
+        }
+
+        return Enum.TryParse(tokens[0], ignoreCase: true, out expectedRace) &&
+            expectedRace != UnitRace.None &&
+            Enum.TryParse(tokens[1], ignoreCase: true, out expectedClass) &&
+            expectedClass != UnitClass.None;
     }
 
     /// <summary>

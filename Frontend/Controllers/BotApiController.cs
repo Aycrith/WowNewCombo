@@ -19,7 +19,9 @@ public record BotStatus(
     double AvgScreenLatency,
     double AvgNpcLatency,
     string? LastDeactivateReason,
-    DateTime? LastDeactivateUtc);
+    DateTime? LastDeactivateUtc,
+    string RuntimeMode,
+    bool AgentAvailable);
 
 public record ProfileListItem(
     string FileName,
@@ -86,7 +88,9 @@ public class BotApiController : ControllerBase
                 avgScreen,
                 avgNpc,
                 botController.LastDeactivateReason,
-                botController.LastDeactivateUtc);
+                botController.LastDeactivateUtc,
+                BotRuntimeModeHelper.GetRuntimeMode(botController),
+                agent?.Active == true);
 
             sw.Stop();
             logger.LogDebug("Bot status: active={IsActive}, profile={ProfileName} ({ElapsedMs}ms)",

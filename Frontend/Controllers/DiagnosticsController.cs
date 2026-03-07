@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 
 namespace Frontend.Controllers;
@@ -132,6 +133,7 @@ public class DiagnosticsController : ControllerBase
     private readonly FeatureFlagService? featureFlagService;
     private readonly CastingHandler? castingHandler;
     private readonly Core.Diagnostics.IGoapEventHistory? goapEventHistory;
+    private readonly PlayerReader? playerReader;
 
     private readonly StartupOptions startupOptions;
 
@@ -148,7 +150,8 @@ public class DiagnosticsController : ControllerBase
         Core.Navigation.NavSoakMetricsService? navSoakMetricsService = null,
         FeatureFlagService? featureFlagService = null,
         CastingHandler? castingHandler = null,
-        Core.Diagnostics.IGoapEventHistory? goapEventHistory = null)
+        Core.Diagnostics.IGoapEventHistory? goapEventHistory = null,
+        PlayerReader? playerReader = null)
     {
         this.logger = logger;
         this.keyBindingsReader = keyBindingsReader;
@@ -163,6 +166,7 @@ public class DiagnosticsController : ControllerBase
         this.featureFlagService = featureFlagService;
         this.castingHandler = castingHandler;
         this.goapEventHistory = goapEventHistory;
+        this.playerReader = playerReader;
     }
 
     #region Diagnostic Endpoints
@@ -395,7 +399,7 @@ public class DiagnosticsController : ControllerBase
             NavigationRerouteDiagnosticsResponse response = new(
                 BotActive: botController.IsBotActive,
                 CurrentGoal: TryGetCurrentGoalLabel(),
-                Reroute: navigation.GetRerouteRuntimeSnapshot(),
+                Reroute: EnrichRerouteSnapshot(navigation.GetRerouteRuntimeSnapshot()),
                 Soak: navSoakMetricsService.GetSnapshot(),
                 FeatureFlags: featureFlagSubset);
 
@@ -981,6 +985,69 @@ public class DiagnosticsController : ControllerBase
         {
             return string.Empty;
         }
+    }
+
+    private NavigationRerouteRuntimeSnapshot? EnrichRerouteSnapshot(NavigationRerouteRuntimeSnapshot? snapshot)
+    {
+        if (snapshot == null || snapshot.ProbeTarget != null || playerReader == null)
+        {
+            return snapshot;
+        }
+
+        if (playerReader.UIMapId.Value <= 0 || playerReader.WorldMapArea.UIMapId <= 0)
+        {
+            return snapshot;
+        }
+
+        IRouteProvider? routeProvider = ResolveRouteProviderForProbe();
+        if (routeProvider == null)
+        {
+            return snapshot;
+        }
+
+        Vector3[] mapRoute = routeProvider.MapRoute();
+        if (mapRoute.Length == 0)
+        {
+            return snapshot;
+        }
+
+        int mapId = snapshot.MapId ?? playerReader.UIMapId.Value;
+        Vector3 currentPosition = snapshot.CurrentPosition ?? SharedLib.WorldMapAreaDB.ToWorld_FlipXY(playerReader.MapPos, playerReader.WorldMapArea);
+        Vector3? probeTarget = RerouteProbeResolver.TryResolveFromMapRoute(
+            mapRoute,
+            playerReader.MapPos,
+            currentPosition,
+            playerReader.WorldMapArea);
+        if (probeTarget == null)
+        {
+            return snapshot;
+        }
+
+        return snapshot with
+        {
+            MapId = mapId,
+            CurrentPosition = currentPosition,
+            ProbeTarget = probeTarget
+        };
+    }
+
+    private IRouteProvider? ResolveRouteProviderForProbe()
+    {
+        Core.GOAP.GoapAgent? goapAgent = botController.GoapAgent;
+        if (goapAgent == null)
+        {
+            return null;
+        }
+
+        IRouteProvider? currentProvider = goapAgent.CurrentGoal as IRouteProvider;
+        IEnumerable<IRouteProvider> candidates = currentProvider == null
+            ? goapAgent.AvailableGoals.OfType<IRouteProvider>()
+            : [currentProvider, .. goapAgent.AvailableGoals.OfType<IRouteProvider>().Where(provider => !ReferenceEquals(provider, currentProvider))];
+
+        return candidates
+            .Where(provider => provider.MapRoute().Length > 0)
+            .OrderByDescending(static provider => provider.LastActive)
+            .FirstOrDefault();
     }
 
     public static bool TryNormalizeSupportedSlashCommand(string? command, out string normalized, out string? error)
