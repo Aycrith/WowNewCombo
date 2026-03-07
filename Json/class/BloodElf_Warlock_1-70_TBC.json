@@ -22,16 +22,16 @@
 
   "IntVariables": {
     "MIN_MANA_DRAIN": 25,
-    "LIFETAP_HP": 70,
-    "LIFETAP_MANA": 80,
+    "LIFETAP_HP": 60,
+    "LIFETAP_MANA": 60,
     "DRAIN_LIFE_HP": 60,
     "FEAR_HP": 40,
     "FEAR_MOB_COUNT": 2,
     "FLEE_HP": 15,
     "FLEE_MOB_COUNT": 3,
     "HEALTHSTONE_HP": 45,
-    "FOOD_HP": 90,
-    "DRINK_MANA": 90,
+    "FOOD_HP": 50,
+    "DRINK_MANA": 50,
     "DOT_MIN_HEALTH%": 35
   },
 
@@ -308,7 +308,7 @@
         "Requirements": [
           "Level >= 10",
           "TargetHealth% < 20",
-          "!BagItem:6265:5"
+          "!BagItem:6265:8"
         ],
         "School": "Shadow"
       },

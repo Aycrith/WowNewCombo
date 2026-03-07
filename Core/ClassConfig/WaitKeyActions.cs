@@ -45,6 +45,13 @@ public sealed partial class WaitKeyActions : KeyActions
         string keyActionName, string requirement)
     {
         string newActionName = $"{keyActionName} Buff";
+        for (int i = 0; i < Sequence.Length; i++)
+        {
+            if (Sequence[i].Name.Equals(newActionName, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return;
+            }
+        }
 
         KeyAction waitAction = new()
         {
