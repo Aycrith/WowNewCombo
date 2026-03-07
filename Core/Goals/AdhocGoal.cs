@@ -156,25 +156,23 @@ public sealed class AdhocGoal : GoapGoal
         return ShouldSuppressDuringRecovery(
             key.Name,
             buffs.Food(),
-            buffs.Drink());
+            buffs.Drink(),
+            playerReader.HealthPercent(),
+            playerReader.ManaPercent());
     }
 
     internal static bool ShouldSuppressDuringRecovery(
         string? actionName,
         bool hasFoodBuff,
-        bool hasDrinkBuff)
+        bool hasDrinkBuff,
+        int healthPercent,
+        int manaPercent)
     {
-        if ((!hasFoodBuff && !hasDrinkBuff) || string.IsNullOrWhiteSpace(actionName))
-        {
-            return false;
-        }
-
-        if (actionName.Equals("Food", StringComparison.OrdinalIgnoreCase) ||
-            actionName.Equals("Drink", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return true;
+        return RecoveryState.ShouldSuppressNonRecoveryAction(
+            actionName,
+            hasFoodBuff,
+            hasDrinkBuff,
+            healthPercent,
+            manaPercent);
     }
 }

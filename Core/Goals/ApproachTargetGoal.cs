@@ -91,7 +91,11 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
         }
     }
 
-    public override bool CanRun() => !buffs.Food() && !buffs.Drink();
+    public override bool CanRun() => !RecoveryState.IsRecoveryActive(
+        buffs.Food(),
+        buffs.Drink(),
+        playerReader.HealthPercent(),
+        playerReader.ManaPercent());
 
     public void OnGoapEvent(GoapEventArgs e)
     {

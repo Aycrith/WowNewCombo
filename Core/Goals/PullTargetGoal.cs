@@ -137,7 +137,11 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         AddEffect(GoapKey.pulled, true);
     }
 
-    public override bool CanRun() => !buffs.Food() && !buffs.Drink();
+    public override bool CanRun() => !RecoveryState.IsRecoveryActive(
+        buffs.Food(),
+        buffs.Drink(),
+        playerReader.HealthPercent(),
+        playerReader.ManaPercent());
 
     public override void OnEnter()
     {

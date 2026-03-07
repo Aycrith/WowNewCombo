@@ -24,7 +24,11 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     private readonly float cost;
     public override float Cost => cost;
-    public override bool CanRun() => pathSettings.CanRun() && !buffs.Food() && !buffs.Drink();
+    public override bool CanRun() => pathSettings.CanRun() && !RecoveryState.IsRecoveryActive(
+        buffs.Food(),
+        buffs.Drink(),
+        playerReader.HealthPercent(),
+        playerReader.ManaPercent());
 
     private const bool debug = false;
     private const float RefillOrientationFlipPenalty = 1f;

@@ -80,7 +80,11 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         AddEffect(GoapKey.shouldloot, false);
     }
 
-    public override bool CanRun() => !buffs.Food() && !buffs.Drink();
+    public override bool CanRun() => !RecoveryState.IsRecoveryActive(
+        buffs.Food(),
+        buffs.Drink(),
+        playerReader.HealthPercent(),
+        playerReader.ManaPercent());
 
     public override void OnEnter()
     {

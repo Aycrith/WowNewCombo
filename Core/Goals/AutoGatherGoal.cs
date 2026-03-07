@@ -27,6 +27,7 @@ public sealed class AutoGatherGoal : GoapGoal, IGoapEventListener, IRouteProvide
     private readonly PlayerReader playerReader;
     private readonly Wait wait;
     private readonly AddonBits bits;
+    private readonly BuffStatus<IPlayer> buffs;
     private readonly FoundNodeListener foundNodeListener;
 
     /// <summary>When the bot arrives at the estimated node coordinate and SoftInteract stays empty,
@@ -43,6 +44,7 @@ public sealed class AutoGatherGoal : GoapGoal, IGoapEventListener, IRouteProvide
         PlayerReader playerReader,
         Wait wait,
         AddonBits bits,
+        BuffStatus<IPlayer> buffs,
         FoundNodeListener foundNodeListener,
         [FromKeyedServices(KeyActionName)] KeyAction keyAction
         ) : base(nameof(AutoGatherGoal))
@@ -52,6 +54,7 @@ public sealed class AutoGatherGoal : GoapGoal, IGoapEventListener, IRouteProvide
         this.wait = wait;
         this.playerReader = playerReader;
         this.navigation = navigation;
+        this.buffs = buffs;
         this.foundNodeListener = foundNodeListener;
         this.bits = bits;
 
@@ -72,6 +75,11 @@ public sealed class AutoGatherGoal : GoapGoal, IGoapEventListener, IRouteProvide
     }
 
     public override bool CanRun() =>
+        !RecoveryState.IsRecoveryActive(
+            buffs.Food(),
+            buffs.Drink(),
+            playerReader.HealthPercent(),
+            playerReader.ManaPercent()) &&
         !IsCircuitBreakerOpen() &&
         key.Path != Array.Empty<Vector3>() &&
         (key.Path.Length == 1 && key.Path[0] != default) &&
