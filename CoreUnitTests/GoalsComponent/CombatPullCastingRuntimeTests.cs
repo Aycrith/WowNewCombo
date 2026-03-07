@@ -437,7 +437,9 @@ public sealed class CombatPullCastingRuntimeTests
         bool result = AdhocGoal.ShouldSuppressDuringRecovery(
             actionName: "Life Tap",
             hasFoodBuff: true,
-            hasDrinkBuff: false);
+            hasDrinkBuff: false,
+            healthPercent: 80,
+            manaPercent: 100);
 
         result.Should().BeTrue();
     }
@@ -448,7 +450,9 @@ public sealed class CombatPullCastingRuntimeTests
         bool result = AdhocGoal.ShouldSuppressDuringRecovery(
             actionName: "Summon Voidwalker",
             hasFoodBuff: false,
-            hasDrinkBuff: true);
+            hasDrinkBuff: true,
+            healthPercent: 100,
+            manaPercent: 70);
 
         result.Should().BeTrue();
     }
@@ -459,7 +463,9 @@ public sealed class CombatPullCastingRuntimeTests
         bool result = AdhocGoal.ShouldSuppressDuringRecovery(
             actionName: "Food",
             hasFoodBuff: true,
-            hasDrinkBuff: false);
+            hasDrinkBuff: false,
+            healthPercent: 80,
+            manaPercent: 100);
 
         result.Should().BeFalse();
     }
@@ -470,7 +476,22 @@ public sealed class CombatPullCastingRuntimeTests
         bool result = AdhocGoal.ShouldSuppressDuringRecovery(
             actionName: "Create Healthstone",
             hasFoodBuff: false,
-            hasDrinkBuff: false);
+            hasDrinkBuff: false,
+            healthPercent: 100,
+            manaPercent: 100);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AdhocGoal_ShouldSuppressDuringRecovery_WhenBuffActiveButResourceFull_ReturnsFalse()
+    {
+        bool result = AdhocGoal.ShouldSuppressDuringRecovery(
+            actionName: "Life Tap",
+            hasFoodBuff: true,
+            hasDrinkBuff: false,
+            healthPercent: 100,
+            manaPercent: 100);
 
         result.Should().BeFalse();
     }

@@ -319,7 +319,7 @@ public sealed class StuckDetectorScenario : TestScenarioBase
             // Move by 6 units each time to exceed the 5 unit threshold
             GameState.Player.Position = new Vector3(i * 6.0f, 0, 0);
             GameState.Player.IsMoving = true;
-            await Task.Delay(10);
+            AdvanceTime(TimeSpan.FromMilliseconds(50));
         }
 
         int historyCount = GameState.Player.PositionHistory.Count;
@@ -343,7 +343,7 @@ public sealed class StuckDetectorScenario : TestScenarioBase
             Vector3 pos = new Vector3(i * 2, 0, 0);
             GameState.Player.Position = pos;
             path.Enqueue(pos);
-            await Task.Delay(10);
+            AdvanceTime(TimeSpan.FromMilliseconds(50));
         }
 
         // Act - Get stuck and try to backtrack

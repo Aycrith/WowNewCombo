@@ -165,7 +165,7 @@ public sealed class WarlockProfileBehaviorTests
         Assert.NotNull(drainSoul);
         Assert.NotNull(shadowBolt);
         Assert.NotNull(shoot);
-        Assert.Contains("!BagItem:6265:5", drainSoul.Requirements);
+        Assert.Contains("!BagItem:6265:8", drainSoul.Requirements);
         Assert.Contains("!HasRangedWeapon", shadowBolt.Requirements);
         Assert.True(Array.IndexOf(config.Combat.Sequence, shoot) < Array.IndexOf(config.Combat.Sequence, shadowBolt));
     }
@@ -186,6 +186,21 @@ public sealed class WarlockProfileBehaviorTests
         Assert.Contains("Health% > LIFETAP_HP", lifeTap.Requirement);
         Assert.Contains("!Food", lifeTap.Requirement);
         Assert.Contains("!Drink", lifeTap.Requirement);
+    }
+
+    [Fact]
+    public void BloodElfWarlockProfile_RestThresholdsAreDeferredUntilHalfResources()
+    {
+        ClassConfiguration? config = LoadProfileOrSkip();
+        if (config == null)
+        {
+            return;
+        }
+
+        Assert.Equal(50, config.IntVariables["FOOD_HP"]);
+        Assert.Equal(50, config.IntVariables["DRINK_MANA"]);
+        Assert.Equal(60, config.IntVariables["LIFETAP_HP"]);
+        Assert.Equal(60, config.IntVariables["LIFETAP_MANA"]);
     }
 
     private static ClassConfiguration? LoadProfileOrSkip()
