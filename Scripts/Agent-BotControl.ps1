@@ -4976,6 +4976,10 @@ function Get-CombatAcceptanceSummary
     $summary["SummonVoidwalkerCount"] = 0
     $summary["SummonImpCount"] = 0
     $summary["PetSummonAttemptCount"] = 0
+    $summary["ApproachAssistCount"] = 0
+    $summary["BodyPullFallbackCount"] = 0
+    $summary["RangedStandoffMaintained"] = $false
+    $summary["RangedFillerDominant"] = $false
     $summary["FacingRecoveryCount"] = 0
     $summary["LowHealthSampleCount"] = 0
     $summary["CriticalHealthSampleCount"] = 0
@@ -5014,6 +5018,8 @@ function Get-CombatAcceptanceSummary
     $summary["SummonVoidwalkerCount"] = [int]$Report.SummonVoidwalkerCount
     $summary["SummonImpCount"] = [int]$Report.SummonImpCount
     $summary["PetSummonAttemptCount"] = [int]$Report.SummonVoidwalkerCount + [int]$Report.SummonImpCount
+    $summary["ApproachAssistCount"] = [int]$Report.ApproachAssistCount
+    $summary["BodyPullFallbackCount"] = [int]$Report.BodyPullFallbackCount
     $summary["FacingRecoveryCount"] = [int]$Report.FacingRecoveryCount
     $summary["LowHealthSampleCount"] = [int]$Report.LowHealthSampleCount
     $summary["CriticalHealthSampleCount"] = [int]$Report.CriticalHealthSampleCount
@@ -5051,8 +5057,13 @@ function Get-CombatAcceptanceSummary
     $summary["SpellCoverageComplete"] =
         ([int]$summary["SpellCounts"].Immolate -gt 0) -and
         ([int]$summary["SpellCounts"].Corruption -gt 0) -and
-        ([int]$summary["SpellCounts"].ShadowBolt -gt 0) -and
         ([int]$summary["SpellCounts"].Shoot -gt 0)
+    $summary["RangedStandoffMaintained"] =
+        ([int]$summary["BodyPullFallbackCount"] -eq 0) -and
+        ([int]$summary["PullFailureSoftRetryCountWindow"] -eq 0)
+    $summary["RangedFillerDominant"] =
+        ([int]$summary["SpellCounts"].Shoot -gt 0) -and
+        ([int]$summary["SpellCounts"].Shoot -ge [int]$summary["SpellCounts"].ShadowBolt)
 
     if ([int]$summary["KillsDelta"] -lt [int]$summary["TargetKills"])
     {
@@ -5062,7 +5073,7 @@ function Get-CombatAcceptanceSummary
     if (-not [bool]$summary["SpellCoverageComplete"])
     {
         $missingSpells = New-Object System.Collections.Generic.List[string]
-        foreach ($spellName in @("Immolate", "Corruption", "ShadowBolt", "Shoot"))
+        foreach ($spellName in @("Immolate", "Corruption", "Shoot"))
         {
             if ([int]$summary["SpellCounts"][$spellName] -le 0)
             {
@@ -5076,6 +5087,16 @@ function Get-CombatAcceptanceSummary
     if ([int]$summary["PullOpenerCounts"].CurseOfAgony -le 0)
     {
         Add-ActionFailureReason -Summary $summary -Reason "Curse of Agony pull opener evidence was not observed."
+    }
+
+    if (-not [bool]$summary["RangedStandoffMaintained"])
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("Ranged standoff was not maintained: BodyPullFallbackCount={0}, PullFailureSoftRetryCountWindow={1}." -f [int]$summary["BodyPullFallbackCount"], [int]$summary["PullFailureSoftRetryCountWindow"])
+    }
+
+    if (-not [bool]$summary["RangedFillerDominant"])
+    {
+        Add-ActionFailureReason -Summary $summary -Reason ("Ranged filler dominance failed: Shoot={0}, ShadowBolt={1}." -f [int]$summary["SpellCounts"].Shoot, [int]$summary["SpellCounts"].ShadowBolt)
     }
 
     if ([int]$summary["SpellFailedMovingCount"] -gt 2)
@@ -5107,6 +5128,10 @@ function Get-CombatAcceptanceSummary
         [int]$summary["FearCastCount"] +
         [int]$summary["DrainLifeCastCount"] +
         [int]$summary["HealthstoneUseCount"]
+    if ([int]$summary["LowHealthSampleCount"] -gt 0 -and [int]$summary["DrainLifeCastCount"] -le 0)
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Low-health combat samples were observed without Drain Life evidence."
+    }
     if ([int]$summary["CriticalHealthSampleCount"] -gt 0 -and $defensiveEvidenceCount -le 0)
     {
         Add-ActionFailureReason -Summary $summary -Reason "Critical low-health combat samples were observed without Fear, Drain Life, or Healthstone evidence."
@@ -6170,7 +6195,7 @@ function Get-RegexMatchCount
 function Get-CombatHealthWindowCount
 {
     param(
-        [Parameter(Mandatory = $true)][object[]]$Samples,
+        [Parameter(Mandatory = $true)]$Samples,
         [double]$Threshold = 35
     )
 
@@ -6179,18 +6204,54 @@ function Get-CombatHealthWindowCount
     {
         try
         {
-            if ($null -eq $sample -or $null -eq $sample.Snapshot -or -not [bool]$sample.Snapshot.Success)
+            if ($null -eq $sample -or $null -eq $sample.Snapshot)
             {
                 continue
             }
 
-            $snapshotResult = $sample.Snapshot.Result
-            if ($null -eq $snapshotResult -or $null -eq $snapshotResult.Data -or $null -eq $snapshotResult.Data.snapshot)
+            $snapshotEnvelope = $sample.Snapshot
+            if (($snapshotEnvelope.PSObject.Properties.Name -contains 'Success') -and -not [bool]$snapshotEnvelope.Success)
             {
                 continue
             }
 
-            $healthPercent = [double]$snapshotResult.Data.snapshot.healthPercent
+            if (($snapshotEnvelope.PSObject.Properties.Name -contains 'Result') -and $null -ne $snapshotEnvelope.Result)
+            {
+                $snapshotPayload = $snapshotEnvelope.Result
+            }
+            elseif (($snapshotEnvelope.PSObject.Properties.Name -contains 'Data') -and $null -ne $snapshotEnvelope.Data)
+            {
+                $snapshotPayload = $snapshotEnvelope.Data
+            }
+            else
+            {
+                continue
+            }
+
+            if (($snapshotPayload.PSObject.Properties.Name -contains 'data') -and $null -ne $snapshotPayload.data)
+            {
+                $snapshotData = $snapshotPayload.data
+            }
+            elseif (($snapshotPayload.PSObject.Properties.Name -contains 'Data') -and $null -ne $snapshotPayload.Data)
+            {
+                $snapshotData = $snapshotPayload.Data
+            }
+            else
+            {
+                continue
+            }
+
+            if (($snapshotData.PSObject.Properties.Name -notcontains 'snapshot') -or $null -eq $snapshotData.snapshot)
+            {
+                continue
+            }
+
+            $healthPercent = 0.0
+            if (-not [double]::TryParse([string]$snapshotData.snapshot.healthPercent, [ref]$healthPercent))
+            {
+                continue
+            }
+
             if ($healthPercent -lt $Threshold)
             {
                 $count++
@@ -6275,6 +6336,8 @@ function Invoke-ControlledCombatValidation
             HealthstoneCreateCount = (Get-RegexMatchCount -Content $logContent -Pattern "Create Healthstone requested|Create Healthstone")
             SummonVoidwalkerCount = (Get-RegexMatchCount -Content $logContent -Pattern "Summon Voidwalker")
             SummonImpCount = (Get-RegexMatchCount -Content $logContent -Pattern "Summon Imp")
+            ApproachAssistCount = (Get-RegexMatchCount -Content $logContent -Pattern "New Plan=\s+Approach Target")
+            BodyPullFallbackCount = (Get-RegexMatchCount -Content $logContent -Pattern "forcing short approach retry before clear")
             LostTargetCount = (Get-RegexMatchCount -Content $logContent -Pattern "Lost target")
             SpellFailedMovingCount = (Get-RegexMatchCount -Content $logContent -Pattern "SPELL_FAILED_MOVING")
             BadAttackFacingCount = (Get-RegexMatchCount -Content $logContent -Pattern "ERR_BADATTACKFACING")
