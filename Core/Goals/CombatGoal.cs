@@ -671,7 +671,6 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         if (!bits.Target() ||
             !bits.Target_Alive() ||
             !bits.Target_Hostile() ||
-            playerReader.IsInMeleeRange() ||
             playerReader.IsCasting() ||
             castingHandler.SpellInQueue())
         {

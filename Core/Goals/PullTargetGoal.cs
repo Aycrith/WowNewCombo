@@ -453,7 +453,6 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         if (!bits.Target() ||
             !bits.Target_Alive() ||
             !bits.Target_Hostile() ||
-            playerReader.IsInMeleeRange() ||
             playerReader.IsCasting() ||
             castingHandler.SpellInQueue())
         {
