@@ -27,6 +27,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
+    private readonly BuffStatus<IPlayer> buffs;
     private readonly Wait wait;
     private readonly AreaDB areaDb;
     private readonly StopMoving stopMoving;
@@ -48,7 +49,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     public LootGoal(ILogger<LootGoal> logger,
         ConfigurableInput input, Wait wait,
         PlayerReader playerReader, AreaDB areaDb, BagReader bagReader,
-        StopMoving stopMoving, AddonBits bits,
+        StopMoving stopMoving, AddonBits bits, BuffStatus<IPlayer> buffs,
         ClassConfiguration classConfig, NpcNameTargeting npcNameTargeting,
         PlayerDirection playerDirection,
         GoapAgentState state, CombatLog combatLog,
@@ -61,6 +62,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         this.wait = wait;
         this.playerReader = playerReader;
         this.bits = bits;
+        this.buffs = buffs;
         this.areaDb = areaDb;
         this.stopMoving = stopMoving;
         this.bagReader = bagReader;
@@ -77,6 +79,8 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         AddPrecondition(GoapKey.shouldloot, true);
         AddEffect(GoapKey.shouldloot, false);
     }
+
+    public override bool CanRun() => !buffs.Food() && !buffs.Drink();
 
     public override void OnEnter()
     {

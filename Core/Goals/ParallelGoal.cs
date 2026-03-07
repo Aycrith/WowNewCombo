@@ -2,6 +2,8 @@
 
 using Microsoft.Extensions.Logging;
 
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Goals;
@@ -15,16 +17,19 @@ public sealed class ParallelGoal : GoapGoal
     private readonly StopMoving stopMoving;
     private readonly Wait wait;
     private readonly PlayerReader playerReader;
+    private readonly BuffStatus<IPlayer> buffs;
     private readonly CastingHandler castingHandler;
     private readonly IMountHandler mountHandler;
 
     private static bool None() => false;
+    private const int RecoverySettleFloorMs = 500;
 
     private bool castSuccess;
+    private int recoveryCastRequested;
 
     public ParallelGoal(ILogger logger, ConfigurableInput input, Wait wait,
         PlayerReader playerReader, StopMoving stopMoving, ClassConfiguration classConfig,
-        CastingHandler castingHandler, IMountHandler mountHandler)
+        CastingHandler castingHandler, IMountHandler mountHandler, BuffStatus<IPlayer> buffs)
         : base(nameof(ParallelGoal))
     {
         this.logger = logger;
@@ -32,6 +37,7 @@ public sealed class ParallelGoal : GoapGoal
         this.stopMoving = stopMoving;
         this.wait = wait;
         this.playerReader = playerReader;
+        this.buffs = buffs;
         this.castingHandler = castingHandler;
         this.mountHandler = mountHandler;
 
@@ -93,7 +99,15 @@ public sealed class ParallelGoal : GoapGoal
 
     private void Cast()
     {
+        recoveryCastRequested = 0;
         Parallel.For(0, Keys.Length, Execute);
+
+        if (Interlocked.Exchange(ref recoveryCastRequested, 0) != 0)
+        {
+            stopMoving.Stop();
+            wait.Fixed(Math.Max(RecoverySettleFloorMs, playerReader.DoubleNetworkLatency * 2));
+            wait.Update();
+        }
     }
 
     private void Execute(int i)
@@ -104,6 +118,25 @@ public sealed class ParallelGoal : GoapGoal
             Keys[i].SetClicked();
 
             castSuccess = true;
+            if (IsRecoveryAction(Keys[i]))
+            {
+                Interlocked.Exchange(ref recoveryCastRequested, 1);
+            }
         }
+    }
+
+    private bool IsRecoveryAction(KeyAction action)
+    {
+        if (action.Name.Equals("Food", StringComparison.OrdinalIgnoreCase))
+        {
+            return !buffs.Food();
+        }
+
+        if (action.Name.Equals("Drink", StringComparison.OrdinalIgnoreCase))
+        {
+            return !buffs.Drink();
+        }
+
+        return false;
     }
 }

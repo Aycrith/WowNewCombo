@@ -29,6 +29,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
     private readonly Wait wait;
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
+    private readonly BuffStatus<IPlayer> buffs;
     private readonly StopMoving stopMoving;
     private readonly CombatTracker combatTracker;
     private readonly IMountHandler mountHandler;
@@ -53,6 +54,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
     public ApproachTargetGoal(ILogger<ApproachTargetGoal> logger,
         ConfigurableInput input, Wait wait,
         PlayerReader playerReader, AddonBits addonBits,
+        BuffStatus<IPlayer> buffs,
         StopMoving stopMoving, CombatTracker combatTracker,
         IBlacklist blacklist,
         IMountHandler mountHandler,
@@ -65,6 +67,7 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
         this.wait = wait;
         this.playerReader = playerReader;
         this.bits = addonBits;
+        this.buffs = buffs;
 
         this.stopMoving = stopMoving;
         this.combatTracker = combatTracker;
@@ -87,6 +90,8 @@ public sealed partial class ApproachTargetGoal : GoapGoal, IGoapEventListener
             AddEffect(GoapKey.incombatrange, true);
         }
     }
+
+    public override bool CanRun() => !buffs.Food() && !buffs.Drink();
 
     public void OnGoapEvent(GoapEventArgs e)
     {

@@ -42,6 +42,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private readonly CombatLog combatLog;
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
+    private readonly BuffStatus<IPlayer> buffs;
     private readonly StopMoving stopMoving;
     private readonly StuckDetector stuckDetector;
     private readonly NpcNameTargeting npcNameTargeting;
@@ -71,6 +72,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     public PullTargetGoal(ILogger<PullTargetGoal> logger, ConfigurableInput input,
         Wait wait, CombatLog combatlog, PlayerReader playerReader,
         AddonBits bits,
+        BuffStatus<IPlayer> buffs,
         IBlacklist targetBlacklist,
         StopMoving stopMoving, CastingHandler castingHandler,
         IMountHandler mountHandler, NpcNameTargeting npcNameTargeting,
@@ -85,6 +87,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
         this.combatLog = combatlog;
         this.playerReader = playerReader;
         this.bits = bits;
+        this.buffs = buffs;
         this.stopMoving = stopMoving;
         this.castingHandler = castingHandler;
         this.mountHandler = mountHandler;
@@ -133,6 +136,8 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
 
         AddEffect(GoapKey.pulled, true);
     }
+
+    public override bool CanRun() => !buffs.Food() && !buffs.Drink();
 
     public override void OnEnter()
     {

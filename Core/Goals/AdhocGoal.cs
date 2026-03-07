@@ -20,6 +20,7 @@ public sealed class AdhocGoal : GoapGoal
     private readonly CastingHandler castingHandler;
     private readonly IMountHandler mountHandler;
     private readonly AddonBits bits;
+    private readonly BuffStatus<IPlayer> buffs;
     private readonly CombatLog combatLog;
     private readonly BagReader bagReader;
     private readonly ExecGameCommand execGameCommand;
@@ -40,7 +41,7 @@ public sealed class AdhocGoal : GoapGoal
         ConfigurableInput input, Wait wait,
         PlayerReader playerReader, StopMoving stopMoving,
         CastingHandler castingHandler, IMountHandler mountHandler,
-        AddonBits bits, CombatLog combatLog,
+        AddonBits bits, BuffStatus<IPlayer> buffs, CombatLog combatLog,
         BagReader bagReader, ExecGameCommand execGameCommand)
         : base(nameof(AdhocGoal))
     {
@@ -53,6 +54,7 @@ public sealed class AdhocGoal : GoapGoal
         this.castingHandler = castingHandler;
         this.mountHandler = mountHandler;
         this.bits = bits;
+        this.buffs = buffs;
         this.combatLog = combatLog;
         this.bagReader = bagReader;
         this.execGameCommand = execGameCommand;
@@ -81,6 +83,9 @@ public sealed class AdhocGoal : GoapGoal
         wait.Update();
 
         if (!CanRun() || castingHandler.SpellInQueue())
+            return;
+
+        if (ShouldSuppressDuringRecovery())
             return;
 
         if (TryRunCommandDrivenAction())
@@ -144,5 +149,32 @@ public sealed class AdhocGoal : GoapGoal
         return combatMatters.HasValue
             ? combatMatters.Value == bits.Combat() && combatLog.DamageTakenCount() > 0
             : combatLog.DamageTakenCount() > 0;
+    }
+
+    private bool ShouldSuppressDuringRecovery()
+    {
+        return ShouldSuppressDuringRecovery(
+            key.Name,
+            buffs.Food(),
+            buffs.Drink());
+    }
+
+    internal static bool ShouldSuppressDuringRecovery(
+        string? actionName,
+        bool hasFoodBuff,
+        bool hasDrinkBuff)
+    {
+        if ((!hasFoodBuff && !hasDrinkBuff) || string.IsNullOrWhiteSpace(actionName))
+        {
+            return false;
+        }
+
+        if (actionName.Equals("Food", StringComparison.OrdinalIgnoreCase) ||
+            actionName.Equals("Drink", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return true;
     }
 }

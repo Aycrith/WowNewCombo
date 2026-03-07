@@ -24,7 +24,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
     private readonly float cost;
     public override float Cost => cost;
-    public override bool CanRun() => pathSettings.CanRun();
+    public override bool CanRun() => pathSettings.CanRun() && !buffs.Food() && !buffs.Drink();
 
     private const bool debug = false;
     private const float RefillOrientationFlipPenalty = 1f;
@@ -41,6 +41,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private readonly Wait wait;
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
+    private readonly BuffStatus<IPlayer> buffs;
     private readonly ClassConfiguration classConfig;
     private readonly IMountHandler mountHandler;
     private readonly Navigation navigation;
@@ -122,6 +123,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         ILogger<FollowRouteGoal> logger,
         ConfigurableInput input, Wait wait, PlayerReader playerReader,
         AddonBits bits,
+        BuffStatus<IPlayer> buffs,
         ClassConfiguration classConfig,
         Navigation navigation,
         IMountHandler mountHandler, TargetFinder targetFinder,
@@ -137,6 +139,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         this.classConfig = classConfig;
         this.playerReader = playerReader;
         this.bits = bits;
+        this.buffs = buffs;
         this.pathSettings = pathSettings;
         this.mountHandler = mountHandler;
         this.targetFinder = targetFinder;
@@ -837,4 +840,3 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         logger.LogInformation(text);
     }
 }
-

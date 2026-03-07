@@ -86,9 +86,46 @@ public sealed class FoundNodeListener : IDisposable
             v.X * cos - v.Y * sin,
             v.X * sin + v.Y * cos);
 
-        // Core precision fix: Use the actual map scale provided by the settings
-        // instead of an estimated zoneDiameterYards
-        float mapUnitsPerPixel = (diametersYards[settings.Zoom] / settings.Width) * 1.5f; // Add tuning factor
+        // Gap C fix: Derive the true yards-to-map-unit scale from the current zone's
+        // WorldMapArea extents rather than using a fixed tuning factor.
+        //
+        // WoW's minimap diameter tables are in yards. The player position (MapPosNoZ)
+        // is expressed in world coordinate units where the zone maps from LocLeft/LocRight
+        // on the Y axis across a 0-100 percentage space.
+        //
+        //   worldUnitsPerPercent = |LocLeft - LocRight| / 100
+        //   yardsPerPercent      = zoneDiameterYards / 100
+        //   → mapUnitsPerYard    = worldUnitsPerPercent / yardsPerPercent
+        //                        = |LocLeft - LocRight| / zoneDiameterYards
+        //
+        // When zone data is unavailable (first few frames), fall back to the previous
+        // empirical constant of 1.5f to avoid a null/division issue.
+
+        WorldMapArea area = playerReader.WorldMapArea;
+
+        float zoneDiameterYards = diametersYards[settings.Zoom];
+        float mapUnitsPerPixel;
+
+        bool hasZoneData = area.MapID != 0 &&
+                           MathF.Abs(area.LocLeft - area.LocRight) > 0.01f;
+
+        if (hasZoneData)
+        {
+            // Zone Y-axis extent in world units maps to 100%.
+            float worldUnitsPerPercent = MathF.Abs(area.LocLeft - area.LocRight) / 100f;
+
+            // How many world units does one yard correspond to in this zone?
+            float mapUnitsPerYard = worldUnitsPerPercent / (zoneDiameterYards / 100f);
+
+            // Pixels → yards → world units
+            mapUnitsPerPixel = (zoneDiameterYards / settings.Width) * mapUnitsPerYard;
+        }
+        else
+        {
+            // Zone data not yet loaded; use the empirical fallback.
+            mapUnitsPerPixel = (zoneDiameterYards / settings.Width) * 1.5f;
+        }
+
         worldOffset *= mapUnitsPerPixel;
 
         Vector3 pos = playerMapPos + new Vector3(worldOffset, 0);
