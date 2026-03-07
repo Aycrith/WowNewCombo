@@ -316,4 +316,62 @@ public sealed class CombatPullCastingRuntimeTests
 
         result.Should().BeFalse();
     }
+
+    [Fact]
+    public void ShouldAttemptApproach_WhenRangedPullIsGated_ReturnsFalse()
+    {
+        bool result = PullTargetGoal.ShouldAttemptApproach(
+            castAny: false,
+            spellInQueue: false,
+            isCasting: false,
+            inCombat: false,
+            autoShotActive: false,
+            isInMeleeRange: false,
+            hasRunnablePullAction: false,
+            hasRangedPullActions: true);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldAttemptApproach_WhenAlreadyInMeleeRange_ReturnsTrue()
+    {
+        bool result = PullTargetGoal.ShouldAttemptApproach(
+            castAny: false,
+            spellInQueue: false,
+            isCasting: false,
+            inCombat: false,
+            autoShotActive: false,
+            isInMeleeRange: true,
+            hasRunnablePullAction: false,
+            hasRangedPullActions: true);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldCancelMeleeAutoAttackForRangedCombat_WhenWandPathExists_ReturnsTrue()
+    {
+        bool result = CombatGoal.ShouldCancelMeleeAutoAttackForRangedCombat(
+            prefersRangedCombat: true,
+            meleeAutoAttacking: true,
+            shooting: false,
+            inMeleeRange: false,
+            withinCombatRange: true);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldCancelMeleeAutoAttackForRangedCombat_WhenActuallyInMeleeRange_ReturnsFalse()
+    {
+        bool result = CombatGoal.ShouldCancelMeleeAutoAttackForRangedCombat(
+            prefersRangedCombat: true,
+            meleeAutoAttacking: true,
+            shooting: false,
+            inMeleeRange: true,
+            withinCombatRange: true);
+
+        result.Should().BeFalse();
+    }
 }

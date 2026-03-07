@@ -43,6 +43,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
     private readonly IRotationOptimizer rotationOptimizer;
     private readonly BehaviorTreeCombatEngine? behaviorTreeEngine;
     private readonly FeatureFlagsOptions featureFlags;
+    private readonly bool prefersRangedCombat;
 
     private float lastDirection;
     private float lastMinDistance;
@@ -103,6 +104,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         this.classConfig = classConfig;
         this.rotationOptimizer = rotationOptimizer;
         this.featureFlags = featureFlagsOptions.Value;
+        this.prefersRangedCombat = HasRangedCombatPreference(classConfig);
         this.combatLog.KillCredit += HandleKillCredit;
 
         // Initialize behavior tree if enabled and factory provided
@@ -223,6 +225,17 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
             !input.PetAttack.OnCooldown())
         {
             input.PressPetAttack();
+        }
+
+        if (ShouldCancelMeleeAutoAttackForRangedCombat(
+            prefersRangedCombat,
+            bits.Auto_Attack(),
+            bits.Shoot(),
+            playerReader.IsInMeleeRange(),
+            playerReader.WithInCombatRange()))
+        {
+            input.PressStopAttack();
+            wait.Update();
         }
 
         // For melee-centric combat profiles, close distance aggressively when a hostile target
@@ -538,6 +551,34 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
     {
         return lossesWithinBurstWindow >= burstThreshold &&
             (lastBurstTick == 0 || (nowTick - lastBurstTick) >= burstCooldownMs);
+    }
+
+    internal static bool ShouldCancelMeleeAutoAttackForRangedCombat(
+        bool prefersRangedCombat,
+        bool meleeAutoAttacking,
+        bool shooting,
+        bool inMeleeRange,
+        bool withinCombatRange)
+    {
+        return prefersRangedCombat &&
+            meleeAutoAttacking &&
+            !shooting &&
+            !inMeleeRange &&
+            withinCombatRange;
+    }
+
+    internal static bool HasRangedCombatPreference(ClassConfiguration classConfiguration)
+    {
+        ReadOnlySpan<KeyAction> span = classConfiguration.Combat.Sequence;
+        for (int i = 0; i < span.Length; i++)
+        {
+            if (span[i].Name.Equals("Shoot", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void RecordLostTargetReacquireAttempt(long nowTick)

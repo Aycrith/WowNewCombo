@@ -54,6 +54,7 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     private readonly Action approachAction;
 
     private readonly bool requiresNpcNameFinder;
+    private readonly bool hasRangedPullActions;
 
     private long pullStart;
     private long lastFaceTargetAssistTick;
@@ -108,6 +109,11 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             if (keyAction.Requirements.Contains(RequirementFactory.AddVisible))
             {
                 requiresNpcNameFinder = true;
+            }
+
+            if (IsRangedPullAction(keyAction))
+            {
+                hasRangedPullActions = true;
             }
         }
 
@@ -397,11 +403,40 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
             combatLog.ToPull.Add(playerReader.TargetGuid);
         }
 
-        // Also skip approach if we entered combat (pull spell aggroed the mob)
-        if (castAny || spellInQueue || playerReader.IsCasting() || bits.Combat() || (bits.AutoShot() && !playerReader.IsInMeleeRange()))
+        if (!ShouldAttemptApproach(
+            castAny,
+            spellInQueue,
+            playerReader.IsCasting(),
+            bits.Combat(),
+            bits.AutoShot(),
+            playerReader.IsInMeleeRange(),
+            HasRunnablePullAction(),
+            hasRangedPullActions))
+        {
             return;
+        }
 
         approachAction();
+    }
+
+    private bool HasRunnablePullAction()
+    {
+        ReadOnlySpan<KeyAction> keys = Keys;
+        for (int i = 0; i < keys.Length; i++)
+        {
+            KeyAction keyAction = keys[i];
+            if (keyAction.Name.Equals(input.Approach.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (keyAction.CanRun())
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void DefaultApproach()
@@ -586,6 +621,29 @@ public sealed class PullTargetGoal : GoapGoal, IGoapEventListener
     {
         return afterDamageDoneCount > beforeDamageDoneCount ||
             afterDamageTakenCount > beforeDamageTakenCount;
+    }
+
+    internal static bool ShouldAttemptApproach(
+        bool castAny,
+        bool spellInQueue,
+        bool isCasting,
+        bool inCombat,
+        bool autoShotActive,
+        bool isInMeleeRange,
+        bool hasRunnablePullAction,
+        bool hasRangedPullActions)
+    {
+        if (castAny || spellInQueue || isCasting || inCombat || (autoShotActive && !isInMeleeRange))
+        {
+            return false;
+        }
+
+        if (hasRangedPullActions && !hasRunnablePullAction && !isInMeleeRange)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private void RecordSoftRetry()

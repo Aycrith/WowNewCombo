@@ -76,6 +76,53 @@ public sealed class WarlockProfileBehaviorTests
         Assert.Contains("!BagItem:22103", createHealthstone.Requirement);
     }
 
+    [Fact]
+    public void BloodElfWarlockProfile_PullRequiresPetAndRecoveryForNormalPulls()
+    {
+        ClassConfiguration? config = LoadProfileOrSkip();
+        if (config == null)
+        {
+            return;
+        }
+
+        KeyAction? curseOfAgony = config.Pull.Sequence.FirstOrDefault(static a => a.Name == "Curse of Agony");
+        Assert.NotNull(curseOfAgony);
+        Assert.Contains("(Level < 10 || Has Pet)", curseOfAgony.Requirements);
+        Assert.Contains("Health% >= FOOD_HP", curseOfAgony.Requirements);
+    }
+
+    [Fact]
+    public void BloodElfWarlockProfile_AdhocPrioritizesPetSummonAndFoodRecovery()
+    {
+        ClassConfiguration? config = LoadProfileOrSkip();
+        if (config == null)
+        {
+            return;
+        }
+
+        KeyAction? summonVoidwalker = config.Adhoc.Sequence.FirstOrDefault(static a => a.Name == "Summon Voidwalker");
+        KeyAction? food = config.Adhoc.Sequence.FirstOrDefault(static a => a.Name == "Food");
+        Assert.NotNull(summonVoidwalker);
+        Assert.NotNull(food);
+        Assert.Equal(1f, summonVoidwalker.Cost);
+        Assert.Contains("Health% >= FOOD_HP", summonVoidwalker.Requirement);
+        Assert.Equal(2f, food.Cost);
+    }
+
+    [Fact]
+    public void BloodElfWarlockProfile_AutoAttackRequiresTrueMeleeFallback()
+    {
+        ClassConfiguration? config = LoadProfileOrSkip();
+        if (config == null)
+        {
+            return;
+        }
+
+        KeyAction? autoAttack = config.Combat.Sequence.FirstOrDefault(static a => a.Name == "AutoAttack");
+        Assert.NotNull(autoAttack);
+        Assert.Contains("InMeleeRange", autoAttack.Requirements);
+    }
+
     private static ClassConfiguration? LoadProfileOrSkip()
     {
         if (!File.Exists(ProfilePath))

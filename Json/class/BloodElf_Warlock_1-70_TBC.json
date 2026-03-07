@@ -22,14 +22,14 @@
 
   "IntVariables": {
     "MIN_MANA_DRAIN": 25,
-    "LIFETAP_HP": 60,
-    "DRAIN_LIFE_HP": 50,
-    "FEAR_HP": 30,
+    "LIFETAP_HP": 92,
+    "DRAIN_LIFE_HP": 60,
+    "FEAR_HP": 40,
     "FEAR_MOB_COUNT": 2,
     "FLEE_HP": 15,
     "FLEE_MOB_COUNT": 3,
-    "HEALTHSTONE_HP": 35,
-    "FOOD_HP": 50,
+    "HEALTHSTONE_HP": 45,
+    "FOOD_HP": 90,
     "DOT_MIN_HEALTH%": 35
   },
 
@@ -187,7 +187,9 @@
         "ResetOnNewTarget": true,
         "Requirements": [
           "Level >= 8",
-          "!Curse of Agony"
+          "!Curse of Agony",
+          "(Level < 10 || Has Pet)",
+          "Health% >= FOOD_HP"
         ],
         "MinMana": 25,
         "School": "Shadow"
@@ -198,7 +200,8 @@
         "HasCastBar": true,
         "ResetOnNewTarget": true,
         "Requirements": [
-          "Level < 8"
+          "Level < 8",
+          "Health% >= FOOD_HP"
         ],
         "MinMana": 25,
         "School": "Fire"
@@ -209,7 +212,8 @@
         "HasCastBar": true,
         "ResetOnNewTarget": true,
         "Requirements": [
-          "Level < 8"
+          "Level < 8",
+          "Health% >= FOOD_HP"
         ],
         "MinMana": 25,
         "School": "Shadow"
@@ -226,18 +230,22 @@
         "Name": "Summon Voidwalker",
         "Key": "N8",
         "HasCastBar": true,
+        "Cost": 1,
         "Requirements": [
           "!Has Pet",
-          "Level >= 10"
+          "Level >= 10",
+          "Health% >= FOOD_HP"
         ]
       },
       {
         "Name": "Summon Imp",
         "Key": "N9",
         "HasCastBar": true,
+        "Cost": 1,
         "Requirements": [
           "!Has Pet",
-          "Level < 10"
+          "Level < 10",
+          "Health% >= FOOD_HP"
         ]
       },
       {
@@ -312,6 +320,7 @@
       {
         "Name": "AutoAttack",
         "Requirements": [
+          "InMeleeRange",
           "!HasRangedWeapon",
           "!AutoAttacking"
         ]
@@ -341,13 +350,15 @@
         "Name": "Summon Voidwalker",
         "Key": "N8",
         "HasCastBar": true,
-        "Requirement": "!Has Pet && Level >= 10"
+        "Cost": 1,
+        "Requirement": "!Has Pet && Level >= 10 && Health% >= FOOD_HP"
       },
       {
         "Name": "Summon Imp",
         "Key": "N9",
         "HasCastBar": true,
-        "Requirement": "!Has Pet && Level < 10"
+        "Cost": 1,
+        "Requirement": "!Has Pet && Level < 10 && Health% >= FOOD_HP"
       },
       {
         "Name": "Use Healthstone",
@@ -398,7 +409,7 @@
         "Name": "Food",
         "Key": "=",
         "Requirement": "Health% < FOOD_HP && !InCombat",
-        "Cost": 4
+        "Cost": 2
       }
     ]
   },
