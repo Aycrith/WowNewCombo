@@ -5,6 +5,7 @@ namespace Core;
 public sealed class SpellInRange : IReader
 {
     private const int cell = 40;
+    private const int WarlockEffectiveRangedRangeYards = 30;
 
     public bool this[int index] => b[index];
 
@@ -123,7 +124,7 @@ public sealed class SpellInRange : IReader
                                    (playerReader.Level.Value >= 20 && playerReader.MinRange() <= 20 && playerReader.MaxRange() <= 25),
         UnitClass.Mage => (playerReader.Level.Value >= 4 && Mage_Frostbolt) || Mage_Fireball,
         UnitClass.Hunter => (playerReader.Level.Value >= 4 && Hunter_SerpentSting) || Hunter_AutoShoot || playerReader.IsInMeleeRange(),
-        UnitClass.Warlock => Warlock_ShadowBolt,
+        UnitClass.Warlock => IsWarlockEffectiveRange(Warlock_ShadowBolt, Warlock_Shoot, playerReader.MinRange(), playerReader.MaxRange()),
         UnitClass.Shaman => (playerReader.Level.Value >= 4 && Shaman_EarthShock) || Shaman_LightningBolt,
         UnitClass.DeathKnight => DeathKnight_DeathGrip,
         _ => true
@@ -138,9 +139,29 @@ public sealed class SpellInRange : IReader
         UnitClass.Paladin => (playerReader.Level.Value >= 4 && Paladin_Judgement) || playerReader.IsInMeleeRange(),
         UnitClass.Mage => Mage_Frostbolt || Mage_Fireball,
         UnitClass.Hunter => (playerReader.Level.Value >= 4 && Hunter_SerpentSting) || Hunter_AutoShoot || playerReader.IsInMeleeRange(),
-        UnitClass.Warlock => Warlock_ShadowBolt,
+        UnitClass.Warlock => IsWarlockEffectiveRange(Warlock_ShadowBolt, Warlock_Shoot, playerReader.MinRange(), playerReader.MaxRange()),
         UnitClass.Shaman => Shaman_LightningBolt,
         UnitClass.DeathKnight => DeathKnight_IcyTouch || playerReader.IsInMeleeRange(),
         _ => true
     };
+
+    internal static bool IsWarlockEffectiveRange(
+        bool shadowBoltInRange,
+        bool shootInRange,
+        int minRange,
+        int maxRange)
+    {
+        if (shadowBoltInRange || shootInRange)
+        {
+            return true;
+        }
+
+        if (maxRange <= 0)
+        {
+            return false;
+        }
+
+        return minRange <= WarlockEffectiveRangedRangeYards &&
+            maxRange <= WarlockEffectiveRangedRangeYards;
+    }
 }
