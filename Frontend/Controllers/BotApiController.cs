@@ -21,7 +21,8 @@ public record BotStatus(
     string? LastDeactivateReason,
     DateTime? LastDeactivateUtc,
     string RuntimeMode,
-    bool AgentAvailable);
+    bool AgentAvailable,
+    string? CorrelationId);
 
 public record ProfileListItem(
     string FileName,
@@ -62,6 +63,11 @@ public class BotApiController : ControllerBase
     public IActionResult GetStatus()
     {
         Stopwatch sw = Stopwatch.StartNew();
+        string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
+        if (HttpContext != null)
+        {
+            Response.Headers["X-Correlation-ID"] = correlationId;
+        }
 
         try
         {
@@ -90,7 +96,8 @@ public class BotApiController : ControllerBase
                 botController.LastDeactivateReason,
                 botController.LastDeactivateUtc,
                 BotRuntimeModeHelper.GetRuntimeMode(botController),
-                agent?.Active == true);
+                agent?.Active == true,
+                correlationId);
 
             sw.Stop();
             logger.LogDebug("Bot status: active={IsActive}, profile={ProfileName} ({ElapsedMs}ms)",

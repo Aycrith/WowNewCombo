@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Core.Autonomy;
 using Core.FeatureFlags;
 using Core.GOAP;
 
@@ -68,6 +69,11 @@ public sealed class FailureAnalytics : IHostedService, IDisposable
         return engine.GetSessionStatistics();
     }
 
+    public IReadOnlyList<AutonomyIncident> GetRecentIncidents()
+    {
+        return engine.GetRecentIncidents();
+    }
+
     /// <summary>
     /// Records a death event (delegates to engine).
     /// </summary>
@@ -92,6 +98,16 @@ public sealed class FailureAnalytics : IHostedService, IDisposable
         engine.RecordMultiMobRetreat(mobCount);
     }
 
+    public AutonomyIncident RecordOperationalFailure(
+        FailureType type,
+        string reason,
+        string subsystem,
+        string source = "runtime",
+        Dictionary<string, object>? additionalData = null)
+    {
+        return engine.RecordIncident(type, reason, subsystem, source, additionalData: additionalData);
+    }
+
 
     public void Dispose()
     {
@@ -111,7 +127,14 @@ public enum FailureType
     NoPlan,
     MultiMobRetreat,
     Disconnect,
-    Timeout
+    Timeout,
+    LaunchReadiness,
+    FocusRestore,
+    CombatTargetLoss,
+    LootFailure,
+    BotInactive,
+    ServiceInterruption,
+    ProcessExit
 }
 
 /// <summary>
@@ -128,6 +151,10 @@ public sealed class FailureEvent
     public string Zone { get; set; } = string.Empty;
     public int Level { get; set; }
     public Dictionary<string, object> AdditionalData { get; set; } = new();
+    public string? CorrelationId { get; set; }
+    public string? IncidentId { get; set; }
+    public string Source { get; set; } = "runtime";
+    public ScreenshotRef? Screenshot { get; set; }
 }
 
 /// <summary>
@@ -151,4 +178,5 @@ public sealed class FailureStatistics
     public Dictionary<FailureType, int> EventsByType { get; set; } = new();
     public List<FailureHotZone> HotZones { get; set; } = new();
     public List<FailureEvent> RecentEvents { get; set; } = new();
+    public List<AutonomyIncident> RecentIncidents { get; set; } = new();
 }

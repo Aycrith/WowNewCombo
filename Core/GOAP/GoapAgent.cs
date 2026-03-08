@@ -1,4 +1,5 @@
 using Core.Diagnostics;
+using Core.Analytics;
 using Core.FeatureFlags;
 using Core.Goals;
 using Core.Session;
@@ -50,6 +51,7 @@ public sealed partial class GoapAgent : IDisposable
     private readonly IGoapEventHistory? goapEventHistory;
     private readonly FeatureFlagService? featureFlagService;
     private readonly GoapCurrentGoalState currentGoalState;
+    private readonly FailureAnalyticsEngine? failureAnalyticsEngine;
 
     private readonly IEnumerable<IGoapEventListener> extraListeners;
 
@@ -157,7 +159,8 @@ public sealed partial class GoapAgent : IDisposable
         IGoapEventHistory? goapEventHistory = null,
         IEnumerable<IGoapEventListener>? extraListeners = null,
         GoapCurrentGoalState? goapCurrentGoalState = null,
-        FeatureFlagService? featureFlagService = null
+        FeatureFlagService? featureFlagService = null,
+        FailureAnalyticsEngine? failureAnalyticsEngine = null
     )
     {
         this.routeInfo = routeInfo;
@@ -186,6 +189,7 @@ public sealed partial class GoapAgent : IDisposable
         this.humanizationProvider = humanizationProvider;
         this.goapEventHistory = goapEventHistory;
         this.featureFlagService = featureFlagService;
+        this.failureAnalyticsEngine = failureAnalyticsEngine;
 
         this.extraListeners = extraListeners ?? Array.Empty<IGoapEventListener>();
 
@@ -556,6 +560,7 @@ public sealed partial class GoapAgent : IDisposable
     public void PlayerDied()
     {
         SessionStat.Deaths++;
+        failureAnalyticsEngine?.RecordDeath(CurrentGoal?.Name ?? "Player died");
     }
 
     private void BroadcastGoapEvent(GoapKey goapKey, bool value)

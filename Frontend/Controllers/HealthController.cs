@@ -36,6 +36,12 @@ public sealed class HealthController : ControllerBase
     [HttpGet]
     public IActionResult Get()
     {
+        string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
+        if (HttpContext != null)
+        {
+            Response.Headers["X-Correlation-ID"] = correlationId;
+        }
+
         Assembly assembly = typeof(HealthController).Assembly;
         Version? version = assembly.GetName().Version;
 
@@ -53,6 +59,7 @@ public sealed class HealthController : ControllerBase
 
         return Ok(new
         {
+            CorrelationId = correlationId,
             Status = status,
             TimestampUtc = DateTime.UtcNow,
             App = new
@@ -89,6 +96,11 @@ public sealed class HealthController : ControllerBase
     [HttpGet("startup")]
     public IActionResult GetStartup()
     {
+        string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
+        if (HttpContext != null)
+        {
+            Response.Headers["X-Correlation-ID"] = correlationId;
+        }
         return Ok(startupState.GetSnapshot());
     }
 }

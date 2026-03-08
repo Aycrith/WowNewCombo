@@ -43,6 +43,10 @@ public sealed class LaunchController : ControllerBase
     {
         Stopwatch sw = Stopwatch.StartNew();
         string trace = HttpContext?.TraceIdentifier ?? string.Empty;
+        if (HttpContext != null)
+        {
+            Response.Headers["X-Correlation-ID"] = trace;
+        }
         logger.LogDebug("[LaunchController] /api/launch/status start (trace={Trace})", trace);
 
         ClassConfiguration? classConfig = botController.ClassConfig;

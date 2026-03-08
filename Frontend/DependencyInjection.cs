@@ -24,6 +24,7 @@ public static class DependencyInjection
         // Event aggregation service for real-time monitoring and LLM integration
         services.AddSingleton<Services.EventAggregationService>();
         services.AddHostedService(sp => sp.GetRequiredService<Services.EventAggregationService>());
+        services.AddSingleton<Services.AutonomyRuntimeService>();
 
         services.AddRazorPages();
 

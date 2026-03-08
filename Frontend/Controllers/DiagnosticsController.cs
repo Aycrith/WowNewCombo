@@ -71,14 +71,16 @@ public record NavigationRuntimeDiagnosticsResponse(
     CombatRuntimeSnapshot? Combat,
     PullRuntimeSnapshot? Pull,
     CastingRuntimeSnapshot Casting,
-    object? FeatureFlags);
+    object? FeatureFlags,
+    string? CorrelationId);
 
 public record NavigationRerouteDiagnosticsResponse(
     bool BotActive,
     string CurrentGoal,
     NavigationRerouteRuntimeSnapshot? Reroute,
     Core.Navigation.NavSoakMetricsSnapshot? Soak,
-    object? FeatureFlags);
+    object? FeatureFlags,
+    string? CorrelationId);
 
 public record BagMetaDto(
     int Index,
@@ -301,6 +303,12 @@ public class DiagnosticsController : ControllerBase
     {
         try
         {
+            string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
+            if (HttpContext != null)
+            {
+                Response.Headers["X-Correlation-ID"] = correlationId;
+            }
+
             if (navSoakMetricsService == null)
             {
                 return StatusCode(503, new { Error = "NavSoakMetricsService is not available in the current runtime." });
@@ -340,7 +348,8 @@ public class DiagnosticsController : ControllerBase
                 Combat: combatGoal?.GetRuntimeSnapshot(),
                 Pull: pullGoal?.GetRuntimeSnapshot(),
                 Casting: castingSnapshot,
-                FeatureFlags: featureFlagSubset);
+                FeatureFlags: featureFlagSubset,
+                CorrelationId: correlationId);
 
             return Ok(response);
         }
@@ -374,6 +383,12 @@ public class DiagnosticsController : ControllerBase
     {
         try
         {
+            string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
+            if (HttpContext != null)
+            {
+                Response.Headers["X-Correlation-ID"] = correlationId;
+            }
+
             if (navSoakMetricsService == null)
             {
                 return StatusCode(503, new { Error = "NavSoakMetricsService is not available in the current runtime." });
@@ -401,7 +416,8 @@ public class DiagnosticsController : ControllerBase
                 CurrentGoal: TryGetCurrentGoalLabel(),
                 Reroute: EnrichRerouteSnapshot(navigation.GetRerouteRuntimeSnapshot()),
                 Soak: navSoakMetricsService.GetSnapshot(),
-                FeatureFlags: featureFlagSubset);
+                FeatureFlags: featureFlagSubset,
+                CorrelationId: correlationId);
 
             return Ok(response);
         }

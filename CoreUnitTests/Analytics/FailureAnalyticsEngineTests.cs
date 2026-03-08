@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Core;
 using Core.Analytics;
@@ -113,6 +114,33 @@ public sealed class FailureAnalyticsEngineTests
         var stats = engine.GetSessionStatistics();
         stats.TotalFailures.Should().Be(1);
         stats.EventsByType.Should().ContainKey(FailureType.Stuck);
+    }
+
+    [Fact]
+    public void RecordNoPlanFailure_CreatesCorrelatedIncident()
+    {
+        var engine = CreateEngine(screenCapture: new StubScreenCapture());
+
+        engine.RecordNoPlanFailure("planner stalled");
+
+        var stats = engine.GetSessionStatistics();
+        stats.RecentIncidents.Should().ContainSingle();
+        stats.RecentIncidents[0].Reason.Should().Be("planner stalled");
+        stats.RecentIncidents[0].Category.Should().Be("planning");
+        stats.RecentIncidents[0].Screenshot.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void RecordSameFailureWithinWindow_DeduplicatesIncident()
+    {
+        var engine = CreateEngine(screenCapture: new StubScreenCapture());
+
+        engine.RecordNoPlanFailure("same blocker");
+        engine.RecordNoPlanFailure("same blocker");
+
+        var incidents = engine.GetRecentIncidents();
+        incidents.Should().ContainSingle();
+        incidents[0].OccurrenceCount.Should().Be(2);
     }
 
     #endregion
@@ -276,7 +304,7 @@ public sealed class FailureAnalyticsEngineTests
 
     #region Helper Methods
 
-    private static FailureAnalyticsEngine CreateEngine(FeatureFlagService? featureFlags = null)
+    private static FailureAnalyticsEngine CreateEngine(FeatureFlagService? featureFlags = null, IScreenCapture? screenCapture = null)
     {
         var flags = featureFlags ?? CreateFeatureFlags();
         var playerReader = CreateMockPlayerReader();
@@ -284,7 +312,8 @@ public sealed class FailureAnalyticsEngineTests
         return new FailureAnalyticsEngine(
             NullLogger<FailureAnalyticsEngine>.Instance,
             flags,
-            playerReader);
+            playerReader,
+            screenCapture: screenCapture);
     }
 
     private static FeatureFlagService CreateFeatureFlags(int maxEventsInMemory = 1000)
@@ -366,6 +395,30 @@ public sealed class FailureAnalyticsEngineTests
 
         public void Dispose()
         {
+        }
+    }
+
+    private sealed class StubScreenCapture : IScreenCapture
+    {
+        public void Request()
+        {
+        }
+
+        public ScreenCaptureResult Capture(string reason, string? correlationId = null, string? incidentId = null, int timeoutMs = 1500)
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            return new ScreenCaptureResult
+            {
+                RequestId = Guid.NewGuid().ToString("N"),
+                CorrelationId = correlationId ?? string.Empty,
+                IncidentId = incidentId ?? string.Empty,
+                Reason = reason,
+                RequestedUtc = now,
+                CompletedUtc = now.AddMilliseconds(12),
+                CaptureLatencyMs = 12,
+                Success = true,
+                Path = @"C:\temp\incident.jpg"
+            };
         }
     }
 

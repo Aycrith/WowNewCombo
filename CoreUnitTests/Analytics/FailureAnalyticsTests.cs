@@ -72,6 +72,7 @@ public sealed class FailureAnalyticsTests : IDisposable
         stats.EventsByType.Should().ContainKey(FailureType.Death);
         stats.EventsByType[FailureType.Death].Should().Be(1);
         stats.RecentEvents.Should().HaveCount(1);
+        stats.RecentIncidents.Should().HaveCount(1);
         stats.RecentEvents[0].Type.Should().Be(FailureType.Death);
         stats.RecentEvents[0].Reason.Should().Be("Killed by elite mob");
     }

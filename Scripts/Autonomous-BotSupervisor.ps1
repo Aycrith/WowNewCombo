@@ -85,9 +85,13 @@ $script:StatusLatestPath = Join-Path $script:SupervisorRoot "status-latest.json"
 $script:NextStepsLatestPath = Join-Path $script:SupervisorRoot "next-steps-latest.json"
 $script:NextStepsLatestMarkdownPath = Join-Path $script:SupervisorRoot "next-steps-latest.md"
 $script:OpenIssuesPath = Join-Path $script:SupervisorRoot "open-issues.json"
+$script:IncidentsLatestPath = Join-Path $script:SupervisorRoot "incidents-latest.json"
+$script:RunsLatestPath = Join-Path $script:SupervisorRoot "runs-latest.json"
 $script:MetricsHistoryPath = Join-Path $script:SupervisorRoot "metrics-history.ndjson"
+$script:IncidentHistoryPath = Join-Path $script:SupervisorRoot "incident-history.ndjson"
 $script:PauseFlagPath = Join-Path $script:ControlRoot "pause.flag"
 $script:StopFlagPath = Join-Path $script:ControlRoot "stop.flag"
+$script:KillSwitchPath = Join-Path $script:ControlRoot "kill-switch.json"
 $script:RunLockPath = Join-Path $script:ControlRoot "run.lock.json"
 $script:MutationLockPath = Join-Path $script:ControlRoot "mutation.lock.json"
 
@@ -452,6 +456,30 @@ function New-DefaultSupervisorState
             Passed = $false
             ArtifactPath = $null
         }
+        Budget = [ordered]@{
+            MaxCycleRuntimeMinutes = 120
+            MaxRetriesPerIncident = 2
+            SameReasonFailureLimit = 2
+            MutationCooldownMinutes = 60
+            LiveDemotionMinutes = 60
+        }
+        IncidentQueue = @()
+        RetryLedger = [ordered]@{}
+        PromotionState = [ordered]@{
+            RequestedSurface = $PrimarySurface
+            EffectiveSurface = $PrimarySurface
+            LiveMode = "Guarded"
+            LastDecisionReason = "Initial"
+            LastUpdatedUtc = (Get-Date).ToUniversalTime().ToString("o")
+            LiveDemotedUntilUtc = $null
+        }
+        KillSwitchState = [ordered]@{
+            Enabled = $false
+            Reason = ""
+            Source = ""
+            UpdatedUtc = $null
+        }
+        RecentRuns = @()
         Gates = [ordered]@{
             ValidateReroute = (New-DefaultGateState -Name "ValidateReroute")
             ValidateNoProgress = (New-DefaultGateState -Name "ValidateNoProgress")
@@ -495,7 +523,9 @@ function Get-SupervisorState
 {
     $defaults = New-DefaultSupervisorState
     $existing = Read-JsonFile -Path $script:StatePath
-    return (Merge-HashtableDefaults -Existing $existing -Defaults $defaults)
+    $state = Merge-HashtableDefaults -Existing $existing -Defaults $defaults
+    Sync-KillSwitchState -State $state
+    return $state
 }
 
 function Save-SupervisorState
@@ -504,6 +534,440 @@ function Save-SupervisorState
 
     $State["LastUpdatedUtc"] = (Get-Date).ToUniversalTime().ToString("o")
     [void](Write-JsonFile -Path $script:StatePath -Object $State)
+}
+
+function Get-KillSwitchState
+{
+    $persisted = Read-JsonFile -Path $script:KillSwitchPath
+    if ($null -eq $persisted)
+    {
+        return [ordered]@{
+            Enabled = $false
+            Reason = ""
+            Source = ""
+            UpdatedUtc = $null
+        }
+    }
+
+    return [ordered]@{
+        Enabled = [bool](Get-OptionalPropertyValue -Object $persisted -Name "Enabled" -Default $false)
+        Reason = [string](Get-OptionalPropertyValue -Object $persisted -Name "Reason" -Default "")
+        Source = [string](Get-OptionalPropertyValue -Object $persisted -Name "Source" -Default "")
+        UpdatedUtc = Get-OptionalPropertyValue -Object $persisted -Name "UpdatedUtc" -Default $null
+    }
+}
+
+function Sync-KillSwitchState
+{
+    param([Parameter(Mandatory = $true)][System.Collections.IDictionary]$State)
+
+    $State["KillSwitchState"] = Get-KillSwitchState
+}
+
+function Get-IncidentFingerprint
+{
+    param([Parameter(Mandatory = $true)][object]$Finding)
+
+    return ("{0}|{1}|{2}" -f `
+            [string](Get-OptionalPropertyValue -Object $Finding -Name "Category" -Default ""), `
+            [string](Get-OptionalPropertyValue -Object $Finding -Name "Subsystem" -Default ""), `
+            [string](Get-OptionalPropertyValue -Object $Finding -Name "BlockerType" -Default "")).ToLowerInvariant()
+}
+
+function New-ArtifactRef
+{
+    param(
+        [Parameter(Mandatory = $true)][string]$Kind,
+        [Parameter(Mandatory = $true)][string]$Path,
+        [string]$Source = "supervisor"
+    )
+
+    return [ordered]@{
+        Kind = $Kind
+        Path = $Path
+        Source = $Source
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Metadata = [ordered]@{}
+    }
+}
+
+function Get-ArtifactRefs
+{
+    param([string[]]$Paths)
+
+    $artifacts = @()
+    foreach ($path in @($Paths))
+    {
+        if ([string]::IsNullOrWhiteSpace($path))
+        {
+            continue
+        }
+
+        $kind = "Evidence"
+        if ($path -like "*.jpg" -or $path -like "*.png")
+        {
+            $kind = "Screenshot"
+        }
+        elseif ($path -like "*.json")
+        {
+            $kind = "Json"
+        }
+        elseif ($path -like "*.txt" -or $path -like "*.log")
+        {
+            $kind = "Log"
+        }
+
+        $artifacts += New-ArtifactRef -Kind $kind -Path $path
+    }
+
+    return @($artifacts)
+}
+
+function Get-FailoverDecision
+{
+    param([Parameter(Mandatory = $true)][object]$Finding)
+
+    $blockerType = [string](Get-OptionalPropertyValue -Object $Finding -Name "BlockerType" -Default "")
+    $reason = switch ($blockerType)
+    {
+        "health unavailable" { "Primary health checks failed, so service recovery should start before any live validation is retried." }
+        "launch readiness incomplete" { "Launch readiness is blocking bot start, so doctoring the stack is safer than continuing live retries." }
+        "navigation launch check blocking" { "Navigation readiness is blocking launch; escalating through doctor and restart is lower risk than repeated gate retries." }
+        "profile drift" { "The wrong profile is loaded, so re-bootstrap the requested profile before continuing guarded live work." }
+        "bot inactive after bootstrap" { "Bootstrap completed without an active agent, so restart and re-bootstrap are the bounded recovery path." }
+        "bootstrap failed" { "Bootstrap itself failed; escalate from re-bootstrap to doctor to restart within the retry budget." }
+        "ValidateCombat" { "Combat validation failed; fall back to a clean bootstrap before attempting another combat gate." }
+        "ValidateReroute" { "Reroute validation failed; restart and re-bootstrap before another reroute attempt." }
+        "ValidateNoProgress" { "No-progress validation failed; restart and re-bootstrap before another recovery attempt." }
+        default { "Use bounded operational remediation before considering code mutation or manual intervention." }
+    }
+
+    $primaryAction = switch ($blockerType)
+    {
+        "health unavailable" { "Restart" }
+        "launch readiness incomplete" { "Doctor" }
+        "navigation launch check blocking" { "Doctor" }
+        "profile drift" { "StartAndValidate" }
+        "bot inactive after bootstrap" { "StartAndValidate" }
+        "bootstrap failed" { "StartAndValidate" }
+        "ValidateCombat" { "StartAndValidate" }
+        "ValidateReroute" { "StartAndValidate" }
+        "ValidateNoProgress" { "StartAndValidate" }
+        default { "Status" }
+    }
+
+    $secondaryAction = switch ($blockerType)
+    {
+        "health unavailable" { "Doctor" }
+        "launch readiness incomplete" { "Restart" }
+        "navigation launch check blocking" { "Restart" }
+        "profile drift" { "Doctor" }
+        "bot inactive after bootstrap" { "Doctor" }
+        "bootstrap failed" { "Doctor" }
+        "ValidateCombat" { "Doctor" }
+        "ValidateReroute" { "Doctor" }
+        "ValidateNoProgress" { "Doctor" }
+        default { "Restart" }
+    }
+
+    $tertiaryAction = switch ($blockerType)
+    {
+        "health unavailable" { "StartAndValidate" }
+        "launch readiness incomplete" { "StartAndValidate" }
+        "navigation launch check blocking" { "StartAndValidate" }
+        "profile drift" { "Restart" }
+        "bot inactive after bootstrap" { "Restart" }
+        "bootstrap failed" { "Restart" }
+        "ValidateCombat" { "Restart" }
+        "ValidateReroute" { "Restart" }
+        "ValidateNoProgress" { "Restart" }
+        default { "Stop" }
+    }
+
+    return [ordered]@{
+        PrimaryAction = $primaryAction
+        SecondaryAction = $secondaryAction
+        TertiaryAction = $tertiaryAction
+        DecisionReason = $reason
+        DemoteLiveMode = ($blockerType -in @("health unavailable", "launch readiness incomplete", "navigation launch check blocking", "bootstrap failed", "profile drift"))
+        TargetSurface = $(if ($blockerType -eq "ValidateCombat") { "Hybrid" } else { "SyntheticOnly" })
+    }
+}
+
+function Convert-FindingToIncident
+{
+    param(
+        [Parameter(Mandatory = $true)][object]$Finding,
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$State,
+        [Parameter(Mandatory = $true)][string]$CycleId,
+        [Parameter(Mandatory = $true)][string]$CycleDir
+    )
+
+    $fingerprint = Get-IncidentFingerprint -Finding $Finding
+    $existing = ($State["IncidentQueue"] | Where-Object { $_.Fingerprint -eq $fingerprint } | Select-Object -First 1)
+    $nowUtc = (Get-Date).ToUniversalTime().ToString("o")
+    $retryEntry = Get-OptionalPropertyValue -Object $State["RetryLedger"] -Name $fingerprint -Default $null
+    $evidencePaths = @((Get-OptionalPropertyValue -Object $Finding -Name "EvidencePaths" -Default @()))
+    $artifacts = Get-ArtifactRefs -Paths $evidencePaths
+    $screenshotArtifact = ($artifacts | Where-Object { $_.Kind -eq "Screenshot" } | Select-Object -First 1)
+    $failover = Get-FailoverDecision -Finding $Finding
+    $incidentId = $(if ($null -ne $existing) { $existing.Id } else { "incident-{0}" -f [guid]::NewGuid().ToString("N").Substring(0, 8) })
+    $correlationId = $(if ($null -ne $existing) { $existing.CorrelationId } else { [guid]::NewGuid().ToString("N") })
+
+    return [ordered]@{
+        Id = $incidentId
+        Fingerprint = $fingerprint
+        CorrelationId = $correlationId
+        Category = [string](Get-OptionalPropertyValue -Object $Finding -Name "Category" -Default "")
+        Subsystem = [string](Get-OptionalPropertyValue -Object $Finding -Name "Subsystem" -Default "")
+        Severity = $(switch ([string](Get-OptionalPropertyValue -Object $Finding -Name "Priority" -Default "P3"))
+            {
+                "P1" { "Critical" }
+                "P2" { "Error" }
+                default { "Warning" }
+            })
+        Gate = [string](Get-OptionalPropertyValue -Object $Finding -Name "BlockerType" -Default "")
+        Reason = [string](Get-OptionalPropertyValue -Object $Finding -Name "BlockerType" -Default "")
+        Summary = [string](Get-OptionalPropertyValue -Object $Finding -Name "Summary" -Default "")
+        Status = "Open"
+        Outcome = "Open"
+        OccurrenceCount = $(if ($null -ne $existing) { [int]$existing.OccurrenceCount + 1 } else { 1 })
+        RetryCount = [int](Get-OptionalPropertyValue -Object $retryEntry -Name "Attempts" -Default 0)
+        FirstSeenUtc = $(if ($null -ne $existing) { $existing.FirstSeenUtc } else { $nowUtc })
+        LastSeenUtc = $nowUtc
+        Artifacts = @($artifacts)
+        Screenshot = $(if ($null -ne $screenshotArtifact)
+            {
+                [ordered]@{
+                    RequestId = ""
+                    CorrelationId = $correlationId
+                    IncidentId = $incidentId
+                    Reason = "supervisor-artifact"
+                    Path = $screenshotArtifact.Path
+                    RequestedUtc = $nowUtc
+                    CompletedUtc = $nowUtc
+                    CaptureLatencyMs = $null
+                    Success = $true
+                    Error = $null
+                }
+            }
+            else
+            {
+                $null
+            })
+        Failover = $failover
+        RemediationTask = $null
+        Metadata = [ordered]@{
+            CycleId = $CycleId
+            CycleDir = $CycleDir
+            Priority = [string](Get-OptionalPropertyValue -Object $Finding -Name "Priority" -Default "")
+        }
+    }
+}
+
+function Get-IncidentsForCycle
+{
+    param(
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$State,
+        [Parameter(Mandatory = $true)][object[]]$Findings,
+        [Parameter(Mandatory = $true)][string]$CycleId,
+        [Parameter(Mandatory = $true)][string]$CycleDir
+    )
+
+    $incidents = @()
+    foreach ($finding in @($Findings))
+    {
+        if ([string](Get-OptionalPropertyValue -Object $finding -Name "Category" -Default "") -eq "optimization")
+        {
+            continue
+        }
+
+        $incidents += Convert-FindingToIncident -Finding $finding -State $State -CycleId $CycleId -CycleDir $CycleDir
+    }
+
+    if ($incidents.Count -eq 0)
+    {
+        return @()
+    }
+
+    return @($incidents | Sort-Object @{ Expression = { [int]$_.OccurrenceCount } ; Descending = $true }, @{ Expression = { $_.Severity } ; Descending = $true })
+}
+
+function Update-RetryLedgerForIncidents
+{
+    param(
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$State,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]]$Incidents
+    )
+
+    $ledger = $State["RetryLedger"]
+    foreach ($incident in @($Incidents))
+    {
+        if ([string](Get-OptionalPropertyValue -Object $incident -Name "Category" -Default "") -eq "optimization")
+        {
+            continue
+        }
+
+        $fingerprint = [string](Get-OptionalPropertyValue -Object $incident -Name "Fingerprint" -Default "")
+        if ([string]::IsNullOrWhiteSpace($fingerprint))
+        {
+            continue
+        }
+
+        $entry = Get-OptionalPropertyValue -Object $ledger -Name $fingerprint -Default $null
+        if ($null -eq $entry)
+        {
+            $entry = [ordered]@{
+                Fingerprint = $fingerprint
+                Attempts = 0
+                SameReasonFailures = 0
+                LastAction = ""
+                LastOutcome = "Observed"
+                LastAttemptUtc = $null
+            }
+        }
+
+        $entry["SameReasonFailures"] = [int](Get-OptionalPropertyValue -Object $entry -Name "SameReasonFailures" -Default 0) + 1
+        $entry["LastOutcome"] = "Observed"
+        $ledger[$fingerprint] = $entry
+    }
+}
+
+function Update-PromotionStateFromIncidents
+{
+    param(
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$State,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]]$Incidents
+    )
+
+    $promotionState = $State["PromotionState"]
+    $budget = $State["Budget"]
+    $sameReasonLimit = [int](Get-OptionalPropertyValue -Object $budget -Name "SameReasonFailureLimit" -Default 2)
+    $liveDemotionMinutes = [int](Get-OptionalPropertyValue -Object $budget -Name "LiveDemotionMinutes" -Default 60)
+
+    $demote = $false
+    $decisionReason = "No demotion required."
+
+    foreach ($incident in @($Incidents))
+    {
+        $fingerprint = [string](Get-OptionalPropertyValue -Object $incident -Name "Fingerprint" -Default "")
+        $ledgerEntry = Get-OptionalPropertyValue -Object $State["RetryLedger"] -Name $fingerprint -Default $null
+        $sameReasonFailures = [int](Get-OptionalPropertyValue -Object $ledgerEntry -Name "SameReasonFailures" -Default 0)
+        if ($sameReasonFailures -ge $sameReasonLimit)
+        {
+            $demote = $true
+            $decisionReason = "Repeated same-reason failures reached the guarded-live cap."
+            break
+        }
+    }
+
+    if ([bool](Get-OptionalPropertyValue -Object $State["KillSwitchState"] -Name "Enabled" -Default $false))
+    {
+        $demote = $true
+        $decisionReason = "Kill switch enabled."
+    }
+
+    if ($demote)
+    {
+        $promotionState["EffectiveSurface"] = "SyntheticOnly"
+        $promotionState["LastDecisionReason"] = $decisionReason
+        $promotionState["LiveDemotedUntilUtc"] = (Get-Date).AddMinutes($liveDemotionMinutes).ToUniversalTime().ToString("o")
+        $promotionState["LastUpdatedUtc"] = (Get-Date).ToUniversalTime().ToString("o")
+        return
+    }
+
+    $demotedUntilUtcText = [string](Get-OptionalPropertyValue -Object $promotionState -Name "LiveDemotedUntilUtc" -Default "")
+    if (-not [string]::IsNullOrWhiteSpace($demotedUntilUtcText))
+    {
+        try
+        {
+            $demotedUntilUtc = [DateTime]::Parse($demotedUntilUtcText, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
+            if ($demotedUntilUtc -le (Get-Date).ToUniversalTime())
+            {
+                $promotionState["EffectiveSurface"] = $promotionState["RequestedSurface"]
+                $promotionState["LastDecisionReason"] = "Guarded live demotion expired."
+                $promotionState["LiveDemotedUntilUtc"] = $null
+                $promotionState["LastUpdatedUtc"] = (Get-Date).ToUniversalTime().ToString("o")
+            }
+        }
+        catch
+        {
+        }
+    }
+}
+
+function Test-LiveSurfaceAllowed
+{
+    param([Parameter(Mandatory = $true)][System.Collections.IDictionary]$State)
+
+    if ([bool](Get-OptionalPropertyValue -Object $State["KillSwitchState"] -Name "Enabled" -Default $false))
+    {
+        return $false
+    }
+
+    $effectiveSurface = [string](Get-OptionalPropertyValue -Object $State["PromotionState"] -Name "EffectiveSurface" -Default $PrimarySurface)
+    if ($effectiveSurface -eq "SyntheticOnly")
+    {
+        return $false
+    }
+
+    return $true
+}
+
+function Get-GitWorkspaceAssessment
+{
+    $assessment = [ordered]@{
+        Branch = $null
+        Head = $null
+        IsDirty = $null
+        DirtyFiles = @()
+    }
+
+    try
+    {
+        $assessment["Branch"] = (git -C $script:BotRoot rev-parse --abbrev-ref HEAD 2>$null).Trim()
+        $assessment["Head"] = (git -C $script:BotRoot rev-parse --short HEAD 2>$null).Trim()
+        $dirty = @(git -C $script:BotRoot status --porcelain 2>$null)
+        $assessment["IsDirty"] = ($dirty.Count -gt 0)
+        $assessment["DirtyFiles"] = @($dirty)
+    }
+    catch
+    {
+        $assessment["IsDirty"] = $null
+    }
+
+    return $assessment
+}
+
+function Update-RecentRuns
+{
+    param(
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$State,
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$CycleSummary,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]]$Incidents
+    )
+
+    $run = [ordered]@{
+        CycleId = $CycleSummary["CycleId"]
+        CurrentPhase = $CycleSummary["CurrentPhase"]
+        StartedUtc = Get-OptionalPropertyValue -Object $CycleSummary -Name "StartedUtc" -Default $null
+        CompletedUtc = Get-OptionalPropertyValue -Object $CycleSummary -Name "CompletedUtc" -Default $null
+        SyntheticPassed = [bool](Get-OptionalPropertyValue -Object $CycleSummary["SyntheticBaseline"] -Name "Passed" -Default $false)
+        LiveAttempted = ($null -ne $CycleSummary["Bootstrap"])
+        LiveValid = [bool](Get-OptionalPropertyValue -Object $CycleSummary["LiveAssessment"] -Name "Valid" -Default $false)
+        InvalidReason = [string](Get-OptionalPropertyValue -Object $CycleSummary["LiveAssessment"] -Name "InvalidReason" -Default "")
+        IncidentIds = @(@($Incidents | ForEach-Object { $_.Id }))
+        AppliedActions = @(@($CycleSummary["AppliedChanges"] | ForEach-Object { $_.ActionName }))
+    }
+
+    $recentRuns = @($State["RecentRuns"])
+    $recentRuns = ,$run + $recentRuns
+    if ($recentRuns.Count -gt 10)
+    {
+        $recentRuns = @($recentRuns | Select-Object -First 10)
+    }
+
+    $State["RecentRuns"] = $recentRuns
 }
 
 function Test-ProcessIdRunning
@@ -850,6 +1314,7 @@ function Invoke-ManagedProcess
         -RedirectStandardError $stderrPath `
         -PassThru `
         -WindowStyle Hidden
+    $null = $process.Handle
 
     $lastHeartbeat = Get-Date
     $lastObservation = (Get-Date).AddSeconds(-1 * [Math]::Max(1, $ObservationSeconds))
@@ -1056,6 +1521,7 @@ function Get-LiveStateAssessment
     $agentAvailable = [bool](Get-OptionalPropertyValue -Object $botStatus -Name "agentAvailable" -Default $false)
     $runtimeMode = [string](Get-OptionalPropertyValue -Object $botStatus -Name "runtimeMode" -Default "")
     $currentGoal = [string](Get-OptionalPropertyValue -Object $botStatus -Name "currentGoal" -Default "")
+    $profileName = [string](Get-OptionalPropertyValue -Object $botStatus -Name "profileName" -Default "")
     $snapshotDead = [bool](Get-OptionalPropertyValue -Object $snapshot -Name "dead" -Default $false)
     $snapshotSwimming = [bool](Get-OptionalPropertyValue -Object $snapshot -Name "swimming" -Default $false)
     $chatInputVisible = [bool](Get-OptionalPropertyValue -Object $snapshot -Name "chatInputVisible" -Default $false)
@@ -1086,6 +1552,10 @@ function Get-LiveStateAssessment
     {
         $invalidReason = "swimming state"
     }
+    elseif (-not [string]::IsNullOrWhiteSpace($profileName) -and $profileName -ne $Profile)
+    {
+        $invalidReason = "profile drift"
+    }
     elseif (-not [string]::IsNullOrWhiteSpace($currentGoal) -and $currentGoal -like "Adhoc*")
     {
         $invalidReason = "route-follow not restored"
@@ -1106,6 +1576,8 @@ function Get-LiveStateAssessment
         NavigationCheckIsOk = $navigationCheckIsOk
         LaunchReady = $isLaunchReady
         RuntimeMode = $runtimeMode
+        ProfileName = $profileName
+        RequestedProfile = $Profile
         BotActive = $botActive
         AgentAvailable = $agentAvailable
         CurrentGoal = $currentGoal
@@ -1146,7 +1618,7 @@ function Invoke-SyntheticBaseline
     $coreDir = Join-Path $CycleDir "synthetic-coretests"
     [void](Ensure-Directory -Path $coreDir)
     $result["CoreTests"] = Invoke-ManagedProcess -FilePath "dotnet" `
-        -ArgumentList @("test", ".\CoreUnitTests\CoreUnitTests.csproj", "-c", "Release", "--no-build", "--nologo", "-v", "quiet") `
+        -ArgumentList @("test", ".\CoreUnitTests\CoreUnitTests.csproj", "-c", "Release", "--nologo", "-v", "quiet") `
         -WorkingDirectory $script:BotRoot `
         -CycleDir $coreDir `
         -Label "dotnet-test-core"
@@ -1159,7 +1631,7 @@ function Invoke-SyntheticBaseline
     $frontendDir = Join-Path $CycleDir "synthetic-frontendtests"
     [void](Ensure-Directory -Path $frontendDir)
     $result["FrontendTests"] = Invoke-ManagedProcess -FilePath "dotnet" `
-        -ArgumentList @("test", ".\FrontendUnitTests\FrontendUnitTests.csproj", "-c", "Release", "--no-build", "--nologo", "-v", "quiet") `
+        -ArgumentList @("test", ".\FrontendUnitTests\FrontendUnitTests.csproj", "-c", "Release", "--nologo", "-v", "quiet") `
         -WorkingDirectory $script:BotRoot `
         -CycleDir $frontendDir `
         -Label "dotnet-test-frontend"
@@ -1396,12 +1868,14 @@ function Get-FindingsForCycle
         {
             "route-follow not restored" { "navigation/reroute" }
             "navigation launch check blocking" { "infra/startup" }
+            "profile drift" { "launch/profile" }
             default { "invalid live state" }
         }
         $subsystem = switch ($category)
         {
             "navigation/reroute" { "navigation" }
             "infra/startup" { "live-readiness" }
+            "launch/profile" { "profile" }
             default { "live-state" }
         }
         $findings += New-Finding `
@@ -1449,6 +1923,7 @@ function Get-FindingsForCycle
             continue
         }
 
+        $focusContaminated = [bool](Get-OptionalPropertyValue -Object $summary -Name "FocusContaminated" -Default $false)
         $category = switch ($gateName)
         {
             "ValidateCombat" { "combat/rotation" }
@@ -1461,11 +1936,15 @@ function Get-FindingsForCycle
         {
             $category = "invalid live state"
         }
+        elseif ($focusContaminated)
+        {
+            $category = "input/focus"
+        }
 
         $findings += New-Finding `
             -Title ("{0} is not passing acceptance" -f $gateName) `
             -Category $category `
-            -Subsystem $(if ($category -eq "combat/rotation") { "combat" } elseif ($category -eq "invalid live state") { "live-state" } else { "navigation" }) `
+            -Subsystem $(if ($category -eq "combat/rotation") { "combat" } elseif ($category -eq "invalid live state") { "live-state" } elseif ($category -eq "input/focus") { "focus" } else { "navigation" }) `
             -BlockerType $gateName `
             -Summary ("{0} reported one or more acceptance failures." -f $gateName) `
             -Severity 4 `
@@ -1525,6 +2004,7 @@ function Get-HypothesesForFindings
                 "bot inactive after bootstrap" { "The live stack came up, but the bot never became active after bootstrap. Startup recovery needs to be revalidated before gate promotion." }
                 "health unavailable" { "A service or listener crash is preventing health checks from succeeding. Restarting the live stack should restore the contract." }
                 "launch readiness incomplete" { "One or more launch prerequisites are unresolved. Running Doctor or collecting readiness evidence should identify the missing subsystem." }
+                "profile drift" { "The loaded live profile does not match the requested profile, so bootstrap evidence is not trustworthy until the profile contract is restored." }
                 "route-follow not restored" { "The live bot is not settling into FollowRoute, likely because a transient goal or recovery path is still active." }
                 "ValidateReroute" { "Reroute acceptance is failing because synthetic hazards are not intersecting the route strongly enough or reroute counters are not advancing." }
                 "ValidateCombat" { "Combat acceptance is failing due to pull/reacquire regressions, incomplete combat evidence, or focus/input contamination." }
@@ -1548,19 +2028,35 @@ function Get-HypothesesForFindings
 
 function Get-ProposalsForFindings
 {
-    param([object[]]$Findings)
+    param(
+        [Parameter(Mandatory = $true)][object[]]$Findings,
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$State
+    )
 
     $proposals = @()
+    $gitWorkspace = Get-GitWorkspaceAssessment
+    $retryBudget = [int](Get-OptionalPropertyValue -Object $State["Budget"] -Name "MaxRetriesPerIncident" -Default 2)
     foreach ($finding in $Findings)
     {
+        $fingerprint = Get-IncidentFingerprint -Finding $finding
+        $retryEntry = Get-OptionalPropertyValue -Object $State["RetryLedger"] -Name $fingerprint -Default $null
+        $attempts = [int](Get-OptionalPropertyValue -Object $retryEntry -Name "Attempts" -Default 0)
+        $failover = Get-FailoverDecision -Finding $finding
         $proposal = [ordered]@{
             FindingId = $finding.Id
+            Fingerprint = $fingerprint
             Priority = $finding.Priority
             Subsystem = $finding.Subsystem
             Title = ""
             RecommendedChangeType = "Investigation"
             AutoApplyEligible = $false
             Executor = $null
+            FailoverDecision = $failover
+            FailoverActions = @($failover.PrimaryAction, $failover.SecondaryAction, $failover.TertiaryAction)
+            RetryAttempts = $attempts
+            RetryBudget = $retryBudget
+            MutationAssessment = $gitWorkspace
+            RemediationTask = $null
         }
 
         switch ($finding.BlockerType)
@@ -1576,14 +2072,46 @@ function Get-ProposalsForFindings
             {
                 $proposal["Title"] = "Run doctor workflow to restore launch readiness"
                 $proposal["RecommendedChangeType"] = "Operational"
-                $proposal["AutoApplyEligible"] = $true
                 $proposal["Executor"] = [ordered]@{ Kind = "AgentControl"; Action = "Doctor" }
+            }
+            "profile drift"
+            {
+                $proposal["Title"] = "Re-bootstrap the requested profile and confirm the live profile contract"
+                $proposal["RecommendedChangeType"] = "Operational"
+                $proposal["Executor"] = [ordered]@{ Kind = "AgentControl"; Action = "StartAndValidate" }
             }
             default
             {
                 $proposal["Title"] = "Collect targeted evidence and prepare a narrow remediation pass"
                 $proposal["RecommendedChangeType"] = $(if ($finding.Category -eq "invalid live state") { "Operational" } elseif ($finding.Category -eq "combat/rotation") { "Code" } else { "Investigation" })
             }
+        }
+
+        if ($proposal["RecommendedChangeType"] -eq "Code")
+        {
+            $taskId = "remediate-{0}" -f [guid]::NewGuid().ToString("N").Substring(0, 8)
+            $proposal["RemediationTask"] = [ordered]@{
+                Id = $taskId
+                IncidentId = $finding.Id
+                Kind = "Code"
+                Status = $(if ([bool](Get-OptionalPropertyValue -Object $gitWorkspace -Name "IsDirty" -Default $false)) { "BlockedProtectedWorktree" } else { "Pending" })
+                Summary = $proposal["Title"]
+                BranchName = ("autonomy/{0}" -f $taskId)
+                WorktreePath = (Join-Path $script:SupervisorRoot ("worktrees\{0}" -f $taskId))
+                ProtectedWorktreeRequired = $true
+                CreatedUtc = (Get-Date).ToUniversalTime().ToString("o")
+                UpdatedUtc = $null
+            }
+        }
+
+        if ($proposal["RecommendedChangeType"] -eq "Operational" -and $attempts -lt $retryBudget)
+        {
+            $proposal["AutoApplyEligible"] = $true
+        }
+        elseif ($proposal["RecommendedChangeType"] -eq "Operational")
+        {
+            $proposal["AutoApplyEligible"] = $false
+            $proposal["Title"] = "{0} (retry budget exhausted)" -f $proposal["Title"]
         }
 
         $proposals += $proposal
@@ -1595,6 +2123,7 @@ function Get-ProposalsForFindings
 function Invoke-OperationalProposal
 {
     param(
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$State,
         [Parameter(Mandatory = $true)][System.Collections.IDictionary]$Proposal,
         [Parameter(Mandatory = $true)][string]$CycleDir
     )
@@ -1613,17 +2142,71 @@ function Invoke-OperationalProposal
             }
         }
 
-        $actionName = [string](Get-OptionalPropertyValue -Object $executor -Name "Action" -Default "")
-        $artifactTag = "{0}-{1}-proposal-{2}" -f (Get-SafeName -Value $script:SupervisorId), (Get-Date -Format "yyyyMMdd-HHmmss"), (Get-SafeName -Value $actionName)
-        $result = Invoke-AgentControlAction -CycleDir $CycleDir -ActionName $actionName -ArtifactTag $artifactTag
+        $actions = @($Proposal["FailoverActions"] | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+        if ($actions.Count -eq 0)
+        {
+            $actions = @([string](Get-OptionalPropertyValue -Object $executor -Name "Action" -Default ""))
+        }
+
+        $retryEntry = Get-OptionalPropertyValue -Object $State["RetryLedger"] -Name $Proposal["Fingerprint"] -Default $null
+        if ($null -eq $retryEntry)
+        {
+            $retryEntry = [ordered]@{
+                Fingerprint = $Proposal["Fingerprint"]
+                Attempts = 0
+                SameReasonFailures = 0
+                LastAction = ""
+                LastOutcome = ""
+                LastAttemptUtc = $null
+            }
+        }
+
+        $attemptResults = @()
+        foreach ($actionName in $actions)
+        {
+            if ([string]::IsNullOrWhiteSpace($actionName))
+            {
+                continue
+            }
+
+            $artifactTag = "{0}-{1}-proposal-{2}" -f (Get-SafeName -Value $script:SupervisorId), (Get-Date -Format "yyyyMMdd-HHmmss"), (Get-SafeName -Value $actionName)
+            $result = Invoke-AgentControlAction -CycleDir $CycleDir -ActionName $actionName -ArtifactTag $artifactTag
+            $attemptResults += [ordered]@{
+                ActionName = $actionName
+                ArtifactTag = $artifactTag
+                Result = $result
+            }
+
+            $retryEntry["Attempts"] = [int](Get-OptionalPropertyValue -Object $retryEntry -Name "Attempts" -Default 0) + 1
+            $retryEntry["LastAction"] = $actionName
+            $retryEntry["LastOutcome"] = $(if ([bool]$result["ProcessResult"]["Success"]) { "Success" } else { "Failure" })
+            $retryEntry["LastAttemptUtc"] = (Get-Date).ToUniversalTime().ToString("o")
+            $State["RetryLedger"][$Proposal["Fingerprint"]] = $retryEntry
+
+            if ([bool]$result["ProcessResult"]["Success"])
+            {
+                return [ordered]@{
+                    Applied = $true
+                    Rejected = $false
+                    Reason = "Operational failover action executed successfully."
+                    ActionName = $actionName
+                    ArtifactTag = $artifactTag
+                    AttemptResults = @($attemptResults)
+                    Result = $result
+                    Restoration = "Repo mutation still requires a dedicated autonomous worktree."
+                }
+            }
+        }
 
         return [ordered]@{
-            Applied = [bool]$result["ProcessResult"]["Success"]
-            Rejected = (-not [bool]$result["ProcessResult"]["Success"])
-            Reason = $(if ([bool]$result["ProcessResult"]["Success"]) { "Operational proposal executed successfully." } else { "Operational proposal failed." })
-            ArtifactTag = $artifactTag
-            Result = $result
-            Restoration = "No repo mutation support in v1."
+            Applied = $false
+            Rejected = $true
+            Reason = "All operational failover actions failed within the retry budget."
+            ActionName = ""
+            ArtifactTag = $null
+            AttemptResults = @($attemptResults)
+            Result = $null
+            Restoration = "Repo mutation still requires a dedicated autonomous worktree."
         }
     }
     finally
@@ -1654,6 +2237,7 @@ function Get-NextStepsQueue
             "bot inactive after bootstrap" { "StartAndValidateThenObserveBotActivation" }
             "health unavailable" { "RestartThenHealthProbe" }
             "launch readiness incomplete" { "DoctorThenStartAndValidate" }
+            "profile drift" { "StartAndValidateThenVerifyProfile" }
             "ValidateReroute" { "ValidateReroute" }
             "ValidateCombat" { "ValidateCombat" }
             "ValidateNoProgress" { "ValidateNoProgress" }
@@ -1668,6 +2252,9 @@ function Get-NextStepsQueue
             "navigation listener unavailable" { "Port 47110 is listening again before any targeted live gate begins." }
             "navigation launch check blocking" { "Navigation launch check returns Ok (or non-blocking) and targeted gate promotion resumes." }
             "bot inactive after bootstrap" { "Bot status returns IsActive=true and AgentAvailable=true after bootstrap." }
+            "health unavailable" { "Health returns success from both /api/health and /api/health/startup." }
+            "launch readiness incomplete" { "Launch readiness returns green and StartAndValidate exits 0." }
+            "profile drift" { "The loaded profile matches the supervisor-requested profile before any live gate begins." }
             "ValidateReroute" { "Trigger/apply/drop close with zero detour-only collapse." }
             "ValidateCombat" { "Kills >= 30 with complete spell coverage and clean combat runtime counters." }
             "ValidateNoProgress" { "Explicit ShortNoProgress or TimeoutNoProgress trigger followed by recovery." }
@@ -1757,8 +2344,10 @@ function Get-StackStateSummary
 function Write-LatestArtifacts
 {
     param(
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$State,
         [Parameter(Mandatory = $true)][System.Collections.IDictionary]$CycleSummary,
         [Parameter(Mandatory = $true)][object[]]$Findings,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]]$Incidents,
         [Parameter(Mandatory = $true)][object[]]$NextSteps
     )
 
@@ -1766,8 +2355,13 @@ function Write-LatestArtifacts
         SupervisorId = $script:SupervisorId
         CurrentPhase = $CycleSummary["CurrentPhase"]
         LastCycleId = $CycleSummary["CycleId"]
+        Budget = $State["Budget"]
+        PromotionState = $State["PromotionState"]
+        KillSwitchState = $State["KillSwitchState"]
         StackState = Get-StackStateSummary -LiveAssessment $CycleSummary["LiveAssessment"]
         TopFindings = @($Findings | Select-Object -First 3)
+        TopIncidents = @($Incidents | Select-Object -First 5)
+        RecentRuns = @($State["RecentRuns"])
         LatestEvidencePaths = @(
             $CycleSummary["CycleDir"],
             $CycleSummary["ValidationResultsPath"],
@@ -1783,6 +2377,12 @@ function Write-LatestArtifacts
     [void](Write-JsonFile -Path $script:NextStepsLatestPath -Object $NextSteps)
     [void](Write-TextFile -Path $script:NextStepsLatestMarkdownPath -Value (Convert-NextStepsToMarkdown -NextSteps $NextSteps))
     [void](Write-JsonFile -Path $script:OpenIssuesPath -Object $Findings)
+    [void](Write-JsonFile -Path $script:IncidentsLatestPath -Object $Incidents)
+    [void](Write-JsonFile -Path $script:RunsLatestPath -Object $State["RecentRuns"])
+    foreach ($incident in @($Incidents))
+    {
+        Add-NdJsonRecord -Path $script:IncidentHistoryPath -Record $incident
+    }
     Add-NdJsonRecord -Path $script:MetricsHistoryPath -Record ([ordered]@{
             TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
             CycleId = $CycleSummary["CycleId"]
@@ -1797,12 +2397,16 @@ function Invoke-OneCycle
 {
     param([Parameter(Mandatory = $true)][System.Collections.IDictionary]$State)
 
+    Sync-KillSwitchState -State $State
+
     $cycleId = Get-CycleId
     $cycleDir = Get-CycleDir -CycleId $cycleId
+    $gitWorkspace = Get-GitWorkspaceAssessment
+    $startedUtc = (Get-Date).ToUniversalTime().ToString("o")
     $manifest = [ordered]@{
         SupervisorId = $script:SupervisorId
         CycleId = $cycleId
-        StartedUtc = (Get-Date).ToUniversalTime().ToString("o")
+        StartedUtc = $startedUtc
         Action = $Action
         PrimarySurface = $PrimarySurface
         Profile = $Profile
@@ -1810,13 +2414,14 @@ function Invoke-OneCycle
         DryRun = [bool]$DryRun
         EnableMutations = [bool]$EnableMutations
         PriorityGateOrder = Get-GateOrder
+        GitWorkspace = $gitWorkspace
     }
     [void](Write-JsonFile -Path (Join-Path $cycleDir "cycle-manifest.json") -Object $manifest)
 
-    $State["CurrentPhase"] = "Preflight"
+    $State["CurrentPhase"] = "Discover"
     $State["LastCycleId"] = $cycleId
     Save-SupervisorState -State $State
-    Add-CycleObservation -CycleDir $cycleDir -Phase "Preflight" -Subsystem "environment" -ArtifactSource "environment" -Context (Get-EnvironmentObservation)
+    Add-CycleObservation -CycleDir $cycleDir -Phase "Discover" -Subsystem "environment" -ArtifactSource "environment" -Context (Get-EnvironmentObservation)
 
     $synthetic = Invoke-SyntheticBaseline -CycleDir $cycleDir
     $State["SyntheticBaseline"]["Status"] = $(if ([bool]$synthetic["Passed"]) { "Passed" } else { "Failed" })
@@ -1830,9 +2435,10 @@ function Invoke-OneCycle
     $gateResults = [ordered]@{}
     $appliedChanges = @()
 
-    if (-not $DryRun -and $PrimarySurface -ne "SyntheticOnly" -and [bool]$synthetic["Passed"])
+    $liveSurfaceAllowed = Test-LiveSurfaceAllowed -State $State
+    if (-not $DryRun -and $PrimarySurface -ne "SyntheticOnly" -and $liveSurfaceAllowed -and [bool]$synthetic["Passed"])
     {
-        $State["CurrentPhase"] = "LiveReadiness"
+        $State["CurrentPhase"] = "Verify"
         Save-SupervisorState -State $State
 
         $bootstrapTag = "{0}-{1}-bootstrap" -f (Get-SafeName -Value $script:SupervisorId), $cycleId
@@ -1862,7 +2468,7 @@ function Invoke-OneCycle
 
         if ([bool](Get-OptionalPropertyValue -Object $liveAssessment -Name "Valid" -Default $false))
         {
-            $State["CurrentPhase"] = "TargetedGates"
+            $State["CurrentPhase"] = "Verify"
             Save-SupervisorState -State $State
 
             for ($gateIndex = 0; $gateIndex -lt $MaxGateActionsPerCycle; $gateIndex++)
@@ -1895,18 +2501,43 @@ function Invoke-OneCycle
             }
         }
     }
+    elseif (-not $DryRun -and [bool]$synthetic["Passed"])
+    {
+        $liveAssessment = [ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Valid = $false
+            InvalidReason = $(if ([bool](Get-OptionalPropertyValue -Object $State["KillSwitchState"] -Name "Enabled" -Default $false))
+                {
+                    "kill switch enabled"
+                }
+                else
+                {
+                    "guarded live demotion active"
+                })
+            LaunchReady = $false
+            BotActive = $false
+            AgentAvailable = $false
+            CurrentGoal = $null
+            RuntimeMode = $null
+            RequestedProfile = $Profile
+        }
+
+        [void](Write-JsonFile -Path (Join-Path $cycleDir "live-assessment.json") -Object $liveAssessment)
+    }
 
     $cycleSummary = [ordered]@{
         SupervisorId = $script:SupervisorId
         CycleId = $cycleId
         CycleDir = $cycleDir
-        CurrentPhase = "Analysis"
+        StartedUtc = $startedUtc
+        CurrentPhase = "Classify"
         SyntheticBaseline = $synthetic
         Bootstrap = $bootstrapResult
         LiveAssessment = $liveAssessment
         LiveAssessmentPath = $(if ($null -ne $liveAssessment) { Join-Path $cycleDir "live-assessment.json" } else { $null })
         GateResults = $gateResults
         AppliedChanges = @()
+        GitWorkspace = $gitWorkspace
         NavigationCheckStatus = $(if ($null -ne $liveAssessment) { Get-OptionalPropertyValue -Object $liveAssessment -Name "NavigationCheckStatus" -Default $null } else { $null })
         NavigationCheckMessage = $(if ($null -ne $liveAssessment) { Get-OptionalPropertyValue -Object $liveAssessment -Name "NavigationCheckMessage" -Default $null } else { $null })
         NavigationSource = $(if ($null -ne $liveAssessment) { Get-OptionalPropertyValue -Object $liveAssessment -Name "NavigationSource" -Default $null } else { $null })
@@ -1915,8 +2546,13 @@ function Invoke-OneCycle
     }
 
     $findings = Get-FindingsForCycle -CycleSummary $cycleSummary -State $State
+    $incidents = @(Get-IncidentsForCycle -State $State -Findings $findings -CycleId $cycleId -CycleDir $cycleDir)
+    $State["IncidentQueue"] = @($incidents | Select-Object -First 25)
+    Update-RetryLedgerForIncidents -State $State -Incidents $incidents
+    Update-PromotionStateFromIncidents -State $State -Incidents $incidents
+    Save-SupervisorState -State $State
     $hypotheses = Get-HypothesesForFindings -Findings $findings
-    $proposals = Get-ProposalsForFindings -Findings $findings
+    $proposals = Get-ProposalsForFindings -Findings $findings -State $State
 
     if ($EnableMutations -and -not $DryRun)
     {
@@ -1927,8 +2563,10 @@ function Invoke-OneCycle
                 continue
             }
 
-            $cycleSummary["CurrentPhase"] = "Improvement"
-            $appliedChanges += Invoke-OperationalProposal -Proposal $proposal -CycleDir $cycleDir
+            $State["CurrentPhase"] = "Remediate"
+            Save-SupervisorState -State $State
+            $cycleSummary["CurrentPhase"] = "Remediate"
+            $appliedChanges += Invoke-OperationalProposal -State $State -Proposal $proposal -CycleDir $cycleDir
             break
         }
     }
@@ -1936,6 +2574,7 @@ function Invoke-OneCycle
     $cycleSummary["AppliedChanges"] = $appliedChanges
 
     $findingsPath = Join-Path $cycleDir "findings.json"
+    $incidentsPath = Join-Path $cycleDir "incidents.json"
     $hypothesesPath = Join-Path $cycleDir "hypotheses.json"
     $proposalsPath = Join-Path $cycleDir "proposed-improvements.json"
     $appliedChangesPath = Join-Path $cycleDir "applied-changes.json"
@@ -1944,6 +2583,7 @@ function Invoke-OneCycle
     $nextStepsPath = Join-Path $cycleDir "next-steps.json"
 
     [void](Write-JsonFile -Path $findingsPath -Object $findings)
+    [void](Write-JsonFile -Path $incidentsPath -Object $incidents)
     [void](Write-JsonFile -Path $hypothesesPath -Object $hypotheses)
     [void](Write-JsonFile -Path $proposalsPath -Object $proposals)
     [void](Write-JsonFile -Path $appliedChangesPath -Object $appliedChanges)
@@ -1952,20 +2592,26 @@ function Invoke-OneCycle
             Bootstrap = $bootstrapResult
             LiveAssessment = $liveAssessment
             GateResults = $gateResults
+            Incidents = $incidents
         }))
     [void](Write-JsonFile -Path $nextStepsPath -Object $nextSteps)
 
     $cycleSummary["FindingsPath"] = $findingsPath
+    $cycleSummary["IncidentsPath"] = $incidentsPath
     $cycleSummary["HypothesesPath"] = $hypothesesPath
     $cycleSummary["ProposalsPath"] = $proposalsPath
     $cycleSummary["AppliedChangesPath"] = $appliedChangesPath
     $cycleSummary["ValidationResultsPath"] = $validationResultsPath
     $cycleSummary["NextStepsPath"] = $nextStepsPath
+    $cycleSummary["CurrentPhase"] = "Learn"
     $cycleSummary["CompletedUtc"] = (Get-Date).ToUniversalTime().ToString("o")
-    $cycleSummary["CurrentPhase"] = "Completed"
+
+    Update-RecentRuns -State $State -CycleSummary $cycleSummary -Incidents $incidents
+    $State["CurrentPhase"] = "Learn"
+    Save-SupervisorState -State $State
 
     [void](Write-JsonFile -Path (Join-Path $cycleDir "cycle-summary.json") -Object $cycleSummary)
-    Write-LatestArtifacts -CycleSummary $cycleSummary -Findings $findings -NextSteps $nextSteps
+    Write-LatestArtifacts -State $State -CycleSummary $cycleSummary -Findings $findings -Incidents $incidents -NextSteps $nextSteps
 
     $State["CurrentPhase"] = "Idle"
     $State["CycleCount"] = [int]$State["CycleCount"] + 1
@@ -1991,6 +2637,7 @@ function Show-Status
         Write-Host ("Supervisor: {0}" -f $script:SupervisorId)
         Write-Host ("Current phase: {0}" -f (Get-OptionalPropertyValue -Object (Get-SupervisorState) -Name "CurrentPhase" -Default "Idle"))
         Write-Host ("Stack state: WoW={0}, Web5000={1}, Nav47110={2}, Goal={3}" -f $stackState.WowRunning, $stackState.WebPortListening, $stackState.NavigationPortListening, $stackState.CurrentGoal)
+        Write-Host ("Promotion: {0}" -f (Get-OptionalPropertyValue -Object (Get-OptionalPropertyValue -Object (Get-SupervisorState) -Name "PromotionState" -Default $null) -Name "EffectiveSurface" -Default $PrimarySurface))
         Write-Host "Top findings:"
         Write-Host "  - No supervisor cycle has completed yet."
         Write-Host "Latest evidence paths:"
@@ -2010,11 +2657,22 @@ function Show-Status
             $latest.StackState.BotActive, `
             $latest.StackState.CurrentGoal, `
             $latest.StackState.InvalidReason)
+    Write-Host ("Promotion: {0}, KillSwitch={1}" -f `
+            (Get-OptionalPropertyValue -Object $latest.PromotionState -Name "EffectiveSurface" -Default $PrimarySurface), `
+            (Get-OptionalPropertyValue -Object $latest.KillSwitchState -Name "Enabled" -Default $false))
     Write-Host ("Last cycle: {0}" -f $latest.LastCycleId)
     Write-Host "Top findings:"
     foreach ($finding in @($latest.TopFindings))
     {
         Write-Host ("  - [{0}] {1}: {2}" -f $finding.Priority, $finding.Subsystem, $finding.Summary)
+    }
+    if (@($latest.TopIncidents).Count -gt 0)
+    {
+        Write-Host "Top incidents:"
+        foreach ($incident in @($latest.TopIncidents | Select-Object -First 3))
+        {
+            Write-Host ("  - [{0}] {1}: {2} (x{3})" -f $incident.Severity, $incident.Subsystem, $incident.Reason, $incident.OccurrenceCount)
+        }
     }
     Write-Host "Latest evidence paths:"
     foreach ($path in @($latest.LatestEvidencePaths))

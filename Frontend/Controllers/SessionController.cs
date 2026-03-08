@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
@@ -28,7 +29,8 @@ public sealed record SessionStatsResponse(
     string StatsSource,
     string? CurrentGoal,
     System.DateTime? LastUpdatedUtc,
-    bool IsStale);
+    bool IsStale,
+    string? CorrelationId);
 
 public sealed record SessionSummaryResponse(
     bool Active,
@@ -40,7 +42,8 @@ public sealed record SessionSummaryResponse(
     string RuntimeMode,
     string StatsSource,
     System.DateTime? LastUpdatedUtc,
-    bool IsStale);
+    bool IsStale,
+    string? CorrelationId);
 
 #endregion
 
@@ -67,6 +70,12 @@ public sealed class SessionController : ControllerBase
     [HttpGet]
     public IActionResult Get()
     {
+        string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
+        if (HttpContext != null)
+        {
+            Response.Headers["X-Correlation-ID"] = correlationId;
+        }
+
         if (!TryResolveSessionStats(out SessionStatsResponse? statsResponse, out GoapAgent? goapAgent, out bool liveAgentAvailable))
         {
             return ServiceUnavailable("GOAP agent not initialized");
@@ -87,7 +96,8 @@ public sealed class SessionController : ControllerBase
             RuntimeMode: BotRuntimeModeHelper.GetRuntimeMode(botController),
             StatsSource: statsResponse!.StatsSource,
             LastUpdatedUtc: statsResponse!.LastUpdatedUtc,
-            IsStale: statsResponse!.IsStale));
+            IsStale: statsResponse!.IsStale,
+            CorrelationId: correlationId));
     }
 
     /// <summary>
@@ -111,12 +121,18 @@ public sealed class SessionController : ControllerBase
     [HttpGet("stats")]
     public IActionResult GetStats()
     {
+        string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
+        if (HttpContext != null)
+        {
+            Response.Headers["X-Correlation-ID"] = correlationId;
+        }
+
         if (!TryResolveSessionStats(out SessionStatsResponse? response, out _, out _))
         {
             return ServiceUnavailable("GOAP agent not initialized");
         }
 
-        return Ok(response);
+        return Ok(response! with { CorrelationId = correlationId });
     }
 
     private static Dictionary<string, bool> GetWorldStateFlags(BitVector32 worldState)
@@ -189,7 +205,8 @@ public sealed class SessionController : ControllerBase
             "live",
             goapAgent.CurrentGoal?.GetType().Name,
             System.DateTime.UtcNow,
-            isStale: false);
+            isStale: false,
+            correlationId: null);
     }
 
     private static SessionStatsResponse CreateCachedStatsResponse(CachedSessionStats cached)
@@ -205,7 +222,8 @@ public sealed class SessionController : ControllerBase
             "cached",
             cached.CurrentGoal,
             cached.LastUpdatedUtc,
-            isStale: true);
+            isStale: true,
+            correlationId: null);
     }
 
     private static SessionStatsResponse CreateStatsResponse(
@@ -219,7 +237,8 @@ public sealed class SessionController : ControllerBase
         string statsSource,
         string? currentGoal,
         System.DateTime? lastUpdatedUtc,
-        bool isStale)
+        bool isStale,
+        string? correlationId)
     {
         return new SessionStatsResponse(
             Kills: kills,
@@ -232,7 +251,8 @@ public sealed class SessionController : ControllerBase
             StatsSource: statsSource,
             CurrentGoal: currentGoal,
             LastUpdatedUtc: lastUpdatedUtc,
-            IsStale: isStale);
+            IsStale: isStale,
+            CorrelationId: correlationId);
     }
 
     private ObjectResult ServiceUnavailable(string message)
