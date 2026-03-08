@@ -19,7 +19,6 @@
   "CheckTargetGivesExp": true,
   "PathThereAndBack": true,
   "PathReduceSteps": true,
-
   "IntVariables": {
     "MIN_MANA_DRAIN": 25,
     "LIFETAP_HP": 60,
@@ -34,153 +33,231 @@
     "DRINK_MANA": 50,
     "DOT_MIN_HEALTH%": 35
   },
-
   "Paths": [
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\1-6_Eversong Woods.json",
       "PathThereAndBack": false,
       "PathReduceSteps": false,
-      "Requirements": ["Level < 7"]
+      "Requirements": [
+        "Level < 7"
+      ]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\6-12_Eversong Woods.json",
       "PathThereAndBack": false,
       "PathReduceSteps": false,
-      "Requirements": ["Level >= 6", "Level < 10"]
+      "Requirements": [
+        "Level >= 6",
+        "Level < 10"
+      ]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\9-12_Ghostlands.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 9", "Level < 13"]
+      "Requirements": [
+        "Level >= 9",
+        "Level < 13"
+      ]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\13-15_Ghostlands_Sanctum of the Sun.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 13", "Level < 16"]
+      "Requirements": [
+        "Level >= 13",
+        "Level < 16"
+      ]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\15-20_Ghostlands_Windrunner.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 15", "Level < 21"]
+      "Requirements": [
+        "Level >= 15",
+        "Level < 21"
+      ]
     },
     {
       "PathFilename": "_pack\\1-20\\Blood elf\\18-22_Ghostlands_Deatholme_Approach.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 18", "Level < 23"]
+      "Requirements": [
+        "Level >= 18",
+        "Level < 23"
+      ]
     },
     {
       "PathFilename": "_pack\\20-30\\The Barrens\\20-26 Zeplin behind Camp Taurajo.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 20", "Level < 27"]
+      "Requirements": [
+        "Level >= 20",
+        "Level < 27"
+      ]
     },
     {
       "PathFilename": "_pack\\20-30\\The Barrens\\22-24 Field of Giants.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 22", "Level < 25"]
+      "Requirements": [
+        "Level >= 22",
+        "Level < 25"
+      ]
     },
     {
       "PathFilename": "_pack\\20-30\\Hillsbrad Foothills\\22-26 River.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 22", "Level < 27"]
+      "Requirements": [
+        "Level >= 22",
+        "Level < 27"
+      ]
     },
     {
       "PathFilename": "_pack\\20-30\\Hillsbrad Foothills\\26-30 Spriders Bears Cats.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 26", "Level < 31"]
+      "Requirements": [
+        "Level >= 26",
+        "Level < 31"
+      ]
     },
     {
       "PathFilename": "_pack\\30-40\\Desolace\\30-33 Sargeron Satyrs.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 30", "Level < 34"]
+      "Requirements": [
+        "Level >= 30",
+        "Level < 34"
+      ]
     },
     {
       "PathFilename": "_pack\\30-40\\Desolace\\30-35.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 33", "Level < 36"]
+      "Requirements": [
+        "Level >= 33",
+        "Level < 36"
+      ]
     },
     {
       "PathFilename": "_pack\\30-40\\Arathi Highlands\\35-37 Near Bolderfist Hall Raptor Bird Spider Ogre.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 35", "Level < 38"]
+      "Requirements": [
+        "Level >= 35",
+        "Level < 38"
+      ]
     },
     {
       "PathFilename": "_pack\\40-50\\Badlands\\40-45 Ogre camp.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 40", "Level < 46"]
+      "Requirements": [
+        "Level >= 40",
+        "Level < 46"
+      ]
     },
     {
       "PathFilename": "_pack\\40-50\\Feralas\\46-50 Woodpaw Hills.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 46", "Level < 51"]
+      "Requirements": [
+        "Level >= 46",
+        "Level < 51"
+      ]
     },
     {
       "PathFilename": "_pack\\50-60\\Azshara\\50-53 Azshara Legash Encampment.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 50", "Level < 54"]
+      "Requirements": [
+        "Level >= 50",
+        "Level < 54"
+      ]
     },
     {
       "PathFilename": "_pack\\50-60\\Felwood\\53-55 Felwood - Irontree Woods.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 53", "Level < 56"]
+      "Requirements": [
+        "Level >= 53",
+        "Level < 56"
+      ]
     },
     {
       "PathFilename": "_pack\\50-60\\Eastern Plaguelands\\57-60 Browman Mill - Noxious Glade.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 57", "Level < 61"]
+      "Requirements": [
+        "Level >= 57",
+        "Level < 61"
+      ]
     },
     {
       "PathFilename": "_pack\\60-70\\Hellfire Peninsula\\60-64 Felspark Ravine.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 60", "Level < 65"]
+      "Requirements": [
+        "Level >= 60",
+        "Level < 65"
+      ]
     },
     {
       "PathFilename": "_pack\\60-70\\Zangarmarsh\\60-64 Dead mire.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 62", "Level < 67"]
+      "Requirements": [
+        "Level >= 62",
+        "Level < 67"
+      ]
     },
     {
       "PathFilename": "_pack\\60-70\\Nagrand\\64-67 Ogres.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 64", "Level < 68"]
+      "Requirements": [
+        "Level >= 64",
+        "Level < 68"
+      ]
     },
     {
       "PathFilename": "_pack\\60-70\\Blade's Edge Mountains\\65-67.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 66", "Level < 70"]
+      "Requirements": [
+        "Level >= 66",
+        "Level < 70"
+      ]
     },
     {
       "PathFilename": "_pack\\60-70\\Netherstorm\\68-70 Ruins of Farahlon.json",
       "PathThereAndBack": true,
       "PathReduceSteps": true,
-      "Requirements": ["Level >= 68", "Level < 71"]
+      "Requirements": [
+        "Level >= 68",
+        "Level < 71"
+      ]
     }
   ],
-
   "Wait": {
     "AutoGenerateWaitForFoodAndDrink": true,
-    "Sequence": []
+    "Sequence": [
+      {
+        "Name": "Food Buff",
+        "Cost": 4.09,
+        "Enabled": false,
+        "Requirement": "Food && Health% < 100"
+      },
+      {
+        "Name": "Drink Buff",
+        "Cost": 4.09,
+        "Enabled": false,
+        "Requirement": "Drink && Mana% < 100"
+      }
+    ]
   },
-
   "Pull": {
     "Sequence": [
       {
@@ -194,7 +271,8 @@
           "Health% >= FOOD_HP"
         ],
         "MinMana": 25,
-        "School": "Shadow"
+        "School": "Shadow",
+        "Enabled": true
       },
       {
         "Name": "Immolate",
@@ -206,7 +284,8 @@
           "Health% >= FOOD_HP"
         ],
         "MinMana": 25,
-        "School": "Fire"
+        "School": "Fire",
+        "Enabled": false
       },
       {
         "Name": "Shadow Bolt",
@@ -218,14 +297,15 @@
           "Health% >= FOOD_HP"
         ],
         "MinMana": 25,
-        "School": "Shadow"
+        "School": "Shadow",
+        "Enabled": false
       },
       {
-        "Name": "Approach"
+        "Name": "Approach",
+        "Enabled": true
       }
     ]
   },
-
   "Combat": {
     "Sequence": [
       {
@@ -238,7 +318,8 @@
           "Level >= 10",
           "BagItem:6265:1",
           "Health% >= FOOD_HP"
-        ]
+        ],
+        "Enabled": true
       },
       {
         "Name": "Summon Imp",
@@ -249,21 +330,24 @@
           "(!Has Pet || PetHealth% == 0)",
           "(Level < 10 || !BagItem:6265:1)",
           "Health% >= FOOD_HP"
-        ]
+        ],
+        "Enabled": false
       },
       {
         "Name": "Fear",
         "Key": "7",
         "Requirement": "Health% < FEAR_HP",
         "HasCastBar": true,
-        "Cooldown": 100
+        "Cooldown": 100,
+        "Enabled": true
       },
       {
         "Name": "Drain Life",
         "Key": "8",
         "Requirement": "Health% < DRAIN_LIFE_HP",
         "HasCastBar": true,
-        "Cooldown": 100
+        "Cooldown": 100,
+        "Enabled": true
       },
       {
         "Name": "Immolate",
@@ -275,7 +359,8 @@
           "!Immolate"
         ],
         "MinMana": 25,
-        "School": "Fire"
+        "School": "Fire",
+        "Enabled": true
       },
       {
         "Name": "Curse of Agony",
@@ -287,7 +372,8 @@
           "!Curse of Agony"
         ],
         "MinMana": 25,
-        "School": "Shadow"
+        "School": "Shadow",
+        "Enabled": true
       },
       {
         "Name": "Corruption",
@@ -299,7 +385,8 @@
           "!Corruption"
         ],
         "MinMana": 25,
-        "School": "Shadow"
+        "School": "Shadow",
+        "Enabled": true
       },
       {
         "Name": "Drain Soul",
@@ -310,7 +397,8 @@
           "TargetHealth% < 20",
           "!BagItem:6265:8"
         ],
-        "School": "Shadow"
+        "School": "Shadow",
+        "Enabled": true
       },
       {
         "Name": "Shoot",
@@ -320,7 +408,8 @@
           "HasRangedWeapon",
           "!Shooting",
           "SpellInRange:1"
-        ]
+        ],
+        "Enabled": true
       },
       {
         "Name": "Shadow Bolt",
@@ -331,7 +420,8 @@
           "!HasRangedWeapon"
         ],
         "MinMana": 25,
-        "School": "Shadow"
+        "School": "Shadow",
+        "Enabled": false
       },
       {
         "Name": "AutoAttack",
@@ -339,11 +429,11 @@
           "InMeleeRange",
           "!HasRangedWeapon",
           "!AutoAttacking"
-        ]
+        ],
+        "Enabled": true
       }
     ]
   },
-
   "Flee": {
     "Sequence": [
       {
@@ -351,15 +441,16 @@
         "Key": "7",
         "WhenUsable": true,
         "Requirement": "Health% < FLEE_HP && MobCount >= 1",
-        "HasCastBar": true
+        "HasCastBar": true,
+        "Enabled": true
       },
       {
         "Name": "Flee",
-        "Requirement": "MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP"
+        "Requirement": "MobCount >= FLEE_MOB_COUNT && Health% < FLEE_HP",
+        "Enabled": true
       }
     ]
   },
-
   "Adhoc": {
     "Sequence": [
       {
@@ -367,21 +458,24 @@
         "Key": "N8",
         "HasCastBar": true,
         "Cost": 1,
-        "Requirement": "(!Has Pet || PetHealth% == 0) && Level >= 10 && BagItem:6265:1 && Health% >= FOOD_HP"
+        "Requirement": "(!Has Pet || PetHealth% == 0) && Level >= 10 && BagItem:6265:1 && Health% >= FOOD_HP",
+        "Enabled": true
       },
       {
         "Name": "Summon Imp",
         "Key": "N9",
         "HasCastBar": true,
         "Cost": 1,
-        "Requirement": "(!Has Pet || PetHealth% == 0) && (Level < 10 || !BagItem:6265:1) && Health% >= FOOD_HP"
+        "Requirement": "(!Has Pet || PetHealth% == 0) && (Level < 10 || !BagItem:6265:1) && Health% >= FOOD_HP",
+        "Enabled": false
       },
       {
         "Name": "Use Healthstone",
         "Cost": 1,
         "InCombat": "true",
         "Requirement": "Health% < HEALTHSTONE_HP && (BagItem:34062 || BagItem:30703 || BagItem:22044 || BagItem:22105 || BagItem:22104 || BagItem:22103 || BagItem:19013 || BagItem:19012 || BagItem:9421 || BagItem:19011 || BagItem:19010 || BagItem:5510 || BagItem:19009 || BagItem:19008 || BagItem:5509 || BagItem:19007 || BagItem:19006 || BagItem:5511 || BagItem:19005 || BagItem:19004 || BagItem:5512)",
-        "Cooldown": 120000
+        "Cooldown": 120000,
+        "Enabled": true
       },
       {
         "Name": "Create Healthstone",
@@ -389,7 +483,8 @@
         "HasCastBar": true,
         "InCombat": "false",
         "Requirement": "Level >= 10 && BagItem:6265:1 && !InCombat && !BagItem:34062 && !BagItem:30703 && !BagItem:22044 && !BagItem:22105 && !BagItem:22104 && !BagItem:22103 && !BagItem:19013 && !BagItem:19012 && !BagItem:9421 && !BagItem:19011 && !BagItem:19010 && !BagItem:5510 && !BagItem:19009 && !BagItem:19008 && !BagItem:5509 && !BagItem:19007 && !BagItem:19006 && !BagItem:5511 && !BagItem:19005 && !BagItem:19004 && !BagItem:5512",
-        "Cooldown": 60000
+        "Cooldown": 60000,
+        "Enabled": true
       },
       {
         "Cost": 2,
@@ -397,7 +492,8 @@
         "Key": "9",
         "WhenUsable": true,
         "InCombat": "i dont care",
-        "Requirement": "!Demon Skin && !Demon Armor && Level < 20"
+        "Requirement": "!Demon Skin && !Demon Armor && Level < 20",
+        "Enabled": true
       },
       {
         "Cost": 2,
@@ -405,7 +501,8 @@
         "Key": "9",
         "WhenUsable": true,
         "InCombat": "i dont care",
-        "Requirement": "!Demon Armor && !Fel Armor && Level >= 20 && Level < 62"
+        "Requirement": "!Demon Armor && !Fel Armor && Level >= 20 && Level < 62",
+        "Enabled": true
       },
       {
         "Cost": 2,
@@ -413,40 +510,43 @@
         "Key": "9",
         "WhenUsable": true,
         "InCombat": "i dont care",
-        "Requirement": "!Fel Armor && Level >= 62"
+        "Requirement": "!Fel Armor && Level >= 62",
+        "Enabled": true
       },
       {
         "Name": "Life Tap",
         "Key": "-",
         "WhenUsable": true,
         "Requirement": "Mana% < LIFETAP_MANA && Health% > LIFETAP_HP && !InCombat && !Food && !Drink",
-        "Cost": 1
+        "Cost": 1,
+        "Enabled": true
       }
     ]
   },
-
   "Parallel": {
     "Sequence": [
       {
         "Name": "Food",
         "Key": "=",
-        "Requirement": "Health% < FOOD_HP"
+        "Requirement": "Health% < FOOD_HP",
+        "Enabled": true
       },
       {
         "Name": "Drink",
         "Key": "F3",
-        "Requirement": "Mana% < DRINK_MANA"
+        "Requirement": "Mana% < DRINK_MANA",
+        "Enabled": true
       }
     ]
   },
-
   "NPC": {
     "Sequence": [
       {
         "Name": "Repair",
         "Key": "C",
         "Requirement": "Durability% < 40",
-        "Cost": 6
+        "Cost": 6,
+        "Enabled": true
       },
       {
         "Name": "Sell",
@@ -455,8 +555,26 @@
           "BagFullAny",
           "BagGreyItem"
         ],
-        "Cost": 6
+        "Cost": 6,
+        "Enabled": true
       }
+    ]
+  },
+  "Mail": false,
+  "MailConfig": {
+    "RecipientName": "",
+    "MinimumGoldToKeep": 10000,
+    "SendGold": true,
+    "SendItems": true,
+    "ExcludedItemIds": [
+      6948,
+      5956,
+      7005,
+      2901,
+      4238,
+      3275,
+      1760,
+      1165
     ]
   }
 }
