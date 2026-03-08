@@ -264,6 +264,89 @@ public sealed class CombatPullCastingRuntimeTests
     }
 
     [Fact]
+    public void ShouldTreatTargetLossAsKillToLootHandoff_WhenKillCreditRecentAndNoAlternateThreat_ReturnsTrue()
+    {
+        bool result = CombatGoal.ShouldTreatTargetLossAsKillToLootHandoff(
+            hasRecentKillCredit: true,
+            hasRecentCombatProgress: true,
+            deadTargetJustCleared: false,
+            hasValidCombatTarget: false,
+            hasImmediateAlternateThreat: false);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldTreatTargetLossAsKillToLootHandoff_WhenImmediateAlternateThreatExists_ReturnsFalse()
+    {
+        bool result = CombatGoal.ShouldTreatTargetLossAsKillToLootHandoff(
+            hasRecentKillCredit: true,
+            hasRecentCombatProgress: true,
+            deadTargetJustCleared: true,
+            hasValidCombatTarget: false,
+            hasImmediateAlternateThreat: true);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldTreatTargetLossAsKillToLootHandoff_WhenNoRecentSignals_ReturnsFalse()
+    {
+        bool result = CombatGoal.ShouldTreatTargetLossAsKillToLootHandoff(
+            hasRecentKillCredit: false,
+            hasRecentCombatProgress: false,
+            deadTargetJustCleared: false,
+            hasValidCombatTarget: false,
+            hasImmediateAlternateThreat: false);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasImmediateAlternateThreatSignal_WhenLivePetTargetExists_ReturnsTrue()
+    {
+        bool result = CombatGoal.HasImmediateAlternateThreatSignal(
+            hasLivePetTarget: true,
+            damageTakenCount: 0,
+            toPullCount: 0);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void HasImmediateAlternateThreatSignal_WhenNoThreatSignalsExist_ReturnsFalse()
+    {
+        bool result = CombatGoal.HasImmediateAlternateThreatSignal(
+            hasLivePetTarget: false,
+            damageTakenCount: 0,
+            toPullCount: 0);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasRecentDeadTargetClearSignal_WhenWithinWindow_ReturnsTrue()
+    {
+        bool result = CombatGoal.HasRecentDeadTargetClearSignal(
+            nowTick: 12_000,
+            lastDeadTargetClearTick: 11_000,
+            windowMs: 1_500);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void HasRecentDeadTargetClearSignal_WhenOutsideWindow_ReturnsFalse()
+    {
+        bool result = CombatGoal.HasRecentDeadTargetClearSignal(
+            nowTick: 12_000,
+            lastDeadTargetClearTick: 9_000,
+            windowMs: 1_500);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
     public void ShouldRegisterLostTargetBurst_WhenThresholdMetAndCooldownElapsed_ReturnsTrue()
     {
         bool result = CombatGoal.ShouldRegisterLostTargetBurst(

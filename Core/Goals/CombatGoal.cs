@@ -28,6 +28,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
     private const int LostTargetBurstLogCooldownMs = 3_000;
     private const int TargetlessCombatGraceHoldMs = 250;
     private const int RecentCombatProgressWindowMs = 2_500;
+    private const int DeadTargetClearRecentWindowMs = 1_500;
     private const int RuntimeMetricsWindowMs = 10 * 60 * 1000;
 
     private readonly ILogger<CombatGoal> logger;
@@ -54,6 +55,8 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
     private long lastLostTargetBurstTick;
     private long lastLostTargetLogTick;
     private long lastKillCreditTick;
+    private long lastDeadTargetClearTick;
+    private long lastKillToLootHandoffTick;
     private readonly object runtimeMetricsLock = new();
     private readonly Queue<long> lostTargetTicks = [];
     private readonly Queue<long> lostTargetBurstTicks = [];
@@ -64,6 +67,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
     private readonly Queue<long> reacquireFallbackSuccessTicks = [];
     private BehaviorContext? behaviorContext;
     private LostTargetRecoveryStep lostTargetRecoveryStep;
+    private bool killToLootHandoffActive;
     private bool disposed;
 
     private enum LostTargetRecoveryStep
@@ -182,8 +186,10 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         lastLostTargetHandlingTick = 0;
         lastLostTargetBurstTick = 0;
         lastLostTargetLogTick = 0;
-        lostTargetRecoveryStep = LostTargetRecoveryStep.None;
-        targetLostConsecutiveTicks = 0;
+        lastDeadTargetClearTick = 0;
+        lastKillToLootHandoffTick = 0;
+        killToLootHandoffActive = false;
+        ResetTargetLossHandlingState();
     }
 
     public override void OnExit()
@@ -192,6 +198,8 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         {
             stopMoving.Stop();
         }
+
+        ResetTargetLossHandlingState();
     }
 
     public override void Update()
@@ -328,6 +336,12 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         bool targetDead = hasTarget && bits.Target_Dead();
         bool targetMissing = !hasTarget;
 
+        if (!bits.Combat())
+        {
+            ResetTargetLossHandlingState();
+            return;
+        }
+
         // Debounce target-loss: require 2 consecutive ticks to absorb single-frame
         // addon latency gaps that transiently report no target during active combat.
         if (targetMissing || targetDead)
@@ -338,9 +352,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         }
         else
         {
-            targetLostConsecutiveTicks = 0;
-            lastLostTargetHandlingTick = 0;
-            ResetLostTargetRecoveryState();
+            ResetTargetLossHandlingState();
         }
 
         if (targetDead)
@@ -352,6 +364,14 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         if (targetMissing)
         {
             long nowTick = Environment.TickCount64;
+            if (ShouldSuppressTargetLossForKillToLootHandoff(nowTick))
+            {
+                ActivateKillToLootHandoff(nowTick);
+                RecordTargetlessCombatGraceUsed(nowTick);
+                wait.Fixed(Math.Max(TargetlessCombatGraceHoldMs, playerReader.NetworkLatency));
+                return;
+            }
+
             bool burstActive = RecordLostTargetAndCheckBurst(nowTick);
             int recoveryCooldownMs = burstActive
                 ? LostTargetBurstRecoveryCooldownMs
@@ -389,12 +409,13 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
             }
 
             input.ForceAggressiveClearTarget(wait, bits);
-            ResetLostTargetRecoveryState();
+            ResetTargetLossHandlingState();
         }
     }
 
     private void HandleDeadTargetLoss(long nowTick)
     {
+        lastDeadTargetClearTick = nowTick;
         logger.LogInformation("Clear current dead target!");
         input.ForceAggressiveClearTarget(wait, bits);
 
@@ -402,13 +423,13 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
             TryAdoptPetTargetAsCombatThreat())
         {
             logger.LogInformation("Recovered combat target via pet handoff after dead target clear.");
-            targetLostConsecutiveTicks = 0;
-            ResetLostTargetRecoveryState();
+            ResetTargetLossHandlingState();
             return;
         }
 
         if (HasRecentCombatProgress(nowTick))
         {
+            ActivateKillToLootHandoff(nowTick);
             RecordTargetlessCombatGraceUsed(nowTick);
             wait.Fixed(Math.Max(TargetlessCombatGraceHoldMs, playerReader.NetworkLatency));
         }
@@ -441,8 +462,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
                 RecordLostTargetReacquireSuccess(nowTick);
                 RecordReacquireFallbackSuccess(nowTick);
                 logger.LogInformation("Recovered combat target via immediate pet handoff.");
-                targetLostConsecutiveTicks = 0;
-                ResetLostTargetRecoveryState();
+                ResetTargetLossHandlingState();
                 return true;
             }
         }
@@ -458,8 +478,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
             {
                 RecordLostTargetReacquireSuccess(nowTick);
                 logger.LogInformation("Reacquired target with LastTarget fallback.");
-                targetLostConsecutiveTicks = 0;
-                ResetLostTargetRecoveryState();
+                ResetTargetLossHandlingState();
                 return true;
             }
 
@@ -485,8 +504,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
                 RecordLostTargetReacquireSuccess(nowTick);
                 RecordReacquireFallbackSuccess(nowTick);
                 logger.LogWarning("Recovered combat target via nearest-target fallback.");
-                targetLostConsecutiveTicks = 0;
-                ResetLostTargetRecoveryState();
+                ResetTargetLossHandlingState();
                 return true;
             }
 
@@ -501,8 +519,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
                 RecordLostTargetReacquireSuccess(nowTick);
                 RecordReacquireFallbackSuccess(nowTick);
                 logger.LogWarning("Recovered combat target via pet fallback.");
-                targetLostConsecutiveTicks = 0;
-                ResetLostTargetRecoveryState();
+                ResetTargetLossHandlingState();
                 return true;
             }
 
@@ -553,6 +570,38 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
             progressWindowMs: RecentCombatProgressWindowMs);
     }
 
+    private bool ShouldSuppressTargetLossForKillToLootHandoff(long nowTick)
+    {
+        if (!bits.Combat())
+        {
+            ResetKillToLootHandoffState();
+            return false;
+        }
+
+        bool hasRecentKillCredit = HasRecentKillCreditSignal(nowTick, lastKillCreditTick, RecentCombatProgressWindowMs);
+        bool hasRecentCombatProgress = HasRecentCombatProgress(nowTick);
+        bool deadTargetJustCleared = HasRecentDeadTargetClearSignal(nowTick, lastDeadTargetClearTick, DeadTargetClearRecentWindowMs);
+        bool recentKillToLootHandoff = killToLootHandoffActive && HasRecentTimestampSignal(nowTick, lastKillToLootHandoffTick, RecentCombatProgressWindowMs);
+        bool hasImmediateAlternateThreat = HasImmediateAlternateThreatSignal(
+            hasLivePetTarget: ShouldAttemptPetTargetRecoveryAfterDeadTarget(bits.Pet(), playerReader.PetTarget(), bits.PetTarget_Alive()),
+            damageTakenCount: combatLog.DamageTakenCount(),
+            toPullCount: combatLog.ToPullCount());
+
+        bool suppress = ShouldTreatTargetLossAsKillToLootHandoff(
+            hasRecentKillCredit,
+            hasRecentCombatProgress || recentKillToLootHandoff,
+            deadTargetJustCleared,
+            HasValidCombatTarget(),
+            hasImmediateAlternateThreat);
+
+        if (!suppress && killToLootHandoffActive && !hasRecentKillCredit && !hasRecentCombatProgress && !deadTargetJustCleared)
+        {
+            ResetKillToLootHandoffState();
+        }
+
+        return suppress;
+    }
+
     internal static bool HasRecentCombatProgressSignal(
         int damageDoneElapsedMs,
         int damageTakenElapsedMs,
@@ -566,14 +615,73 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         return damageDoneRecent || damageTakenRecent || killCreditRecent;
     }
 
+    internal static bool HasRecentKillCreditSignal(long nowTick, long lastKillCreditTick, int windowMs)
+    {
+        return lastKillCreditTick != 0 && (nowTick - lastKillCreditTick) <= windowMs;
+    }
+
+    internal static bool HasRecentDeadTargetClearSignal(long nowTick, long lastDeadTargetClearTick, int windowMs)
+    {
+        return lastDeadTargetClearTick != 0 && (nowTick - lastDeadTargetClearTick) <= windowMs;
+    }
+
+    internal static bool HasRecentTimestampSignal(long nowTick, long lastTick, int windowMs)
+    {
+        return lastTick != 0 && (nowTick - lastTick) <= windowMs;
+    }
+
+    internal static bool HasImmediateAlternateThreatSignal(
+        bool hasLivePetTarget,
+        int damageTakenCount,
+        int toPullCount)
+    {
+        return hasLivePetTarget || damageTakenCount > 0 || toPullCount > 0;
+    }
+
+    internal static bool ShouldTreatTargetLossAsKillToLootHandoff(
+        bool hasRecentKillCredit,
+        bool hasRecentCombatProgress,
+        bool deadTargetJustCleared,
+        bool hasValidCombatTarget,
+        bool hasImmediateAlternateThreat)
+    {
+        if (hasValidCombatTarget || hasImmediateAlternateThreat)
+        {
+            return false;
+        }
+
+        return hasRecentKillCredit || hasRecentCombatProgress || deadTargetJustCleared;
+    }
+
     private void ResetLostTargetRecoveryState()
     {
         lostTargetRecoveryStep = LostTargetRecoveryStep.None;
     }
 
+    private void ResetKillToLootHandoffState()
+    {
+        killToLootHandoffActive = false;
+        lastKillToLootHandoffTick = 0;
+        lastDeadTargetClearTick = 0;
+    }
+
+    private void ResetTargetLossHandlingState()
+    {
+        targetLostConsecutiveTicks = 0;
+        lastLostTargetHandlingTick = 0;
+        ResetLostTargetRecoveryState();
+        ResetKillToLootHandoffState();
+    }
+
     private void HandleKillCredit()
     {
         lastKillCreditTick = Environment.TickCount64;
+    }
+
+    private void ActivateKillToLootHandoff(long nowTick)
+    {
+        killToLootHandoffActive = true;
+        lastKillToLootHandoffTick = nowTick;
     }
 
     private bool RecordLostTargetAndCheckBurst(long nowTick)
