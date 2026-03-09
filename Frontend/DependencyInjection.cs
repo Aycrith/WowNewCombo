@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddSingleton<Services.EventAggregationService>();
         services.AddHostedService(sp => sp.GetRequiredService<Services.EventAggregationService>());
         services.AddSingleton<Services.AutonomyRuntimeService>();
+        services.AddSingleton<Services.ProfileLoadTelemetryService>();
 
         services.AddRazorPages();
 

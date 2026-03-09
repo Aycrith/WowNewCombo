@@ -223,6 +223,8 @@
 
     private Timer refreshTimer = new Timer();
     private Timer? visUpdateTimer;
+    private bool refreshTimerHooked = false;
+    private bool isDisposed = false;
 
     private float PlayerDir => -PlayerReader.Direction * (180f / MathF.PI);
 
@@ -263,14 +265,41 @@
 
     public void Dispose()
     {
-        refreshTimer.Dispose();
-        visUpdateTimer?.Dispose();
-
+        isDisposed = true;
         botController.ProfileLoaded -= OnProfileLoaded;
         addonReader.AddonDataChanged -= OnAddonDataChanged;
         areaDB.Changed -= OnZoneChanged;
         combatLog.PlayerDeath -= OnPlayerDeath;
         RouteVisService.OnVisualizationStateChanged -= OnVisualizationStateChanged;
+
+        try
+        {
+            refreshTimer.Stop();
+            if (refreshTimerHooked)
+            {
+                refreshTimer.Elapsed -= OnTimerTick;
+                refreshTimerHooked = false;
+            }
+            refreshTimer.Dispose();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+
+        if (visUpdateTimer != null)
+        {
+            try
+            {
+                visUpdateTimer.Stop();
+                visUpdateTimer.Elapsed -= OnVisUpdateTimerElapsed;
+                visUpdateTimer.Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            visUpdateTimer = null;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -442,17 +471,35 @@
 
     private void OnProfileLoaded()
     {
-        if (!refreshTimer.Enabled)
+        if (isDisposed)
         {
-            refreshTimer.Interval = 1000;
-            refreshTimer.Enabled = true;
-
-            refreshTimer.Elapsed += OnTimerTick;
-
-            refreshTimer.Start();
+            return;
         }
 
-        UpdateSymbol();
+        try
+        {
+            refreshTimer.Interval = 1000;
+            refreshTimer.AutoReset = true;
+            if (!refreshTimerHooked)
+            {
+                refreshTimer.Elapsed += OnTimerTick;
+                refreshTimerHooked = true;
+            }
+
+            if (!refreshTimer.Enabled)
+            {
+                refreshTimer.Start();
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+
+        if (!isDisposed)
+        {
+            UpdateSymbol();
+        }
     }
 
     private void UpdateSymbol()
