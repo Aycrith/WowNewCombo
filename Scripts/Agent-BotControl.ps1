@@ -8,8 +8,8 @@
   CLI actions for status, restart, stop, monitoring, and direct API calls.
 
 .EXAMPLES
-  pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action StartAndValidate -Profile BloodElf_Rogue_8-60_TBC.json
-  pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action StartAndValidate -Profile BloodElf_Rogue_8-60_TBC.json -BypassActionBar
+  pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action StartAndValidate -Profile BloodElf_Warlock_1-70_TBC.json
+  pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action StartAndValidate -Profile BloodElf_Warlock_1-70_TBC.json -BypassActionBar
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action Status
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action Stop
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action Api -ApiMethod GET -ApiPath /api/launch/status
@@ -19,7 +19,7 @@ param(
     [ValidateSet("Start", "StartAndValidate", "Validate", "Status", "Stop", "Restart", "Monitor", "Api", "CollectEvidence", "Soak", "LiveSession", "Doctor", "GameCmd", "FlagsProfile", "WatchNav", "NavTriage", "ValidateReroute", "ValidateNoProgress", "ValidateCombat")]
     [string]$Action = "StartAndValidate",
 
-    [string]$Profile = "BloodElf_Rogue_8-60_TBC.json",
+    [string]$Profile = "BloodElf_Warlock_1-70_TBC.json",
     [string]$BotRoot = "",
     [string]$BaseUrl = "http://localhost:5000",
     [int]$WebPort = 5000,
@@ -354,6 +354,20 @@ function Write-ActionFailureArtifact
 
         $botStatus = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
         $sessionStats = Invoke-AgentApiSafe -Method GET -Path "/api/session/stats" -TimeoutSec 5
+        $launchStatus = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 5
+        $launchPayload = $(if ($launchStatus.Success) { $launchStatus.Result } else { $null })
+        $actionBarBypassInfo = $(if ($null -ne $launchPayload)
+            {
+                Get-LaunchActionBarBypassOverrideInfo -Launch $launchPayload
+            }
+            else
+            {
+                [pscustomobject]@{
+                    Enabled = $false
+                    Reason = $null
+                    Source = $null
+                }
+            })
         $artifactName = "{0}-{1}-failure.json" -f $script:RunTag, (Get-SafeArtifactName -Name $ActionName.ToLowerInvariant())
         $line = $null
         try { $line = $ErrorRecord.InvocationInfo.ScriptLineNumber } catch { }
@@ -371,6 +385,14 @@ function Write-ActionFailureArtifact
             ScriptStackTrace = $ErrorRecord.ScriptStackTrace
             RuntimeMode = $(if ($botStatus.Success -and $null -ne $botStatus.Result.RuntimeMode) { "$($botStatus.Result.RuntimeMode)" } else { $null })
             AgentAvailable = $(if ($botStatus.Success -and $null -ne $botStatus.Result.AgentAvailable) { [bool]$botStatus.Result.AgentAvailable } else { $null })
+            LaunchStatus = $launchStatus
+            LaunchRequestedProfile = $(if ($null -ne $launchPayload) { Get-OptionalPropertyValue -Object $launchPayload -Name "RequestedProfile" } else { $null })
+            LaunchAppliedProfile = $(if ($null -ne $launchPayload) { Get-OptionalPropertyValue -Object $launchPayload -Name "AppliedProfile" } else { $null })
+            ProfileLoadFailureKind = $(if ($null -ne $launchPayload) { Get-OptionalPropertyValue -Object $launchPayload -Name "ProfileLoadFailureKind" } else { $null })
+            ProfileLoadFailureReason = $(if ($null -ne $launchPayload) { Get-OptionalPropertyValue -Object $launchPayload -Name "ProfileLoadFailureReason" } else { $null })
+            ActionBarIssueCount = $(if ($null -ne $launchPayload) { Get-OptionalPropertyValue -Object $launchPayload -Name "ActionBarIssueCount" } else { $null })
+            ActionBarBypassActive = [bool]$actionBarBypassInfo.Enabled
+            ActionBarBypassReason = $actionBarBypassInfo.Reason
             BotStatus = $botStatus
             SessionStats = $sessionStats
         }))
@@ -3144,7 +3166,13 @@ function Load-BotProfile
         throw "Profile load failed for '$Profile'"
     }
 
-    Write-Ok "Profile loaded ($($res.FileName))"
+    $appliedProfile = [string](Get-OptionalPropertyValue -Object $res -Name "AppliedProfile" -Default $res.FileName)
+    if (-not [string]::IsNullOrWhiteSpace($appliedProfile) -and $appliedProfile -ne $Profile)
+    {
+        throw ("Profile load drift detected: requested '{0}' but applied '{1}'." -f $Profile, $appliedProfile)
+    }
+
+    Write-Ok "Profile loaded ($($res.FileName) -> $appliedProfile)"
 }
 
 function Invoke-ReadinessFixes

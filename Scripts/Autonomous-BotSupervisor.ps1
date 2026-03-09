@@ -479,6 +479,11 @@ function New-DefaultSupervisorState
             Source = ""
             UpdatedUtc = $null
         }
+        WorkspaceFingerprint = ""
+        WorkspaceDirty = $null
+        StartupBlockerFingerprint = ""
+        SameReasonRetryCount = 0
+        LiveDemotionReason = ""
         RecentRuns = @()
         Gates = [ordered]@{
             ValidateReroute = (New-DefaultGateState -Name "ValidateReroute")
@@ -630,6 +635,10 @@ function Get-FailoverDecision
     $blockerType = [string](Get-OptionalPropertyValue -Object $Finding -Name "BlockerType" -Default "")
     $reason = switch ($blockerType)
     {
+        "ProfileLoadDisposedTimer" { "Profile loading faulted in the startup path, so retrying bootstrap once and then recycling the web/nav stack is the bounded recovery path." }
+        "DoctorReadinessTimeout" { "Doctor timed out while trying to restore readiness, so the next action should stay inside the startup recovery ladder." }
+        "ActionBarShadowBoltSlot2Empty" { "Action bar readiness is the only known startup blocker, so a doctor pass or a single bounded bypass run is safer than widening scope." }
+        "WrongProfileLoaded" { "The wrong class profile is active, so restart the requested profile selection before any live validation continues." }
         "health unavailable" { "Primary health checks failed, so service recovery should start before any live validation is retried." }
         "launch readiness incomplete" { "Launch readiness is blocking bot start, so doctoring the stack is safer than continuing live retries." }
         "navigation launch check blocking" { "Navigation readiness is blocking launch; escalating through doctor and restart is lower risk than repeated gate retries." }
@@ -644,6 +653,10 @@ function Get-FailoverDecision
 
     $primaryAction = switch ($blockerType)
     {
+        "ProfileLoadDisposedTimer" { "StartAndValidate" }
+        "DoctorReadinessTimeout" { "Doctor" }
+        "ActionBarShadowBoltSlot2Empty" { "Doctor" }
+        "WrongProfileLoaded" { "StartAndValidate" }
         "health unavailable" { "Restart" }
         "launch readiness incomplete" { "Doctor" }
         "navigation launch check blocking" { "Doctor" }
@@ -658,6 +671,10 @@ function Get-FailoverDecision
 
     $secondaryAction = switch ($blockerType)
     {
+        "ProfileLoadDisposedTimer" { "Restart" }
+        "DoctorReadinessTimeout" { "Restart" }
+        "ActionBarShadowBoltSlot2Empty" { "StartAndValidate" }
+        "WrongProfileLoaded" { "Restart" }
         "health unavailable" { "Doctor" }
         "launch readiness incomplete" { "Restart" }
         "navigation launch check blocking" { "Restart" }
@@ -672,6 +689,10 @@ function Get-FailoverDecision
 
     $tertiaryAction = switch ($blockerType)
     {
+        "ProfileLoadDisposedTimer" { "Stop" }
+        "DoctorReadinessTimeout" { "Stop" }
+        "ActionBarShadowBoltSlot2Empty" { "Status" }
+        "WrongProfileLoaded" { "Stop" }
         "health unavailable" { "StartAndValidate" }
         "launch readiness incomplete" { "StartAndValidate" }
         "navigation launch check blocking" { "StartAndValidate" }
@@ -689,7 +710,7 @@ function Get-FailoverDecision
         SecondaryAction = $secondaryAction
         TertiaryAction = $tertiaryAction
         DecisionReason = $reason
-        DemoteLiveMode = ($blockerType -in @("health unavailable", "launch readiness incomplete", "navigation launch check blocking", "bootstrap failed", "profile drift"))
+        DemoteLiveMode = ($blockerType -in @("ProfileLoadDisposedTimer", "DoctorReadinessTimeout", "ActionBarShadowBoltSlot2Empty", "WrongProfileLoaded", "health unavailable", "launch readiness incomplete", "navigation launch check blocking", "bootstrap failed", "profile drift"))
         TargetSurface = $(if ($blockerType -eq "ValidateCombat") { "Hybrid" } else { "SyntheticOnly" })
     }
 }
@@ -937,6 +958,30 @@ function Get-GitWorkspaceAssessment
     }
 
     return $assessment
+}
+
+function Get-GitWorkspaceFingerprint
+{
+    param([AllowNull()][object]$Assessment)
+
+    if ($null -eq $Assessment)
+    {
+        return ""
+    }
+
+    $branch = [string](Get-OptionalPropertyValue -Object $Assessment -Name "Branch" -Default "")
+    $head = [string](Get-OptionalPropertyValue -Object $Assessment -Name "Head" -Default "")
+    $dirtyFiles = @((Get-OptionalPropertyValue -Object $Assessment -Name "DirtyFiles" -Default @()))
+    $dirtyState = $(if ([bool](Get-OptionalPropertyValue -Object $Assessment -Name "IsDirty" -Default $false))
+        {
+            "dirty:{0}" -f $dirtyFiles.Count
+        }
+        else
+        {
+            "clean"
+        })
+
+    return ("{0}|{1}|{2}" -f $branch, $head, $dirtyState).Trim("|")
 }
 
 function Update-RecentRuns
@@ -1483,6 +1528,178 @@ function Get-GateSummaryPath
     return (Get-ArtifactByPattern -DirectoryPath $artifactDir -Pattern $pattern)
 }
 
+function Get-ActionFailureKind
+{
+    param(
+        [string]$Action,
+        [string]$ErrorMessage,
+        [AllowNull()][object]$FailureArtifact
+    )
+
+    $recordedFailureKind = [string](Get-OptionalPropertyValue -Object $FailureArtifact -Name "ProfileLoadFailureKind" -Default "")
+    if (-not [string]::IsNullOrWhiteSpace($recordedFailureKind))
+    {
+        return $recordedFailureKind
+    }
+
+    $launchRequestedProfile = [string](Get-OptionalPropertyValue -Object $FailureArtifact -Name "LaunchRequestedProfile" -Default "")
+    $launchAppliedProfile = [string](Get-OptionalPropertyValue -Object $FailureArtifact -Name "LaunchAppliedProfile" -Default "")
+    if (-not [string]::IsNullOrWhiteSpace($launchRequestedProfile) -and
+        -not [string]::IsNullOrWhiteSpace($launchAppliedProfile) -and
+        $launchRequestedProfile -ne $launchAppliedProfile)
+    {
+        return "WrongProfileLoaded"
+    }
+
+    if ($ErrorMessage -match "(?i)disposed object" -and $ErrorMessage -match "System\.Timers\.Timer")
+    {
+        return "ProfileLoadDisposedTimer"
+    }
+
+    if ($ErrorMessage -match "(?i)ReadinessTimeout")
+    {
+        return "DoctorReadinessTimeout"
+    }
+
+    if (($ErrorMessage -match "(?i)slot\s*2" -and $ErrorMessage -match "(?i)Shadow Bolt") -or
+        ($ErrorMessage -match "(?i)ActionBarShadowBoltSlot2Empty"))
+    {
+        return "ActionBarShadowBoltSlot2Empty"
+    }
+
+    if ($ErrorMessage -match "(?i)profile load drift")
+    {
+        return "WrongProfileLoaded"
+    }
+
+    return ""
+}
+
+function Get-LatestActionFailureAssessment
+{
+    $logsRoot = Join-Path $script:BotRoot "logs"
+    if (-not (Test-Path -LiteralPath $logsRoot))
+    {
+        return $null
+    }
+
+    $failureFiles = @(
+        Get-ChildItem -LiteralPath $logsRoot -Directory -Filter "live-session-*" -ErrorAction SilentlyContinue |
+            ForEach-Object {
+                Get-ChildItem -LiteralPath $_.FullName -File -Filter "*-failure.json" -ErrorAction SilentlyContinue
+            } |
+            Sort-Object LastWriteTimeUtc
+    )
+
+    if ($failureFiles.Count -eq 0)
+    {
+        return $null
+    }
+
+    $latest = $failureFiles[-1]
+    $payload = Read-JsonFile -Path $latest.FullName
+    $errorMessage = [string](Get-OptionalPropertyValue -Object $payload -Name "ErrorMessage" -Default "")
+    $action = [string](Get-OptionalPropertyValue -Object $payload -Name "Action" -Default "")
+    $failureKind = Get-ActionFailureKind -Action $action -ErrorMessage $errorMessage -FailureArtifact $payload
+
+    return [ordered]@{
+        Path = $latest.FullName
+        TimestampUtc = Get-OptionalPropertyValue -Object $payload -Name "TimestampUtc" -Default $latest.LastWriteTimeUtc.ToUniversalTime().ToString("o")
+        Action = $action
+        ErrorMessage = $errorMessage
+        FailureKind = $failureKind
+        RequestedProfile = [string](Get-OptionalPropertyValue -Object $payload -Name "LaunchRequestedProfile" -Default (Get-OptionalPropertyValue -Object $payload -Name "Profile" -Default ""))
+        AppliedProfile = [string](Get-OptionalPropertyValue -Object $payload -Name "LaunchAppliedProfile" -Default "")
+        ActionBarIssueCount = [int](Get-OptionalPropertyValue -Object $payload -Name "ActionBarIssueCount" -Default 0)
+        ActionBarBypassActive = [bool](Get-OptionalPropertyValue -Object $payload -Name "ActionBarBypassActive" -Default $false)
+    }
+}
+
+function Get-RecentRuntimeSignalFindings
+{
+    $runtimeLogDir = Join-Path $script:BotRoot "BlazorServer\bin\Release\net10.0"
+    $runtimeLogPath = Get-ArtifactByPattern -DirectoryPath $runtimeLogDir -Pattern "out*.log"
+    if ([string]::IsNullOrWhiteSpace($runtimeLogPath))
+    {
+        return @()
+    }
+
+    try
+    {
+        $tailLines = @(Get-Content -LiteralPath $runtimeLogPath -Tail 400 -ErrorAction Stop)
+    }
+    catch
+    {
+        return @()
+    }
+
+    if ($tailLines.Count -eq 0)
+    {
+        return @()
+    }
+
+    $tailText = ($tailLines -join [Environment]::NewLine)
+    $findings = @()
+
+    if ($tailText -match "(?i)Loot Failed, target not found!")
+    {
+        $findings += New-Finding `
+            -Title "Loot target reacquire is still missing some corpses" `
+            -Category "combat/loot" `
+            -Subsystem "loot" `
+            -BlockerType "LootTargetNotFound" `
+            -Summary "Recent runtime logs still show corpse target loss ending in 'Loot Failed, target not found!' during the live warlock route." `
+            -Severity 3 `
+            -Reproducibility 4 `
+            -TestBlockingImpact 3 `
+            -UserImpact 4 `
+            -EstimatedFixCost 2 `
+            -EvidencePaths @($runtimeLogPath)
+    }
+
+    if ($tailText -match "(?i)Loot Failed open:")
+    {
+        $blockerType = $(if ($tailText -match "(?i)Nearest Corpse mouseover interaction sent" -and $tailText -match "(?i)Loot not opened after mouseover interaction")
+            {
+                "LootCursorMismatch"
+            }
+            else
+            {
+                "LootOpenFailure"
+            })
+        $findings += New-Finding `
+            -Title "Corpse interaction is still dropping some loot opens" `
+            -Category "combat/loot" `
+            -Subsystem "loot" `
+            -BlockerType $blockerType `
+            -Summary "Recent runtime logs show corpse interaction advancing to mouseover/click but still failing to open loot in some stacked-corpse windows." `
+            -Severity 3 `
+            -Reproducibility 3 `
+            -TestBlockingImpact 3 `
+            -UserImpact 4 `
+            -EstimatedFixCost 2 `
+            -EvidencePaths @($runtimeLogPath)
+    }
+
+    if ($tailText -match "(?i)\[CombatGoal\s+\]\s+Lost target!")
+    {
+        $findings += New-Finding `
+            -Title "Combat target-loss noise is still present in live logs" `
+            -Category "combat/loot" `
+            -Subsystem "combat" `
+            -BlockerType "CombatReacquireNoise" `
+            -Summary "Recent runtime logs still contain CombatGoal lost-target events around kill transitions, so ValidateCombat should stay paired with loot follow-through until the noise is bounded." `
+            -Severity 3 `
+            -Reproducibility 3 `
+            -TestBlockingImpact 4 `
+            -UserImpact 3 `
+            -EstimatedFixCost 2 `
+            -EvidencePaths @($runtimeLogPath)
+    }
+
+    return @($findings)
+}
+
 function Get-LiveStateAssessment
 {
     $observation = Get-LiveApiObservation
@@ -1496,6 +1713,7 @@ function Get-LiveStateAssessment
     $botStatus = Get-OptionalPropertyValue -Object $botStatusResult -Name "Result" -Default $null
     $snapshot = Get-SnapshotPayload -ApiResult $snapshotResult
     $sessionStats = Get-OptionalPropertyValue -Object $sessionStatsResult -Name "Result" -Default $null
+    $latestActionFailure = Get-LatestActionFailureAssessment
     $webPortListening = Test-TcpPort -Port 5000
     $navigationPortListening = Test-TcpPort -Port 47110
 
@@ -1522,15 +1740,40 @@ function Get-LiveStateAssessment
     $runtimeMode = [string](Get-OptionalPropertyValue -Object $botStatus -Name "runtimeMode" -Default "")
     $currentGoal = [string](Get-OptionalPropertyValue -Object $botStatus -Name "currentGoal" -Default "")
     $profileName = [string](Get-OptionalPropertyValue -Object $botStatus -Name "profileName" -Default "")
+    $requestedProfile = [string](Get-OptionalPropertyValue -Object $launchPayload -Name "requestedProfile" -Default $Profile)
+    $appliedProfile = [string](Get-OptionalPropertyValue -Object $launchPayload -Name "appliedProfile" -Default $profileName)
+    $profileLoadFailureKind = [string](Get-OptionalPropertyValue -Object $launchPayload -Name "profileLoadFailureKind" -Default "")
+    $profileLoadFailureReason = [string](Get-OptionalPropertyValue -Object $launchPayload -Name "profileLoadFailureReason" -Default "")
+    $actionBarIssueCount = [int](Get-OptionalPropertyValue -Object $launchPayload -Name "actionBarIssueCount" -Default 0)
+    $actionBarBypassActive = [bool](Get-OptionalPropertyValue -Object $launchPayload -Name "actionBarBypassActive" -Default $false)
     $snapshotDead = [bool](Get-OptionalPropertyValue -Object $snapshot -Name "dead" -Default $false)
     $snapshotSwimming = [bool](Get-OptionalPropertyValue -Object $snapshot -Name "swimming" -Default $false)
     $chatInputVisible = [bool](Get-OptionalPropertyValue -Object $snapshot -Name "chatInputVisible" -Default $false)
     $inCombat = [bool](Get-OptionalPropertyValue -Object $snapshot -Name "inCombat" -Default $false)
+    $latestFailureKind = [string](Get-OptionalPropertyValue -Object $latestActionFailure -Name "FailureKind" -Default "")
+    $useLatestStartupFailure = ($null -eq $launchPayload -or -not $isLaunchReady)
 
     $invalidReason = $null
     if (-not [bool](Get-OptionalPropertyValue -Object $healthResult -Name "Success" -Default $false))
     {
         $invalidReason = "health unavailable"
+    }
+    elseif ($profileLoadFailureKind -eq "ProfileLoadDisposedTimer" -or ($useLatestStartupFailure -and $latestFailureKind -eq "ProfileLoadDisposedTimer"))
+    {
+        $invalidReason = "profile-load disposed timer"
+    }
+    elseif ($useLatestStartupFailure -and $latestFailureKind -eq "DoctorReadinessTimeout")
+    {
+        $invalidReason = "doctor readiness timeout"
+    }
+    elseif ($profileLoadFailureKind -eq "WrongProfileLoaded" -or
+        (-not [string]::IsNullOrWhiteSpace($requestedProfile) -and -not [string]::IsNullOrWhiteSpace($appliedProfile) -and $requestedProfile -ne $appliedProfile))
+    {
+        $invalidReason = "wrong profile loaded"
+    }
+    elseif ($actionBarIssueCount -gt 0 -and -not $actionBarBypassActive)
+    {
+        $invalidReason = "action-bar drift"
     }
     elseif (-not $isLaunchReady)
     {
@@ -1554,7 +1797,7 @@ function Get-LiveStateAssessment
     }
     elseif (-not [string]::IsNullOrWhiteSpace($profileName) -and $profileName -ne $Profile)
     {
-        $invalidReason = "profile drift"
+        $invalidReason = "wrong profile loaded"
     }
     elseif (-not [string]::IsNullOrWhiteSpace($currentGoal) -and $currentGoal -like "Adhoc*")
     {
@@ -1577,13 +1820,19 @@ function Get-LiveStateAssessment
         LaunchReady = $isLaunchReady
         RuntimeMode = $runtimeMode
         ProfileName = $profileName
-        RequestedProfile = $Profile
+        RequestedProfile = $requestedProfile
+        AppliedProfile = $appliedProfile
+        ProfileLoadFailureKind = $profileLoadFailureKind
+        ProfileLoadFailureReason = $profileLoadFailureReason
+        ActionBarIssueCount = $actionBarIssueCount
+        ActionBarBypassActive = $actionBarBypassActive
         BotActive = $botActive
         AgentAvailable = $agentAvailable
         CurrentGoal = $currentGoal
         InCombat = $inCombat
         Snapshot = $snapshot
         SessionStats = $sessionStats
+        LatestActionFailure = $latestActionFailure
         Observation = $observation
     }
 }
@@ -1862,34 +2111,89 @@ function Get-FindingsForCycle
     }
 
     $invalidReason = [string](Get-OptionalPropertyValue -Object $liveAssessment -Name "InvalidReason" -Default "")
+    $latestActionFailure = Get-LatestActionFailureAssessment
+    $latestFailureKind = [string](Get-OptionalPropertyValue -Object $latestActionFailure -Name "FailureKind" -Default "")
+    if ([string]::IsNullOrWhiteSpace($invalidReason) -and -not [string]::IsNullOrWhiteSpace($latestFailureKind))
+    {
+        $failureCategory = switch ($latestFailureKind)
+        {
+            "ProfileLoadDisposedTimer" { "startup/profile-load" }
+            "DoctorReadinessTimeout" { "startup/readiness" }
+            "ActionBarShadowBoltSlot2Empty" { "readiness/action-bar" }
+            "WrongProfileLoaded" { "readiness/profile" }
+            default { "infra/startup" }
+        }
+        $failureSubsystem = switch ($failureCategory)
+        {
+            "startup/profile-load" { "profile-load" }
+            "startup/readiness" { "live-readiness" }
+            "readiness/action-bar" { "action-bar" }
+            "readiness/profile" { "profile" }
+            default { "startup" }
+        }
+        $failureSummary = [string](Get-OptionalPropertyValue -Object $latestActionFailure -Name "ErrorMessage" -Default "Latest startup failure artifact did not include an error message.")
+        $findings += New-Finding `
+            -Title "Latest startup artifact still reports a live blocker" `
+            -Category $failureCategory `
+            -Subsystem $failureSubsystem `
+            -BlockerType $latestFailureKind `
+            -Summary $failureSummary `
+            -Severity 5 `
+            -Reproducibility 4 `
+            -TestBlockingImpact 5 `
+            -UserImpact 3 `
+            -EstimatedFixCost 2 `
+            -EvidencePaths @($(Get-OptionalPropertyValue -Object $latestActionFailure -Name "Path" -Default $null))
+    }
+
     if (-not [string]::IsNullOrWhiteSpace($invalidReason))
     {
         $category = switch ($invalidReason)
         {
+            "profile-load disposed timer" { "startup/profile-load" }
+            "doctor readiness timeout" { "startup/readiness" }
+            "action-bar drift" { "readiness/action-bar" }
+            "wrong profile loaded" { "readiness/profile" }
             "route-follow not restored" { "navigation/reroute" }
             "navigation launch check blocking" { "infra/startup" }
-            "profile drift" { "launch/profile" }
             default { "invalid live state" }
         }
         $subsystem = switch ($category)
         {
+            "startup/profile-load" { "profile-load" }
+            "startup/readiness" { "live-readiness" }
+            "readiness/action-bar" { "action-bar" }
+            "readiness/profile" { "profile" }
             "navigation/reroute" { "navigation" }
             "infra/startup" { "live-readiness" }
-            "launch/profile" { "profile" }
             default { "live-state" }
+        }
+        $blockerType = switch ($invalidReason)
+        {
+            "profile-load disposed timer" { "ProfileLoadDisposedTimer" }
+            "doctor readiness timeout" { "DoctorReadinessTimeout" }
+            "action-bar drift" { "ActionBarShadowBoltSlot2Empty" }
+            "wrong profile loaded" { "WrongProfileLoaded" }
+            default { $invalidReason }
+        }
+        $evidence = @($CycleSummary["LiveAssessmentPath"])
+        $latestFailurePath = Get-OptionalPropertyValue -Object $liveAssessment -Name "LatestActionFailure" -Default $null
+        if ($null -ne $latestFailurePath)
+        {
+            $evidence += $(Get-OptionalPropertyValue -Object $latestFailurePath -Name "Path" -Default $null)
         }
         $findings += New-Finding `
             -Title "Live validation is blocked by current client state" `
             -Category $category `
             -Subsystem $subsystem `
-            -BlockerType $invalidReason `
+            -BlockerType $blockerType `
             -Summary ("Live validation cannot proceed while the stack reports: {0}." -f $invalidReason) `
-            -Severity 4 `
+            -Severity $(if ($blockerType -in @("ProfileLoadDisposedTimer", "DoctorReadinessTimeout", "WrongProfileLoaded")) { 5 } else { 4 }) `
             -Reproducibility 4 `
             -TestBlockingImpact 5 `
             -UserImpact 3 `
             -EstimatedFixCost 2 `
-            -EvidencePaths @($CycleSummary["LiveAssessmentPath"])
+            -EvidencePaths $evidence
     }
 
     foreach ($gateName in $State["Gates"].Keys)
@@ -1954,6 +2258,8 @@ function Get-FindingsForCycle
             -EstimatedFixCost 3 `
             -EvidencePaths @($gateResult["SummaryPath"], $gateResult["ArtifactDir"])
     }
+
+    $findings += @(Get-RecentRuntimeSignalFindings)
 
     if ($findings.Count -eq 0)
     {
@@ -2320,6 +2626,10 @@ function Get-StackStateSummary
         NavigationCheckMessage = $null
         NavigationSource = $null
         NavigationBlockingReason = $null
+        RequestedProfile = $null
+        AppliedProfile = $null
+        ProfileLoadFailureKind = $null
+        ActionBarIssueCount = $null
         RuntimeMode = $null
         BotActive = $null
         CurrentGoal = $null
@@ -2335,6 +2645,10 @@ function Get-StackStateSummary
         $summary["NavigationCheckMessage"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "NavigationCheckMessage" -Default $null
         $summary["NavigationSource"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "NavigationSource" -Default $null
         $summary["NavigationBlockingReason"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "NavigationBlockingReason" -Default $null
+        $summary["RequestedProfile"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "RequestedProfile" -Default $null
+        $summary["AppliedProfile"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "AppliedProfile" -Default $null
+        $summary["ProfileLoadFailureKind"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "ProfileLoadFailureKind" -Default $null
+        $summary["ActionBarIssueCount"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "ActionBarIssueCount" -Default $null
         $summary["InvalidReason"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "InvalidReason" -Default $null
     }
 
@@ -2358,6 +2672,12 @@ function Write-LatestArtifacts
         Budget = $State["Budget"]
         PromotionState = $State["PromotionState"]
         KillSwitchState = $State["KillSwitchState"]
+        GitWorkspace = $CycleSummary["GitWorkspace"]
+        WorkspaceFingerprint = $State["WorkspaceFingerprint"]
+        WorkspaceDirty = $State["WorkspaceDirty"]
+        StartupBlockerFingerprint = $State["StartupBlockerFingerprint"]
+        SameReasonRetryCount = $State["SameReasonRetryCount"]
+        LiveDemotionReason = $State["LiveDemotionReason"]
         StackState = Get-StackStateSummary -LiveAssessment $CycleSummary["LiveAssessment"]
         TopFindings = @($Findings | Select-Object -First 3)
         TopIncidents = @($Incidents | Select-Object -First 5)
@@ -2451,7 +2771,10 @@ function Invoke-OneCycle
         if (-not [bool]$liveAssessment["BootstrapSucceeded"])
         {
             $liveAssessment["Valid"] = $false
-            $liveAssessment["InvalidReason"] = "bootstrap failed"
+            if ([string]::IsNullOrWhiteSpace([string](Get-OptionalPropertyValue -Object $liveAssessment -Name "InvalidReason" -Default "")))
+            {
+                $liveAssessment["InvalidReason"] = "bootstrap failed"
+            }
         }
         elseif (-not [string]::IsNullOrWhiteSpace([string](Get-OptionalPropertyValue -Object $liveAssessment -Name "NavigationBlockingReason" -Default "")))
         {
@@ -2550,6 +2873,15 @@ function Invoke-OneCycle
     $State["IncidentQueue"] = @($incidents | Select-Object -First 25)
     Update-RetryLedgerForIncidents -State $State -Incidents $incidents
     Update-PromotionStateFromIncidents -State $State -Incidents $incidents
+    $topIncident = @($incidents | Select-Object -First 1)
+    $startupIncident = @($incidents | Where-Object { $_.Category -like "startup/*" -or $_.Category -like "readiness/*" } | Select-Object -First 1)
+    $topFingerprint = $(if ($topIncident.Count -gt 0) { [string](Get-OptionalPropertyValue -Object $topIncident[0] -Name "Fingerprint" -Default "") } else { "" })
+    $retryEntry = $(if (-not [string]::IsNullOrWhiteSpace($topFingerprint)) { Get-OptionalPropertyValue -Object $State["RetryLedger"] -Name $topFingerprint -Default $null } else { $null })
+    $State["WorkspaceFingerprint"] = Get-GitWorkspaceFingerprint -Assessment $gitWorkspace
+    $State["WorkspaceDirty"] = Get-OptionalPropertyValue -Object $gitWorkspace -Name "IsDirty" -Default $null
+    $State["StartupBlockerFingerprint"] = $(if ($startupIncident.Count -gt 0) { [string](Get-OptionalPropertyValue -Object $startupIncident[0] -Name "Fingerprint" -Default "") } else { "" })
+    $State["SameReasonRetryCount"] = [int](Get-OptionalPropertyValue -Object $retryEntry -Name "SameReasonFailures" -Default 0)
+    $State["LiveDemotionReason"] = [string](Get-OptionalPropertyValue -Object $State["PromotionState"] -Name "LastDecisionReason" -Default "")
     Save-SupervisorState -State $State
     $hypotheses = Get-HypothesesForFindings -Findings $findings
     $proposals = Get-ProposalsForFindings -Findings $findings -State $State
