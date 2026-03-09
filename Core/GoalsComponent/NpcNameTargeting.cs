@@ -194,7 +194,7 @@ public sealed partial class NpcNameTargeting : IDisposable
                 input.SetCursorPos(p);
 
                 classifier.Classify(out CursorType cls, out _);
-                if (cursors.BinarySearch(cls, Comparer<CursorType>.Default) != -1)
+                if (AcceptsCursor(cursors, cls))
                 {
                     input.InteractMouseOver(token);
                     LogFoundTarget(logger, cls.ToStringF(), mouseOverReader.MouseOverId, npc.Rect);
@@ -206,6 +206,9 @@ public sealed partial class NpcNameTargeting : IDisposable
         }
         return false;
     }
+
+    internal static bool AcceptsCursor(ReadOnlySpan<CursorType> cursors, CursorType cursor)
+        => cursors.IndexOf(cursor) >= 0;
 
     #region Logging
 

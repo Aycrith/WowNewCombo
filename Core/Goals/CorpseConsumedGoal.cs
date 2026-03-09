@@ -65,6 +65,14 @@ public sealed partial class CorpseConsumedGoal : GoapGoal
         }
     }
 
+    public override bool CanRun()
+    {
+        return CanRunForLootState(lootEnabled, goapAgentState.LootableCorpseCount);
+    }
+
+    internal static bool CanRunForLootState(bool lootEnabled, int lootableCorpseCount)
+        => !lootEnabled || lootableCorpseCount <= 0;
+
     [LoggerMessage(
         EventId = 0120,
         Level = LogLevel.Information,

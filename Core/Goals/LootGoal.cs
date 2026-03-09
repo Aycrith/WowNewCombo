@@ -21,6 +21,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     public override float Cost => 4.6f;
 
     private const int MAX_TIME_TO_REACH_MELEE = GoalTimeouts.MaxTimeToReachMeleeMs;
+    private const int MAX_TIME_TO_WAIT_NPC_NAME = 750;
 
     private readonly ILogger<LootGoal> logger;
     private readonly ConfigurableInput input;
@@ -145,6 +146,11 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             return true;
         }
 
+        if (TryLootByCursorFallback())
+        {
+            return true;
+        }
+
         return !input.KeyboardOnly && LootMouse();
     }
 
@@ -247,24 +253,60 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     {
         npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
 
-        wait.Fixed(playerReader.NetworkLatency);
-        npcNameTargeting.WaitForUpdate();
-
-        ReadOnlySpan<CursorType> types = [CursorType.Loot, CursorType.Vendor];
-        if (!npcNameTargeting.FindBy(types, token))
+        try
         {
-            return false;
+            wait.Fixed(playerReader.NetworkLatency);
+            npcNameTargeting.WaitForUpdate();
+
+            float elapsedMs = wait.Until(MAX_TIME_TO_WAIT_NPC_NAME, npcNameTargeting.FoundAny);
+            LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, elapsedMs);
+            if (elapsedMs < 0)
+            {
+                return false;
+            }
+
+            ReadOnlySpan<CursorType> types = [CursorType.Loot, CursorType.Vendor];
+            if (!npcNameTargeting.FindBy(types, token))
+            {
+                return false;
+            }
+
+            Log("Nearest Corpse mouseover interaction sent...");
+            float targetElapsedMs = WaitForLootInteraction();
+            if (targetElapsedMs < 0 && !bits.Target() && !LootWindowOpen())
+            {
+                Log("Loot not opened after mouseover interaction; trying right-click fallback...");
+                input.RightClickCurrentMouse();
+                wait.Update();
+                targetElapsedMs = WaitForLootInteraction();
+            }
+
+            if (targetElapsedMs < 0 && !bits.Target() && !LootWindowOpen())
+            {
+                Log("Loot still not opened after right-click; trying left-click fallback...");
+                input.LeftClickCurrentMouse();
+                wait.Update();
+                targetElapsedMs = WaitForLootInteraction();
+            }
+
+            if (targetElapsedMs < 0 && !bits.Target() && !LootWindowOpen())
+            {
+                Log("Loot still not opened after mouse click fallbacks; trying direct interact...");
+                input.PressInteract();
+                wait.Update();
+                targetElapsedMs = WaitForLootInteraction();
+            }
+
+            LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, targetElapsedMs);
+
+            CheckForCanGather();
+
+            return LootWindowOpen() || (bits.Target() && playerReader.MinRangeZero()) || MoveToTargetAndReached();
         }
-
-        Log("Nearest Corpse clicked...");
-        float elapsedMs = wait.Until(playerReader.DoubleNetworkLatency, bits.Target);
-        LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, elapsedMs);
-
-        npcNameTargeting.ChangeNpcType(NpcNames.None);
-
-        CheckForCanGather();
-
-        return (bits.Target() && playerReader.MinRangeZero()) || MoveToTargetAndReached();
+        finally
+        {
+            npcNameTargeting.ChangeNpcType(NpcNames.None);
+        }
     }
 
     private CorpseEvent? GetClosestCorpse()
@@ -288,6 +330,9 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         return closest;
     }
+
+    private float WaitForLootInteraction()
+        => wait.Until(playerReader.DoubleNetworkLatency, () => bits.Target() || LootWindowOpen());
 
     private void CheckForCanGather()
     {
@@ -418,6 +463,32 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         return (bits.Target() && playerReader.MinRangeZero()) || MoveToTargetAndReached();
     }
 
+    private bool TryLootByCursorFallback()
+    {
+        if (corpseLocations.Count == 0)
+        {
+            return false;
+        }
+
+        stopMoving.Stop();
+        wait.Update();
+
+        if (FoundByCursor())
+        {
+            return true;
+        }
+
+        Vector3 playerMap = playerReader.MapPos;
+        CorpseEvent corpse = GetClosestCorpse()!;
+        float heading = DirectionCalculator.CalculateMapHeading(playerMap, corpse.MapLoc);
+        playerDirection.SetDirection(heading);
+        wait.Fixed(playerReader.DoubleNetworkLatency);
+        wait.Update();
+
+        Log("Look at possible closest corpse and try cursor fallback once again...");
+        return FoundByCursor();
+    }
+
     private bool EligibleCorpseSoftTargetExists() =>
         bits.SoftInteract() &&
         bits.SoftInteract_Hostile() &&
@@ -442,7 +513,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         LogReachedCorpse(logger, bits.Target(), bits.Moving(), playerReader.MinRangeZero(), elapsedMs);
 
-        return bits.Target() && playerReader.MinRangeZero();
+        return LootWindowOpen() || (bits.Target() && playerReader.MinRangeZero());
     }
 
     private bool NotMovingOrLootAvailable() => !bits.Target() || bits.NotMoving() || playerReader.LootWindowCount.Value > 0;
