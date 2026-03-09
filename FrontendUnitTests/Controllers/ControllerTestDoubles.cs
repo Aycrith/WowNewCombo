@@ -25,6 +25,10 @@ internal sealed class FakeBotController : IBotController
     public string? LastDeactivateReason { get; set; }
     public DateTime? LastDeactivateUtc { get; set; }
     public string SelectedClassFilename { get; set; } = string.Empty;
+    public string? LoadClassProfileAppliedSelection { get; set; }
+    public ClassConfiguration? LoadClassProfileAppliedConfig { get; set; }
+    public Exception? LoadClassProfileException { get; set; }
+    public bool LoadClassProfileLeavesNullConfig { get; set; }
     public Dictionary<int, string> SelectedPathFilename { get; set; } = [];
     public ClassConfiguration? ClassConfig { get; set; }
     public GoapAgent? GoapAgent { get; set; }
@@ -43,7 +47,28 @@ internal sealed class FakeBotController : IBotController
 
     public void LoadClassProfile(string classFilename)
     {
-        SelectedClassFilename = classFilename;
+        if (LoadClassProfileException != null)
+        {
+            throw LoadClassProfileException;
+        }
+
+        SelectedClassFilename = LoadClassProfileAppliedSelection ?? classFilename;
+        if (LoadClassProfileAppliedConfig != null)
+        {
+            ClassConfig = LoadClassProfileAppliedConfig;
+        }
+        else if (LoadClassProfileLeavesNullConfig)
+        {
+            ClassConfig = null;
+        }
+        else
+        {
+            ClassConfig = new ClassConfiguration
+            {
+                FileName = SelectedClassFilename
+            };
+        }
+
         ProfileLoaded?.Invoke();
     }
 
@@ -167,6 +192,7 @@ internal static class TestGoapAgentFactory
         SetAutoProperty(agent, "AvailableGoals", availableGoals ?? Array.Empty<GoapGoal>());
         SetAutoProperty(agent, "Plan", new Stack<GoapGoal>());
         SetAutoProperty(agent, "WorldState", worldState ?? new BitVector32());
+        SetAutoProperty(agent, "State", new GoapAgentState());
 
         return agent;
     }

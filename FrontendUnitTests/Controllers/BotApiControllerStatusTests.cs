@@ -2,6 +2,7 @@ using Core;
 using Core.Goals;
 
 using Frontend.Controllers;
+using Frontend.Services;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -23,7 +24,8 @@ public sealed class BotApiControllerStatusTests
         BotApiController controller = new(
             NullLogger<BotApiController>.Instance,
             botController,
-            new FakeBotStartGuard());
+            new FakeBotStartGuard(),
+            new ProfileLoadTelemetryService());
 
         IActionResult result = controller.GetStatus();
 
@@ -56,7 +58,8 @@ public sealed class BotApiControllerStatusTests
         BotApiController controller = new(
             NullLogger<BotApiController>.Instance,
             botController,
-            new FakeBotStartGuard());
+            new FakeBotStartGuard(),
+            new ProfileLoadTelemetryService());
 
         IActionResult result = controller.GetStatus();
 
@@ -88,7 +91,8 @@ public sealed class BotApiControllerStatusTests
         BotApiController controller = new(
             NullLogger<BotApiController>.Instance,
             botController,
-            new FakeBotStartGuard());
+            new FakeBotStartGuard(),
+            new ProfileLoadTelemetryService());
 
         IActionResult result = controller.GetStatus();
 

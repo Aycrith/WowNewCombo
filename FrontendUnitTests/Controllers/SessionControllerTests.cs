@@ -47,7 +47,47 @@ public sealed class SessionControllerTests
         Assert.False(response.IsStale);
         Assert.True(response.BotActive);
         Assert.Equal(nameof(TestGoal), response.CurrentGoal);
+        Assert.Equal(0, response.LootableCorpseCount);
+        Assert.Equal(0, response.ConsumableCorpseCount);
+        Assert.False(response.ShouldConsumeCorpse);
         Assert.NotNull(cache.GetSnapshot());
+    }
+
+    [Fact]
+    public void GetStats_WhenLiveAgentAvailable_ReturnsLootStateSummary()
+    {
+        SessionStat stats = TestSessionStatFactory.Create(kills: 2, deaths: 0, uptime: TimeSpan.FromMinutes(15));
+        GoapGoal currentGoal = new TestGoal(nameof(TestGoal));
+        GoapAgent agent = TestGoapAgentFactory.Create(
+            sessionStat: stats,
+            active: true,
+            currentGoal: currentGoal,
+            availableGoals: [currentGoal]);
+
+        agent.State.LootableCorpseCount = 2;
+        agent.State.ConsumableCorpseCount = 1;
+        agent.State.LastCombatKillCount = 3;
+        agent.State.ShouldConsumeCorpse = true;
+        agent.State.RecentlyLooted.Add(101);
+        agent.State.RecentlyLooted.Add(202);
+
+        FakeBotController botController = new()
+        {
+            IsBotActive = true,
+            GoapAgent = agent
+        };
+
+        SessionController controller = new(botController, new SessionStatsCache());
+
+        IActionResult result = controller.GetStats();
+
+        OkObjectResult ok = Assert.IsType<OkObjectResult>(result);
+        SessionStatsResponse response = Assert.IsType<SessionStatsResponse>(ok.Value);
+        Assert.Equal(2, response.LootableCorpseCount);
+        Assert.Equal(1, response.ConsumableCorpseCount);
+        Assert.Equal(3, response.LastCombatKillCount);
+        Assert.True(response.ShouldConsumeCorpse);
+        Assert.Equal(2, response.RecentlyLootedCount);
     }
 
     [Fact]
