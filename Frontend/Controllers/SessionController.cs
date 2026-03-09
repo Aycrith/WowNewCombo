@@ -30,7 +30,14 @@ public sealed record SessionStatsResponse(
     string? CurrentGoal,
     System.DateTime? LastUpdatedUtc,
     bool IsStale,
-    string? CorrelationId);
+    string? CorrelationId)
+{
+    public int LootableCorpseCount { get; init; }
+    public int ConsumableCorpseCount { get; init; }
+    public int LastCombatKillCount { get; init; }
+    public bool ShouldConsumeCorpse { get; init; }
+    public int RecentlyLootedCount { get; init; }
+}
 
 public sealed record SessionSummaryResponse(
     bool Active,
@@ -206,7 +213,14 @@ public sealed class SessionController : ControllerBase
             goapAgent.CurrentGoal?.GetType().Name,
             System.DateTime.UtcNow,
             isStale: false,
-            correlationId: null);
+            correlationId: null) with
+        {
+            LootableCorpseCount = goapAgent.State.LootableCorpseCount,
+            ConsumableCorpseCount = goapAgent.State.ConsumableCorpseCount,
+            LastCombatKillCount = goapAgent.State.LastCombatKillCount,
+            ShouldConsumeCorpse = goapAgent.State.ShouldConsumeCorpse,
+            RecentlyLootedCount = goapAgent.State.RecentlyLooted.Count
+        };
     }
 
     private static SessionStatsResponse CreateCachedStatsResponse(CachedSessionStats cached)

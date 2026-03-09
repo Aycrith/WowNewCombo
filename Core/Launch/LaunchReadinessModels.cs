@@ -54,4 +54,15 @@ public sealed record LaunchReadinessSnapshot(
     bool CanStartBot,
     DateTimeOffset TimestampUtc,
     IReadOnlyList<LaunchSubsystemCheck> Checks,
-    LaunchOverrideSnapshot Overrides);
+    LaunchOverrideSnapshot Overrides)
+{
+    public string? RequestedProfile { get; init; }
+    public string? AppliedProfile { get; init; }
+    public string? ProfileLoadFailureReason { get; init; }
+    public string? ProfileLoadFailureKind { get; init; }
+    public string? ProfileLoadCorrelationId { get; init; }
+    public DateTimeOffset? ProfileLoadUpdatedUtc { get; init; }
+    public int ActionBarIssueCount { get; init; }
+    public bool ActionBarBypassActive { get; init; }
+    public string? ActionBarBypassReason { get; init; }
+}

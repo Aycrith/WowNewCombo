@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,8 @@ using Microsoft.Extensions.Logging;
 
 using Core;
 using Core.Launch;
+
+using Frontend.Services;
 
 namespace Frontend.Controllers;
 
@@ -21,6 +24,7 @@ public sealed class LaunchController : ControllerBase
     private readonly IBotController botController;
     private readonly AddonValidator addonValidator;
     private readonly ILaunchReadinessCacheInvalidator cacheInvalidator;
+    private readonly ProfileLoadTelemetryService profileLoadTelemetry;
 
     public LaunchController(
         ILogger<LaunchController> logger,
@@ -28,7 +32,8 @@ public sealed class LaunchController : ControllerBase
         LaunchOverrideState overrides,
         IBotController botController,
         AddonValidator addonValidator,
-        ILaunchReadinessCacheInvalidator cacheInvalidator)
+        ILaunchReadinessCacheInvalidator cacheInvalidator,
+        ProfileLoadTelemetryService profileLoadTelemetry)
     {
         this.logger = logger;
         this.readiness = readiness;
@@ -36,6 +41,7 @@ public sealed class LaunchController : ControllerBase
         this.botController = botController;
         this.addonValidator = addonValidator;
         this.cacheInvalidator = cacheInvalidator;
+        this.profileLoadTelemetry = profileLoadTelemetry;
     }
 
     [HttpGet("status")]
@@ -80,9 +86,47 @@ public sealed class LaunchController : ControllerBase
                 Overrides: overrides.Snapshot());
         }
 
+        ProfileLoadTelemetrySnapshot profileLoad = profileLoadTelemetry.GetSnapshot();
+        LaunchOverrideSnapshot overrideSnapshot = snapshot.Overrides;
+        LaunchSubsystemBypass? actionBarBypass = null;
+        bool actionBarBypassActive = overrideSnapshot.EmergencyBypassAll ||
+            (overrideSnapshot.Bypasses.TryGetValue(LaunchSubsystem.ActionBar, out actionBarBypass) &&
+             actionBarBypass is { Enabled: true });
+        int actionBarIssueCount = snapshot.Checks.Count(check =>
+            check.Subsystem == LaunchSubsystem.ActionBar &&
+            check.Status is LaunchStatus.Warning or LaunchStatus.Error);
+
+        snapshot = snapshot with
+        {
+            RequestedProfile = profileLoad.RequestedProfile,
+            AppliedProfile = string.IsNullOrWhiteSpace(profileLoad.AppliedProfile)
+                ? GetSelectedProfileNameSafe()
+                : profileLoad.AppliedProfile,
+            ProfileLoadFailureReason = profileLoad.FailureReason,
+            ProfileLoadFailureKind = profileLoad.FailureKind,
+            ProfileLoadCorrelationId = profileLoad.CorrelationId,
+            ProfileLoadUpdatedUtc = profileLoad.UpdatedUtc,
+            ActionBarIssueCount = actionBarIssueCount,
+            ActionBarBypassActive = actionBarBypassActive,
+            ActionBarBypassReason = actionBarBypass?.Reason
+        };
+
         sw.Stop();
         logger.LogDebug("[LaunchController] /api/launch/status end (trace={Trace}) in {Elapsed}ms", trace, sw.ElapsedMilliseconds);
         return Ok(snapshot);
+    }
+
+    private string? GetSelectedProfileNameSafe()
+    {
+        try
+        {
+            return botController.SelectedClassFilename;
+        }
+        catch (NotImplementedException ex)
+        {
+            logger.LogWarning(ex, "[LaunchController] SelectedClassFilename not implemented");
+            return null;
+        }
     }
 
     public sealed record LaunchOverrideRequest(
