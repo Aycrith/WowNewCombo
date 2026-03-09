@@ -1,5 +1,35 @@
 # Live Recovery Autonomous Handoff - 2026-03-07
 
+## 2026-03-09 Continuation Addendum
+- Published branch baseline is still `31c8735c7`, but the active local workspace is now intentionally dirty with in-flight startup, loot, and supervisor fixes.
+- The real blocker chain is now:
+  - startup/profile-load stability
+  - action-bar/profile correctness
+  - combat kill-to-loot handoff plus loot follow-through
+  - `ValidateCombat`
+  - `ValidateReroute`
+  - `ValidateNoProgress`
+  - dry-run and integrated soaks
+- New first-class startup blockers confirmed by live evidence:
+  - `ProfileLoadDisposedTimer`
+  - `ActionBarShadowBoltSlot2Empty`
+  - `WrongProfileLoaded`
+  - `DoctorReadinessTimeout`
+- Combat and loot should now be treated as one closure family until `ValidateCombat` is green. The bot is no longer allowed to declare combat “separate” from loot follow-through when evaluating live progress.
+- The supervisor must use current live/session artifacts and the latest failure JSON files as the source of truth for blocker selection. The older `autonomy-smoke9` dry-run optimism is no longer sufficient.
+
+## 2026-03-08 Baseline Addendum
+- Published branch baseline: `31c8735c7` (`chore(profile): refresh blood elf warlock live profile`)
+- Working tree at publish: clean
+- Current blocker chain remains:
+  - startup/readiness stability
+  - `ValidateCombat`
+  - `ValidateReroute`
+  - `ValidateNoProgress`
+  - integrated soaks
+- The autonomous control loop now has incident persistence, correlated screenshots, guarded live demotion, retry budgeting, and API visibility.
+- Autonomous repo mutation is still intentionally disabled. The loop is operating as a bounded supervisor, not a self-editing code executor.
+
 ## Mission
 - Restore confidence that the `dev` baseline can support stable live validation on the local WoW client.
 - Preserve already-closed work.
@@ -8,10 +38,10 @@
 
 ## Current State
 - Branch: `dev`
-- HEAD: `c88dc7b91` (`fix live recovery sequencing and combat evidence`)
-- Working tree: clean
+- HEAD: `31c8735c7` (`chore(profile): refresh blood elf warlock live profile`)
+- Local working tree: active and dirty with startup/profile-load, loot interaction, supervisor, and handoff updates
 - Current live stack status as of the last status probe:
-  - WoW client: stopped
+  - WoW client: running in the most recent local repros, but services were stopped before handoff
   - `BlazorServer`: stopped
   - `AmeisenNavigationServer`: stopped
   - port `5000`: closed
@@ -46,6 +76,13 @@
   - `LiveSession`
 - `Scripts/Autonomous-BotSupervisor.ps1` now aligns with the real blocker chain from live evidence.
 
+### 2b. Autonomy evidence and failover scaffolding were expanded
+- Failure analytics now persists bounded incident records alongside runtime failure events.
+- Critical failures can request correlated screenshots with correlation IDs and incident IDs.
+- The supervisor now persists run state, retry budgets, promotion state, kill-switch state, and incident queues.
+- Additive `/api/autonomy/*` endpoints expose supervisor state, incidents, runs, control actions, and incident artifacts.
+- Correlation IDs were added to the key runtime/status API surfaces used by the harness.
+
 ### 3. Combat evidence collection was corrected
 - `ValidateCombat` no longer depends only on short artifact logs and server tails.
 - Session manifest now records the active runtime `out*.log` snapshot at gate start.
@@ -72,14 +109,16 @@
   - Reason: the newer map-wide creature-flag search regressed previously stable vendor/service behavior.
 - Session-scoped runtime log capture:
   - Reason: combat summary undercounted real warlock actions because the gate was not reading the active runtime log stream.
+- Bounded autonomy only:
+  - Reason: guarded orchestration, evidence correlation, and failover support the live campaign directly; autonomous repo mutation does not yet have a safe baseline and stays disabled.
 - No autonomous repo mutation yet:
   - Reason: the system is not stable enough to auto-apply changes safely without explicit gate closure first.
 
 ## Testing History and Results
 ### Local validation
-- Latest local gate on `c88dc7b91`:
+- Latest local gate on `31c8735c7`:
   - `dotnet build MasterOfPuppets.sln -c Release --nologo -v quiet` -> pass
-  - `dotnet test CoreUnitTests/CoreUnitTests.csproj -c Release --nologo -v quiet` -> pass (`1909` passed, `3` skipped)
+  - `dotnet test CoreUnitTests/CoreUnitTests.csproj -c Release --filter "FullyQualifiedName~CombatPullCastingRuntimeTests|FullyQualifiedName~FailureAnalytics"` -> pass (`77` passed)
   - `dotnet test FrontendUnitTests/FrontendUnitTests.csproj -c Release --nologo -v quiet` -> pass (`73` passed)
 
 ### Service NPC validation
@@ -145,6 +184,32 @@
   - the dominant blocker is now kill-to-loot / end-of-combat target handoff accounting, not body-pull drift, not facing spam, and not the previous combat evidence blind spot
 
 ## Known Bugs, Blockers, and Leads
+### Active blocker: startup/profile-load stability
+- Symptoms:
+  - `POST /api/bot/profile/load` can fail with `Cannot access a disposed object. Object name: 'System.Timers.Timer'.`
+  - startup can also fail clean readiness because `Shadow Bolt` is missing from slot `2`
+  - live repros have also shown rogue/profile drift instead of the requested warlock profile
+- Evidence:
+  - `logs/live-session-20260308-125446/agentctl-20260308-125446-start-failure.json`
+  - `logs/live-session-20260308-040302/agentctl-20260308-040302-startandvalidate-failure.json`
+  - `BlazorServer/bin/Release/net10.0/out20260308.log`
+- Current hypothesis:
+  - a disposed Blazor route timer subscriber can still fault profile-load startup, while action-bar/profile correctness is a separate readiness family that must be classified explicitly instead of buried under generic launch failure.
+- Best lead:
+  - harden `RouteComponent`/profile-load event handling, expose requested/applied profile + profile-load failure kind in `/api/launch/status`, and teach the supervisor to rank startup blockers ahead of combat.
+
+### Active blocker: combat plus loot follow-through
+- Symptoms:
+  - `CombatGoal` still emits kill-transition lost-target noise in live evidence.
+  - loot interaction is improved but still not consistently closing every stacked or cursor-driven corpse opportunity.
+- Evidence:
+  - `BlazorServer/bin/Release/net10.0/out20260308.log`
+  - recent combat validation summaries under `logs/live-session-*`
+- Current hypothesis:
+  - combat and loot are still coupled at the end-of-fight handoff, so evaluating them independently is masking the actual blocker family.
+- Best lead:
+  - keep fixes local to `CombatGoal` and `LootGoal`, use short 5-10 kill guarded live windows, and stop after two same-reason failures.
+
 ### Active blocker: combat target-loss accounting around kill transitions
 - Symptom:
   - `CombatGoal` still records lost-target/reacquire attempts during kill credit, dead-target clear, and loot handoff windows.
@@ -239,4 +304,4 @@
   - stop after two failures for the same gate/reason
 
 ## One-Line Situation Summary
-- The project is on a clean `dev` baseline at `c88dc7b91`; service NPC interaction is fixed, combat telemetry is fixed, startup can still wobble once, and the real next blocker is combat reacquire accounting during kill-to-loot transitions.
+- The project is on a clean published `dev` baseline at `31c8735c7`; service NPC interaction is fixed, combat telemetry is fixed, the autonomy layer is bounded and observable, startup can still wobble once, and the real next blocker is combat reacquire accounting during kill-to-loot transitions.
