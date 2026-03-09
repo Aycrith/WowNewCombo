@@ -169,6 +169,26 @@ public sealed partial class ConfigurableInput
 
     public void PressInteract(CancellationToken token = default) => PressRandom(Interact, token);
 
+    public void RightClickCurrentMouse()
+    {
+        if (!EnsureChatInputClosed())
+        {
+            return;
+        }
+
+        input.RightClickCurrent();
+    }
+
+    public void LeftClickCurrentMouse()
+    {
+        if (!EnsureChatInputClosed())
+        {
+            return;
+        }
+
+        input.LeftClickCurrent();
+    }
+
     public void PressFastInteract(CancellationToken token = default)
     {
         if (!EnsureChatInputClosed(token))

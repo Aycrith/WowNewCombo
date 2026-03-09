@@ -265,9 +265,19 @@ public sealed partial class WowProcessInput : IMouseInput, IDisposable
         nativeInput.RightClick(p);
     }
 
+    public void RightClickCurrent()
+    {
+        nativeInput.RightClickCurrent();
+    }
+
     public void LeftClick(Point p)
     {
         nativeInput.LeftClick(p);
+    }
+
+    public void LeftClickCurrent()
+    {
+        nativeInput.LeftClickCurrent();
     }
 
     public void InteractMouseOver(CancellationToken token)

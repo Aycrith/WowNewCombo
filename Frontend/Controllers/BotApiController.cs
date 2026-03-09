@@ -1,5 +1,6 @@
 using Core;
 using Core.Launch;
+using Frontend.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
@@ -44,15 +45,18 @@ public class BotApiController : ControllerBase
     private readonly ILogger<BotApiController> logger;
     private readonly IBotController botController;
     private readonly IBotStartGuard botStartGuard;
+    private readonly ProfileLoadTelemetryService profileLoadTelemetry;
 
     public BotApiController(
         ILogger<BotApiController> logger,
         IBotController botController,
-        IBotStartGuard botStartGuard)
+        IBotStartGuard botStartGuard,
+        ProfileLoadTelemetryService profileLoadTelemetry)
     {
         this.logger = logger;
         this.botController = botController;
         this.botStartGuard = botStartGuard;
+        this.profileLoadTelemetry = profileLoadTelemetry;
     }
 
     /// <summary>
@@ -343,13 +347,20 @@ public class BotApiController : ControllerBase
     public IActionResult LoadProfile([FromBody] ProfileLoadRequest request)
     {
         Stopwatch sw = Stopwatch.StartNew();
+        string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
+        if (HttpContext != null)
+        {
+            Response.Headers["X-Correlation-ID"] = correlationId;
+        }
 
         try
         {
-            if (string.IsNullOrWhiteSpace(request.FileName))
+            if (request == null || string.IsNullOrWhiteSpace(request.FileName))
             {
                 return BadRequest(new { Error = "FileName is required" });
             }
+
+            profileLoadTelemetry.RecordAttempt(request.FileName, correlationId);
 
             logger.LogInformation("Loading profile: {FileName}", request.FileName);
 
@@ -372,19 +383,49 @@ public class BotApiController : ControllerBase
 
             // Verify the profile actually loaded
             bool isLoaded = botController.ClassConfig != null;
+            string? appliedProfile = GetSelectedProfileNameSafe();
 
             if (!isLoaded)
             {
+                const string failureKind = "ProfileLoadNullConfig";
+                string failureReason = "Profile loaded but configuration is null - possible file not found or invalid JSON";
+                profileLoadTelemetry.RecordFailure(request.FileName, appliedProfile, failureKind, failureReason, correlationId);
                 logger.LogWarning("Profile load completed but ClassConfig is null. File: {FileName}", request.FileName);
                 sw.Stop();
                 return StatusCode(500, new
                 {
-                    Error = "Profile loaded but configuration is null - possible file not found or invalid JSON",
+                    Error = failureReason,
                     FileName = request.FileName,
-                    IsLoaded = false
+                    RequestedProfile = request.FileName,
+                    AppliedProfile = appliedProfile,
+                    FailureKind = failureKind,
+                    IsLoaded = false,
+                    CorrelationId = correlationId
                 });
             }
 
+            if (!string.Equals(appliedProfile, request.FileName, StringComparison.OrdinalIgnoreCase))
+            {
+                const string failureKind = "WrongProfileLoaded";
+                string failureReason = $"Requested '{request.FileName}' but active profile is '{appliedProfile ?? "unknown"}'.";
+                profileLoadTelemetry.RecordFailure(request.FileName, appliedProfile, failureKind, failureReason, correlationId);
+                logger.LogWarning("Profile load drift detected. Requested={RequestedProfile} Applied={AppliedProfile}",
+                    request.FileName,
+                    appliedProfile ?? "null");
+                sw.Stop();
+                return StatusCode(500, new
+                {
+                    Error = failureReason,
+                    FileName = request.FileName,
+                    RequestedProfile = request.FileName,
+                    AppliedProfile = appliedProfile,
+                    FailureKind = failureKind,
+                    IsLoaded = false,
+                    CorrelationId = correlationId
+                });
+            }
+
+            profileLoadTelemetry.RecordSuccess(request.FileName, appliedProfile, correlationId);
             logger.LogInformation("Profile '{FileName}' loaded successfully",
                 request.FileName);
 
@@ -393,14 +434,57 @@ public class BotApiController : ControllerBase
             {
                 Message = $"Profile '{request.FileName}' loaded successfully",
                 FileName = request.FileName,
-                IsLoaded = true
+                RequestedProfile = request.FileName,
+                AppliedProfile = appliedProfile,
+                FailureKind = (string?)null,
+                IsLoaded = true,
+                CorrelationId = correlationId
             });
         }
         catch (System.Exception ex)
         {
-            logger.LogError(ex, "Load profile failed: {FileName}. Exception: {Message}", request.FileName, ex.Message);
+            string? appliedProfile = GetSelectedProfileNameSafe();
+            string failureKind = ClassifyProfileLoadFailure(ex);
+            profileLoadTelemetry.RecordFailure(request?.FileName ?? string.Empty, appliedProfile, failureKind, ex.Message, correlationId);
+            logger.LogError(ex, "Load profile failed: {FileName}. Exception: {Message}", request?.FileName ?? "null", ex.Message);
             sw.Stop();
-            return StatusCode(500, new { Error = $"Failed to load profile: {ex.Message}" });
+            return StatusCode(500, new
+            {
+                Error = $"Failed to load profile: {ex.Message}",
+                RequestedProfile = request?.FileName,
+                AppliedProfile = appliedProfile,
+                FailureKind = failureKind,
+                CorrelationId = correlationId
+            });
         }
+    }
+
+    private string? GetSelectedProfileNameSafe()
+    {
+        try
+        {
+            return botController.SelectedClassFilename;
+        }
+        catch (NotImplementedException ex)
+        {
+            logger.LogWarning(ex, "SelectedClassFilename not implemented");
+            return null;
+        }
+    }
+
+    private static string ClassifyProfileLoadFailure(Exception ex)
+    {
+        if (ex is ObjectDisposedException)
+        {
+            return "ProfileLoadDisposedTimer";
+        }
+
+        if (ex.Message.Contains("disposed object", StringComparison.OrdinalIgnoreCase) &&
+            ex.Message.Contains("System.Timers.Timer", StringComparison.OrdinalIgnoreCase))
+        {
+            return "ProfileLoadDisposedTimer";
+        }
+
+        return "ProfileLoadFailed";
     }
 }

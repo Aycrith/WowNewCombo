@@ -681,7 +681,7 @@ public sealed partial class BotController : IBotController, IDisposable
             SelectedPathFilename = [];
         }
 
-        ProfileLoaded?.Invoke();
+        RaiseProfileLoaded();
     }
 
     public void LoadPathProfile(Dictionary<int, string> pathFilenames)
@@ -691,7 +691,28 @@ public sealed partial class BotController : IBotController, IDisposable
             SelectedPathFilename = pathFilenames;
         }
 
-        ProfileLoaded?.Invoke();
+        RaiseProfileLoaded();
+    }
+
+    private void RaiseProfileLoaded()
+    {
+        Action? handlers = ProfileLoaded;
+        if (handlers == null)
+        {
+            return;
+        }
+
+        foreach (Delegate handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                ((Action)handler).Invoke();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[BotController     ] ProfileLoaded subscriber failed");
+            }
+        }
     }
 
     public void OverrideClassConfig(ClassConfiguration classConfig)

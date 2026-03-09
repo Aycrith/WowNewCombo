@@ -483,6 +483,14 @@ public sealed class InputWindowsNative : IInput, IDisposable
         PostMessage(process.MainWindowHandle, WM_LBUTTONUP, 0, lparam);
     }
 
+    public void LeftClickCurrent()
+    {
+        if (GetCursorPos(out Point current))
+        {
+            LeftClick(current);
+        }
+    }
+
     public void RightClick(Point p)
     {
         MoveCursorTo(p);
@@ -498,6 +506,14 @@ public sealed class InputWindowsNative : IInput, IDisposable
         PostMessage(process.MainWindowHandle, WM_RBUTTONDOWN, 0, lparam);
         token.WaitHandle.WaitOne(DelayTime(maxDelay));
         PostMessage(process.MainWindowHandle, WM_RBUTTONUP, 0, lparam);
+    }
+
+    public void RightClickCurrent()
+    {
+        if (GetCursorPos(out Point current))
+        {
+            RightClick(current);
+        }
     }
 
     public void SetCursorPos(Point p)
