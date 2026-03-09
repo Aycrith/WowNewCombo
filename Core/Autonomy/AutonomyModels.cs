@@ -137,5 +137,10 @@ public sealed class AutonomyRunState
     public Dictionary<string, RetryLedgerEntry> RetryLedger { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public PromotionState PromotionState { get; set; } = new();
     public KillSwitchState KillSwitchState { get; set; } = new();
+    public string WorkspaceFingerprint { get; set; } = string.Empty;
+    public bool? WorkspaceDirty { get; set; }
+    public string StartupBlockerFingerprint { get; set; } = string.Empty;
+    public int SameReasonRetryCount { get; set; }
+    public string LiveDemotionReason { get; set; } = string.Empty;
     public List<AutonomyRunSummary> RecentRuns { get; set; } = [];
 }

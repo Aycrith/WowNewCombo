@@ -83,6 +83,18 @@ public sealed class AutonomyRuntimeService
         return incident?.Artifacts ?? [];
     }
 
+    public JsonElement? GetLatestStatus(string supervisorId = "default")
+    {
+        string path = Path.Combine(GetSupervisorRoot(supervisorId), "status-latest.json");
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
+        return document.RootElement.Clone();
+    }
+
     public (bool PauseRequested, bool StopRequested, KillSwitchState KillSwitchState) ApplyControl(
         string supervisorId,
         string command,

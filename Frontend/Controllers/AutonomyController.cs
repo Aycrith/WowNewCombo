@@ -40,6 +40,7 @@ public sealed class AutonomyController : ControllerBase
         {
             CorrelationId = correlationId,
             State = state,
+            LatestStatus = autonomyRuntime.GetLatestStatus(supervisorId),
             Incidents = autonomyRuntime.GetIncidents(supervisorId).Take(10).ToArray(),
             Runs = autonomyRuntime.GetRuns(supervisorId, 5).ToArray(),
             SupervisorRoot = autonomyRuntime.GetSupervisorRoot(supervisorId),
