@@ -203,6 +203,36 @@ public sealed class WarlockProfileBehaviorTests
         Assert.Equal(60, config.IntVariables["LIFETAP_MANA"]);
     }
 
+    [Fact]
+    public void BloodElfWarlockProfile_PinsGhostlandsWindrunnerThroughLevel21()
+    {
+        ClassConfiguration? config = LoadProfileOrSkip();
+        if (config == null)
+        {
+            return;
+        }
+
+        PathSettings? windrunner = config.Paths.FirstOrDefault(static p =>
+            p.PathFilename.EndsWith("15-20_Ghostlands_Windrunner.json", StringComparison.OrdinalIgnoreCase));
+        PathSettings? deatholme = config.Paths.FirstOrDefault(static p =>
+            p.PathFilename.EndsWith("18-22_Ghostlands_Deatholme_Approach.json", StringComparison.OrdinalIgnoreCase));
+        PathSettings? barrens = config.Paths.FirstOrDefault(static p =>
+            p.PathFilename.EndsWith("20-26 Zeplin behind Camp Taurajo.json", StringComparison.OrdinalIgnoreCase));
+
+        Assert.NotNull(windrunner);
+        Assert.NotNull(deatholme);
+        Assert.NotNull(barrens);
+
+        Assert.Contains("Level >= 15", windrunner.Requirements);
+        Assert.Contains("Level < 22", windrunner.Requirements);
+
+        Assert.Contains("Level >= 22", deatholme.Requirements);
+        Assert.Contains("Level < 23", deatholme.Requirements);
+
+        Assert.Contains("Level >= 22", barrens.Requirements);
+        Assert.Contains("Level < 27", barrens.Requirements);
+    }
+
     private static ClassConfiguration? LoadProfileOrSkip()
     {
         if (!File.Exists(ProfilePath))

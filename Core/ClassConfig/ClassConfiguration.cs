@@ -128,6 +128,25 @@ public sealed partial class ClassConfiguration
     private readonly List<KeyAction> macroActions = [];
     public IReadOnlyList<KeyAction> MacroActions => macroActions;
 
+    internal static string NormalizePathOverride(string? overridePath)
+    {
+        return string.IsNullOrWhiteSpace(overridePath)
+            ? string.Empty
+            : overridePath.Trim();
+    }
+
+    internal static void ApplyPathOverride(PathSettings settings, string? overridePath)
+    {
+        settings.OverridePathFilename = NormalizePathOverride(overridePath);
+    }
+
+    internal static string GetEffectivePathFilename(PathSettings settings)
+    {
+        return string.IsNullOrEmpty(settings.OverridePathFilename)
+            ? settings.PathFilename
+            : settings.OverridePathFilename;
+    }
+
     public void Initialise(IServiceProvider sp, Dictionary<int, string> overridePathFile)
     {
         Approach.Key = Interact.Key;
@@ -142,12 +161,7 @@ public sealed partial class ClassConfiguration
             !string.IsNullOrEmpty(PathFilename))
         {
             overridePathFile.TryGetValue(0, out string? firstoverridePath);
-            OverridePathFilename = firstoverridePath ?? string.Empty;
-
-            if (!string.IsNullOrEmpty(OverridePathFilename))
-            {
-                PathFilename = OverridePathFilename;
-            }
+            OverridePathFilename = NormalizePathOverride(firstoverridePath);
 
             Paths =
             [
@@ -186,16 +200,15 @@ public sealed partial class ClassConfiguration
             PathSettings settings = Paths[i];
 
             if (overridePathFile.TryGetValue(i, out string? overridePath))
-                settings.OverridePathFilename = overridePath;
-
-            if (!string.IsNullOrEmpty(settings.OverridePathFilename))
             {
-                settings.PathFilename = settings.OverridePathFilename;
+                ApplyPathOverride(settings, overridePath);
             }
 
-            if (!File.Exists(Path.Join(dataConfig.Path, settings.PathFilename)))
+            string effectivePathFilename = GetEffectivePathFilename(settings);
+
+            if (!File.Exists(Path.Join(dataConfig.Path, effectivePathFilename)))
             {
-                if (!string.IsNullOrEmpty(OverridePathFilename))
+                if (!string.IsNullOrEmpty(settings.OverridePathFilename))
                     throw new Exception(
                         $"[{nameof(ClassConfiguration)}.{nameof(Paths)}[{i}]] " +
                         $"`{settings.OverridePathFilename}` file does not exists!");

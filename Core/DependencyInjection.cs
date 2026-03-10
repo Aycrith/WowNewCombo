@@ -205,6 +205,7 @@ public static class DependencyInjection
         s.TryAddSingleton<ILaunchReadinessCacheInvalidator>(sp => sp.GetRequiredService<BotStartGuard>());
         s.TryAddSingleton<LaunchReadinessService>();
         s.TryAddSingleton<LaunchAutoFixService>();
+        s.TryAddSingleton<IBotRouteControlService, BotRouteControlService>();
 
         // Minimal pathing services so launch readiness can evaluate navigation without forcing remote connections.
         s.AddSingleton<PPatherService>(x =>
@@ -264,6 +265,7 @@ public static class DependencyInjection
         s.TryAddSingleton<ILaunchReadinessCacheInvalidator>(sp => sp.GetRequiredService<BotStartGuard>());
         s.TryAddSingleton<LaunchReadinessService>();
         s.TryAddSingleton<LaunchAutoFixService>();
+        s.TryAddSingleton<IBotRouteControlService, BotRouteControlService>();
 
         s.AddSingleton<IScreenCapture>(x =>
             GetScreenCapture(x, log));
