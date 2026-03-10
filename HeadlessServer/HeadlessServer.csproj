@@ -8,6 +8,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Remove="headless_appsettings.Development.json" />
 		<None Remove="headless_appsettings.json" />
 	</ItemGroup>
@@ -27,14 +31,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="CommandLineParser" />
-		<PackageReference Include="Microsoft.Extensions.Configuration" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" />
-		<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
 		<PackageReference Include="Serilog.Expressions" />
 		<PackageReference Include="Serilog.Extensions.Logging" />
 		<PackageReference Include="Serilog.Settings.Configuration" />
