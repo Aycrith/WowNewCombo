@@ -84,5 +84,9 @@ public sealed class LaunchControllerTests
         Assert.Equal(1, snapshot.ActionBarIssueCount);
         Assert.True(snapshot.ActionBarBypassActive);
         Assert.Equal("Known slot drift", snapshot.ActionBarBypassReason);
+        Assert.False(snapshot.KeyBindingsBypassActive);
+        Assert.False(snapshot.AllowStartWithWarningsActive);
+        Assert.False(snapshot.EmergencyBypassAllActive);
+        Assert.True(snapshot.AnyBypassActive);
     }
 }

@@ -270,6 +270,7 @@ public sealed class CombatPullCastingRuntimeTests
             hasRecentKillCredit: true,
             hasRecentCombatProgress: true,
             deadTargetJustCleared: false,
+            hasPendingCorpseOrLootState: true,
             hasValidCombatTarget: false,
             hasImmediateAlternateThreat: false);
 
@@ -283,6 +284,7 @@ public sealed class CombatPullCastingRuntimeTests
             hasRecentKillCredit: true,
             hasRecentCombatProgress: true,
             deadTargetJustCleared: true,
+            hasPendingCorpseOrLootState: true,
             hasValidCombatTarget: false,
             hasImmediateAlternateThreat: true);
 
@@ -296,6 +298,21 @@ public sealed class CombatPullCastingRuntimeTests
             hasRecentKillCredit: false,
             hasRecentCombatProgress: false,
             deadTargetJustCleared: false,
+            hasPendingCorpseOrLootState: true,
+            hasValidCombatTarget: false,
+            hasImmediateAlternateThreat: false);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldTreatTargetLossAsKillToLootHandoff_WhenPendingCorpseStateMissing_ReturnsFalse()
+    {
+        bool result = CombatGoal.ShouldTreatTargetLossAsKillToLootHandoff(
+            hasRecentKillCredit: true,
+            hasRecentCombatProgress: true,
+            deadTargetJustCleared: true,
+            hasPendingCorpseOrLootState: false,
             hasValidCombatTarget: false,
             hasImmediateAlternateThreat: false);
 
@@ -320,6 +337,30 @@ public sealed class CombatPullCastingRuntimeTests
             hasLivePetTarget: false,
             damageTakenCount: 0,
             toPullCount: 0);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasPendingCorpseOrLootStateSignal_WhenLootPending_ReturnsTrue()
+    {
+        bool result = CombatGoal.HasPendingCorpseOrLootStateSignal(
+            shouldConsumeCorpse: true,
+            lootableCorpseCount: 0,
+            consumableCorpseCount: 0,
+            lastCombatKillCount: 0);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void HasPendingCorpseOrLootStateSignal_WhenAllSignalsClear_ReturnsFalse()
+    {
+        bool result = CombatGoal.HasPendingCorpseOrLootStateSignal(
+            shouldConsumeCorpse: false,
+            lootableCorpseCount: 0,
+            consumableCorpseCount: 0,
+            lastCombatKillCount: 0);
 
         result.Should().BeFalse();
     }
@@ -398,6 +439,72 @@ public sealed class CombatPullCastingRuntimeTests
         bool result = CastingHandler.ShouldContinueAmbiguousResolution(
             recheckElapsedMs: 15f,
             tokenCancelled: true);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldSuppressRecentImmolateRetry_WhenSameTargetWithinWindow_ReturnsTrue()
+    {
+        bool result = CastingHandler.ShouldSuppressRecentImmolateRetry(
+            actionName: "Immolate",
+            afterCastAuraExpected: true,
+            currentTargetGuid: 1337,
+            recentTargetGuid: 1337,
+            nowTick: 10_000,
+            suppressUntilTick: 13_000);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldSuppressRecentImmolateRetry_WhenTargetChanged_ReturnsFalse()
+    {
+        bool result = CastingHandler.ShouldSuppressRecentImmolateRetry(
+            actionName: "Immolate",
+            afterCastAuraExpected: true,
+            currentTargetGuid: 1338,
+            recentTargetGuid: 1337,
+            nowTick: 10_000,
+            suppressUntilTick: 13_000);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldSuppressRecentImmolateRetry_WhenWindowExpired_ReturnsFalse()
+    {
+        bool result = CastingHandler.ShouldSuppressRecentImmolateRetry(
+            actionName: "Immolate",
+            afterCastAuraExpected: true,
+            currentTargetGuid: 1337,
+            recentTargetGuid: 1337,
+            nowTick: 13_001,
+            suppressUntilTick: 13_000);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldArmRecentImmolateSuppression_WhenCastSucceededWithoutResist_ReturnsTrue()
+    {
+        bool result = CastingHandler.ShouldArmRecentImmolateSuppression(
+            actionName: "Immolate",
+            afterCastAuraExpected: true,
+            targetGuid: 1337,
+            missType: MissType.NONE);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldArmRecentImmolateSuppression_WhenCastResisted_ReturnsFalse()
+    {
+        bool result = CastingHandler.ShouldArmRecentImmolateSuppression(
+            actionName: "Immolate",
+            afterCastAuraExpected: true,
+            targetGuid: 1337,
+            missType: MissType.RESIST);
 
         result.Should().BeFalse();
     }

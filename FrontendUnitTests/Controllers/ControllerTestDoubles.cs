@@ -7,6 +7,8 @@ using Core.Launch;
 using Game;
 
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 
 using System;
 using System.Collections.Generic;
@@ -245,4 +247,12 @@ internal static class TestConfigBotControllerFactory
             new NullWowScreen(),
             cts);
     }
+}
+
+internal sealed class FakeHostEnvironment : IHostEnvironment
+{
+    public string EnvironmentName { get; set; } = "Development";
+    public string ApplicationName { get; set; } = "FrontendUnitTests";
+    public string ContentRootPath { get; set; } = string.Empty;
+    public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
 }
