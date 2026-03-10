@@ -2,6 +2,7 @@
 
 ## 2026-03-09 Continuation Addendum
 - Published branch baseline is still `31c8735c7`, but the active local workspace is now intentionally dirty with in-flight startup, loot, and supervisor fixes.
+- Parallel feature track added: runtime dashboard route-goal control must continue in parallel with autonomous live validation. The front-end dashboard must allow stop, route clear, route selection, safe route apply, and optional resume through shared backend services/APIs.
 - The real blocker chain is now:
   - startup/profile-load stability
   - action-bar/profile correctness

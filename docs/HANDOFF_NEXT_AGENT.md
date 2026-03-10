@@ -26,6 +26,15 @@
 6. `ValidateNoProgress`
 7. Integrated soak runs and final verdict
 
+## Parallel Feature Track
+- Runtime route-goal control from the dashboard is now an active parallel workstream and must continue alongside live validation.
+- Required outcome:
+  - user can stop the bot from the dashboard goal panel
+  - user can clear the current route override
+  - user can browse/select a new route file
+  - user can apply the route switch safely and optionally resume the bot
+- This work must stay wired through shared backend services and API endpoints, not a frontend-only mutation path.
+
 ## Control Plane
 - Live orchestration: `Scripts/Agent-BotControl.ps1`
 - Autonomous supervision and artifacts: `Scripts/Autonomous-BotSupervisor.ps1`
