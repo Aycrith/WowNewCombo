@@ -9,13 +9,13 @@
   using the existing project control surfaces.
 
 .EXAMPLE
-  pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Autonomous-BotSupervisor.ps1 -Action RunLoop -MaxCycles 1 -DryRun
+  pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Autonomous-BotSupervisor.ps1 -Action RunLoop -MaxCycles 1 -DryRun -SupervisorId autonomy-live-prep-warlock
 
 .EXAMPLE
-  pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Autonomous-BotSupervisor.ps1 -Action Status
+  pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Autonomous-BotSupervisor.ps1 -Action Status -SupervisorId autonomy-live-prep-warlock
 
 .EXAMPLE
-  pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Autonomous-BotSupervisor.ps1 -Action NextSteps
+  pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Autonomous-BotSupervisor.ps1 -Action NextSteps -SupervisorId autonomy-live-prep-warlock
 #>
 [CmdletBinding()]
 param(
@@ -30,7 +30,7 @@ param(
     [ValidateSet("Hybrid", "SyntheticOnly", "LiveFirst")]
     [string]$PrimarySurface = "Hybrid",
     [string]$OutputRoot = "",
-    [string]$SupervisorId = "default",
+    [string]$SupervisorId = "autonomy-live-prep-warlock",
     [int]$HeartbeatSeconds = 30,
     [int]$ObservationSeconds = 15,
     [int]$SyntheticIntervalMinutes = 15,
@@ -45,6 +45,7 @@ param(
     [int]$LegacyHarnessEveryNCycles = 4,
     [string]$PriorityGateOrder = "ValidateCombat,ValidateReroute,ValidateNoProgress,LiveSession",
     [string]$LegacyHarnessStages = "PreFlight",
+    [bool]$StrictReadiness = $true,
     [switch]$EnableMutations,
     [switch]$DryRun,
     [switch]$StopServicesOnExit
@@ -92,8 +93,10 @@ $script:IncidentHistoryPath = Join-Path $script:SupervisorRoot "incident-history
 $script:PauseFlagPath = Join-Path $script:ControlRoot "pause.flag"
 $script:StopFlagPath = Join-Path $script:ControlRoot "stop.flag"
 $script:KillSwitchPath = Join-Path $script:ControlRoot "kill-switch.json"
+$script:LiveWindowPath = Join-Path $script:ControlRoot "live-window.json"
 $script:RunLockPath = Join-Path $script:ControlRoot "run.lock.json"
 $script:MutationLockPath = Join-Path $script:ControlRoot "mutation.lock.json"
+$script:IsPrepLane = ($script:SupervisorId -eq "autonomy-live-prep-warlock")
 
 function Ensure-Directory
 {
@@ -479,6 +482,12 @@ function New-DefaultSupervisorState
             Source = ""
             UpdatedUtc = $null
         }
+        LiveWindowState = [ordered]@{
+            Enabled = $false
+            Reason = "Operator live window is not armed."
+            Source = ""
+            UpdatedUtc = $null
+        }
         WorkspaceFingerprint = ""
         WorkspaceDirty = $null
         StartupBlockerFingerprint = ""
@@ -530,6 +539,7 @@ function Get-SupervisorState
     $existing = Read-JsonFile -Path $script:StatePath
     $state = Merge-HashtableDefaults -Existing $existing -Defaults $defaults
     Sync-KillSwitchState -State $state
+    Sync-LiveWindowState -State $state
     return $state
 }
 
@@ -562,11 +572,69 @@ function Get-KillSwitchState
     }
 }
 
+function Get-LiveWindowState
+{
+    $persisted = Read-JsonFile -Path $script:LiveWindowPath
+    if ($null -eq $persisted)
+    {
+        return [ordered]@{
+            Enabled = $false
+            Reason = "Operator live window is not armed."
+            Source = ""
+            UpdatedUtc = $null
+        }
+    }
+
+    return [ordered]@{
+        Enabled = [bool](Get-OptionalPropertyValue -Object $persisted -Name "Enabled" -Default $false)
+        Reason = [string](Get-OptionalPropertyValue -Object $persisted -Name "Reason" -Default "")
+        Source = [string](Get-OptionalPropertyValue -Object $persisted -Name "Source" -Default "")
+        UpdatedUtc = Get-OptionalPropertyValue -Object $persisted -Name "UpdatedUtc" -Default $null
+    }
+}
+
+function Set-LiveWindowState
+{
+    param(
+        [Parameter(Mandatory = $true)][bool]$Enabled,
+        [AllowNull()][string]$Reason,
+        [AllowNull()][string]$Source
+    )
+
+    [void](Write-JsonFile -Path $script:LiveWindowPath -Object ([ordered]@{
+                Enabled = [bool]$Enabled
+                Reason = [string]$(if ([string]::IsNullOrWhiteSpace($Reason))
+                    {
+                        if ($Enabled)
+                        {
+                            "Operator armed live window."
+                        }
+                        else
+                        {
+                            "Operator live window is not armed."
+                        }
+                    }
+                    else
+                    {
+                        $Reason
+                    })
+                Source = [string]$(if ([string]::IsNullOrWhiteSpace($Source)) { "AutonomousBotSupervisor" } else { $Source })
+                UpdatedUtc = (Get-Date).ToUniversalTime().ToString("o")
+            }))
+}
+
 function Sync-KillSwitchState
 {
     param([Parameter(Mandatory = $true)][System.Collections.IDictionary]$State)
 
     $State["KillSwitchState"] = Get-KillSwitchState
+}
+
+function Sync-LiveWindowState
+{
+    param([Parameter(Mandatory = $true)][System.Collections.IDictionary]$State)
+
+    $State["LiveWindowState"] = Get-LiveWindowState
 }
 
 function Get-IncidentFingerprint
@@ -577,6 +645,88 @@ function Get-IncidentFingerprint
             [string](Get-OptionalPropertyValue -Object $Finding -Name "Category" -Default ""), `
             [string](Get-OptionalPropertyValue -Object $Finding -Name "Subsystem" -Default ""), `
             [string](Get-OptionalPropertyValue -Object $Finding -Name "BlockerType" -Default "")).ToLowerInvariant()
+}
+
+function Get-BlockerPrecedenceRank
+{
+    param([Parameter(Mandatory = $true)][object]$Item)
+
+    $blockerType = [string](Get-OptionalPropertyValue -Object $Item -Name "BlockerType" -Default "")
+    if ([string]::IsNullOrWhiteSpace($blockerType))
+    {
+        $blockerType = [string](Get-OptionalPropertyValue -Object $Item -Name "Gate" -Default "")
+    }
+
+    $category = [string](Get-OptionalPropertyValue -Object $Item -Name "Category" -Default "")
+
+    switch ($blockerType)
+    {
+        "synthetic baseline failure" { return 75 }
+        "ProfileLoadDisposedTimer" { return 10 }
+        "health unavailable" { return 10 }
+        "bootstrap failed" { return 10 }
+        "OperatorLiveWindowNotArmed" { return 15 }
+        "DoctorReadinessTimeout" { return 20 }
+        "ActionBarShadowBoltSlot2Empty" { return 20 }
+        "WrongProfileLoaded" { return 20 }
+        "LaunchReadinessBypassActive" { return 20 }
+        "launch readiness incomplete" { return 20 }
+        "navigation launch check blocking" { return 20 }
+        "profile drift" { return 20 }
+        "bot inactive after bootstrap" { return 20 }
+        "ValidationBagContamination" { return 25 }
+        "ValidationReadinessContamination" { return 25 }
+        "ValidationProfileContamination" { return 25 }
+        "KillTransitionExpected" { return 30 }
+        "CombatReacquireNoise" { return 30 }
+        "LootTargetNotFound" { return 30 }
+        "LootOpenFailure" { return 30 }
+        "LootCursorMismatch" { return 30 }
+        "LootDeadlockRecovered" { return 30 }
+        "ServicePathDeadlock" { return 35 }
+        "ValidateCombat" { return 40 }
+        "ValidateReroute" { return 50 }
+        "ValidateNoProgress" { return 60 }
+        "LiveSession" { return 70 }
+        "CampaignCloseout" { return 80 }
+    }
+
+    if ($category -like "startup/*" -or $category -eq "infra/startup")
+    {
+        return 10
+    }
+
+    if ($category -like "readiness/*" -or $category -eq "invalid live state")
+    {
+        return 20
+    }
+
+    if ($category -eq "combat/loot")
+    {
+        return 30
+    }
+
+    if ($category -eq "combat/rotation" -or $category -eq "input/focus")
+    {
+        return 40
+    }
+
+    if ($category -eq "navigation/reroute")
+    {
+        if ($blockerType -eq "ValidateNoProgress")
+        {
+            return 60
+        }
+
+        return 50
+    }
+
+    if ($category -eq "optimization")
+    {
+        return 80
+    }
+
+    return 90
 }
 
 function New-ArtifactRef
@@ -636,15 +786,26 @@ function Get-FailoverDecision
     $reason = switch ($blockerType)
     {
         "ProfileLoadDisposedTimer" { "Profile loading faulted in the startup path, so retrying bootstrap once and then recycling the web/nav stack is the bounded recovery path." }
+        "OperatorLiveWindowNotArmed" { "Guarded live work is operator-gated, so the next step is to arm the live window rather than forcing a live retry." }
         "DoctorReadinessTimeout" { "Doctor timed out while trying to restore readiness, so the next action should stay inside the startup recovery ladder." }
         "ActionBarShadowBoltSlot2Empty" { "Action bar readiness is the only known startup blocker, so a doctor pass or a single bounded bypass run is safer than widening scope." }
         "WrongProfileLoaded" { "The wrong class profile is active, so restart the requested profile selection before any live validation continues." }
+        "LaunchReadinessBypassActive" { "Launch overrides are still contaminating readiness, so clear the contamination with a clean startup rather than accepting bypassed evidence." }
         "health unavailable" { "Primary health checks failed, so service recovery should start before any live validation is retried." }
         "launch readiness incomplete" { "Launch readiness is blocking bot start, so doctoring the stack is safer than continuing live retries." }
         "navigation launch check blocking" { "Navigation readiness is blocking launch; escalating through doctor and restart is lower risk than repeated gate retries." }
         "profile drift" { "The wrong profile is loaded, so re-bootstrap the requested profile before continuing guarded live work." }
         "bot inactive after bootstrap" { "Bootstrap completed without an active agent, so restart and re-bootstrap are the bounded recovery path." }
         "bootstrap failed" { "Bootstrap itself failed; escalate from re-bootstrap to doctor to restart within the retry budget." }
+        "CombatReacquireNoise" { "Kill-to-loot target handoff is still generating lost-target noise, so keep the next verification window inside the short combat/loot repro before reopening full combat validation." }
+        "LootTargetNotFound" { "Corpse selection is still missing some kills, so stay inside short loot repro windows instead of promoting to broader validation." }
+        "LootOpenFailure" { "Corpse interaction is reaching a target but not opening loot reliably, so use bounded combat/loot repro windows before any broader live gate." }
+        "LootCursorMismatch" { "Cursor-based corpse interaction is still flaky, so keep remediation inside short combat/loot repros before reopening ValidateCombat." }
+        "LootDeadlockRecovered" { "A loot deadlock was recovered, so keep the next pass focused on combat/loot stabilization rather than promoting downstream gates." }
+        "ValidationBagContamination" { "Combat validation was launched with full or low bags, so fail fast and clear bag contamination before interpreting combat results." }
+        "ValidationReadinessContamination" { "Combat validation preflight failed because launch/readiness was not clean, so stay inside startup and readiness recovery." }
+        "ValidationProfileContamination" { "Combat validation preflight failed because the requested and applied profiles did not match." }
+        "ServicePathDeadlock" { "A service or sell run collapsed into a zero-waypoint stuck loop, so isolate vendor/service routing outside combat validation." }
         "ValidateCombat" { "Combat validation failed; fall back to a clean bootstrap before attempting another combat gate." }
         "ValidateReroute" { "Reroute validation failed; restart and re-bootstrap before another reroute attempt." }
         "ValidateNoProgress" { "No-progress validation failed; restart and re-bootstrap before another recovery attempt." }
@@ -654,15 +815,26 @@ function Get-FailoverDecision
     $primaryAction = switch ($blockerType)
     {
         "ProfileLoadDisposedTimer" { "StartAndValidate" }
+        "OperatorLiveWindowNotArmed" { "Status" }
         "DoctorReadinessTimeout" { "Doctor" }
         "ActionBarShadowBoltSlot2Empty" { "Doctor" }
         "WrongProfileLoaded" { "StartAndValidate" }
+        "LaunchReadinessBypassActive" { "StartAndValidate" }
         "health unavailable" { "Restart" }
         "launch readiness incomplete" { "Doctor" }
         "navigation launch check blocking" { "Doctor" }
         "profile drift" { "StartAndValidate" }
         "bot inactive after bootstrap" { "StartAndValidate" }
         "bootstrap failed" { "StartAndValidate" }
+        "CombatReacquireNoise" { "Status" }
+        "LootTargetNotFound" { "Status" }
+        "LootOpenFailure" { "Status" }
+        "LootCursorMismatch" { "Status" }
+        "LootDeadlockRecovered" { "Status" }
+        "ValidationBagContamination" { "Status" }
+        "ValidationReadinessContamination" { "Doctor" }
+        "ValidationProfileContamination" { "StartAndValidate" }
+        "ServicePathDeadlock" { "Status" }
         "ValidateCombat" { "StartAndValidate" }
         "ValidateReroute" { "StartAndValidate" }
         "ValidateNoProgress" { "StartAndValidate" }
@@ -672,15 +844,26 @@ function Get-FailoverDecision
     $secondaryAction = switch ($blockerType)
     {
         "ProfileLoadDisposedTimer" { "Restart" }
+        "OperatorLiveWindowNotArmed" { "Status" }
         "DoctorReadinessTimeout" { "Restart" }
         "ActionBarShadowBoltSlot2Empty" { "StartAndValidate" }
         "WrongProfileLoaded" { "Restart" }
+        "LaunchReadinessBypassActive" { "Status" }
         "health unavailable" { "Doctor" }
         "launch readiness incomplete" { "Restart" }
         "navigation launch check blocking" { "Restart" }
         "profile drift" { "Doctor" }
         "bot inactive after bootstrap" { "Doctor" }
         "bootstrap failed" { "Doctor" }
+        "CombatReacquireNoise" { "StartAndValidate" }
+        "LootTargetNotFound" { "StartAndValidate" }
+        "LootOpenFailure" { "StartAndValidate" }
+        "LootCursorMismatch" { "StartAndValidate" }
+        "LootDeadlockRecovered" { "StartAndValidate" }
+        "ValidationBagContamination" { "Stop" }
+        "ValidationReadinessContamination" { "Restart" }
+        "ValidationProfileContamination" { "Restart" }
+        "ServicePathDeadlock" { "Restart" }
         "ValidateCombat" { "Doctor" }
         "ValidateReroute" { "Doctor" }
         "ValidateNoProgress" { "Doctor" }
@@ -690,15 +873,26 @@ function Get-FailoverDecision
     $tertiaryAction = switch ($blockerType)
     {
         "ProfileLoadDisposedTimer" { "Stop" }
+        "OperatorLiveWindowNotArmed" { "Stop" }
         "DoctorReadinessTimeout" { "Stop" }
         "ActionBarShadowBoltSlot2Empty" { "Status" }
         "WrongProfileLoaded" { "Stop" }
+        "LaunchReadinessBypassActive" { "Stop" }
         "health unavailable" { "StartAndValidate" }
         "launch readiness incomplete" { "StartAndValidate" }
         "navigation launch check blocking" { "StartAndValidate" }
         "profile drift" { "Restart" }
         "bot inactive after bootstrap" { "Restart" }
         "bootstrap failed" { "Restart" }
+        "CombatReacquireNoise" { "Restart" }
+        "LootTargetNotFound" { "Restart" }
+        "LootOpenFailure" { "Restart" }
+        "LootCursorMismatch" { "Restart" }
+        "LootDeadlockRecovered" { "Restart" }
+        "ValidationBagContamination" { "CollectEvidence" }
+        "ValidationReadinessContamination" { "Stop" }
+        "ValidationProfileContamination" { "Stop" }
+        "ServicePathDeadlock" { "Stop" }
         "ValidateCombat" { "Restart" }
         "ValidateReroute" { "Restart" }
         "ValidateNoProgress" { "Restart" }
@@ -710,7 +904,7 @@ function Get-FailoverDecision
         SecondaryAction = $secondaryAction
         TertiaryAction = $tertiaryAction
         DecisionReason = $reason
-        DemoteLiveMode = ($blockerType -in @("ProfileLoadDisposedTimer", "DoctorReadinessTimeout", "ActionBarShadowBoltSlot2Empty", "WrongProfileLoaded", "health unavailable", "launch readiness incomplete", "navigation launch check blocking", "bootstrap failed", "profile drift"))
+        DemoteLiveMode = ($blockerType -in @("ProfileLoadDisposedTimer", "DoctorReadinessTimeout", "ActionBarShadowBoltSlot2Empty", "WrongProfileLoaded", "LaunchReadinessBypassActive", "health unavailable", "launch readiness incomplete", "navigation launch check blocking", "bootstrap failed", "profile drift", "LootDeadlockRecovered", "ValidationBagContamination", "ValidationReadinessContamination", "ValidationProfileContamination", "ServicePathDeadlock"))
         TargetSurface = $(if ($blockerType -eq "ValidateCombat") { "Hybrid" } else { "SyntheticOnly" })
     }
 }
@@ -811,7 +1005,10 @@ function Get-IncidentsForCycle
         return @()
     }
 
-    return @($incidents | Sort-Object @{ Expression = { [int]$_.OccurrenceCount } ; Descending = $true }, @{ Expression = { $_.Severity } ; Descending = $true })
+    return @($incidents | Sort-Object `
+            @{ Expression = { Get-BlockerPrecedenceRank -Item $_ } ; Descending = $false }, `
+            @{ Expression = { [int]$_.OccurrenceCount } ; Descending = $true }, `
+            @{ Expression = { $_.Severity } ; Descending = $true })
 }
 
 function Update-RetryLedgerForIncidents
@@ -928,6 +1125,11 @@ function Test-LiveSurfaceAllowed
 
     $effectiveSurface = [string](Get-OptionalPropertyValue -Object $State["PromotionState"] -Name "EffectiveSurface" -Default $PrimarySurface)
     if ($effectiveSurface -eq "SyntheticOnly")
+    {
+        return $false
+    }
+
+    if (-not [bool](Get-OptionalPropertyValue -Object $State["LiveWindowState"] -Name "Enabled" -Default $false))
     {
         return $false
     }
@@ -1191,6 +1393,7 @@ function Get-LiveApiObservation
     $botStatus = Invoke-SafeApiGet -Path "/api/bot/status"
     $snapshot = Invoke-SafeApiGet -Path "/api/test/snapshot"
     $sessionStats = Invoke-SafeApiGet -Path "/api/session/stats"
+    $autonomyStatus = Invoke-SafeApiGet -Path ("/api/autonomy/status?supervisorId={0}" -f [Uri]::EscapeDataString($script:SupervisorId))
 
     return [ordered]@{
         Health = $health
@@ -1198,6 +1401,7 @@ function Get-LiveApiObservation
         BotStatus = $botStatus
         Snapshot = $snapshot
         SessionStats = $sessionStats
+        AutonomyStatus = $autonomyStatus
     }
 }
 
@@ -1209,6 +1413,114 @@ function Get-LiveDetailedObservation
     $base["NavigationReroute"] = Invoke-SafeApiGet -Path "/api/diagnostics/navigation/reroute"
     $base["SoakCurrent"] = Invoke-SafeApiGet -Path "/api/diagnostics/soak/current"
     return $base
+}
+
+function Get-LatestRuntimeLogPath
+{
+    $runtimeLogDir = Join-Path $script:BotRoot "BlazorServer\bin\Release\net10.0"
+    return Get-ArtifactByPattern -DirectoryPath $runtimeLogDir -Pattern "out*.log"
+}
+
+function Resolve-ScreenCaptureArtifactPath
+{
+    param([Parameter(Mandatory = $true)][string]$FileName)
+
+    if ([System.IO.Path]::IsPathRooted($FileName) -and (Test-Path -LiteralPath $FileName))
+    {
+        return $FileName
+    }
+
+    $candidateDirs = @(
+        (Join-Path $script:BotRoot "BlazorServer\bin\Release\json\cap"),
+        (Join-Path $script:BotRoot "BlazorServer\bin\Release\net10.0\json\cap"),
+        (Join-Path $script:BotRoot "BlazorServer\bin\Debug\json\cap")
+    )
+
+    foreach ($dir in $candidateDirs)
+    {
+        $candidate = Join-Path $dir $FileName
+        if (Test-Path -LiteralPath $candidate)
+        {
+            return $candidate
+        }
+    }
+
+    return $FileName
+}
+
+function Get-RecentRuntimeEvidence
+{
+    param([int]$TailCount = 400)
+
+    $runtimeLogPath = Get-LatestRuntimeLogPath
+    if ([string]::IsNullOrWhiteSpace($runtimeLogPath))
+    {
+        return [ordered]@{
+            RuntimeLogPath = $null
+            TailCount = $TailCount
+            TailLines = @()
+            ScreenshotPaths = @()
+        }
+    }
+
+    try
+    {
+        $tailLines = @(Get-Content -LiteralPath $runtimeLogPath -Tail $TailCount -ErrorAction Stop)
+    }
+    catch
+    {
+        return [ordered]@{
+            RuntimeLogPath = $runtimeLogPath
+            TailCount = $TailCount
+            TailLines = @()
+            ScreenshotPaths = @()
+        }
+    }
+
+    $screenshotPaths = @()
+    foreach ($line in $tailLines)
+    {
+        if ($line -match "\[ScreenCapture\s+\]\s+(?<name>.+?\.(?:jpg|jpeg|png))\s*$")
+        {
+            $screenshotPaths += Resolve-ScreenCaptureArtifactPath -FileName $Matches["name"]
+        }
+    }
+
+    return [ordered]@{
+        RuntimeLogPath = $runtimeLogPath
+        TailCount = $TailCount
+        TailLines = @($tailLines)
+        ScreenshotPaths = @($screenshotPaths | Select-Object -Unique | Select-Object -Last 10)
+    }
+}
+
+function Write-RuntimeEvidenceArtifacts
+{
+    param([Parameter(Mandatory = $true)][string]$CycleDir)
+
+    $runtimeEvidence = Get-RecentRuntimeEvidence
+    $runtimeLogPath = [string](Get-OptionalPropertyValue -Object $runtimeEvidence -Name "RuntimeLogPath" -Default "")
+    if ([string]::IsNullOrWhiteSpace($runtimeLogPath))
+    {
+        return $null
+    }
+
+    $tailLines = @((Get-OptionalPropertyValue -Object $runtimeEvidence -Name "TailLines" -Default @()))
+    $tailPath = Join-Path $CycleDir "runtime-log-tail.txt"
+    [void](Write-TextFile -Path $tailPath -Value ($tailLines -join [Environment]::NewLine))
+
+    $screenshotsPath = Join-Path $CycleDir "runtime-screenshots.json"
+    [void](Write-JsonFile -Path $screenshotsPath -Object ([ordered]@{
+            RuntimeLogPath = $runtimeLogPath
+            ScreenshotPaths = @((Get-OptionalPropertyValue -Object $runtimeEvidence -Name "ScreenshotPaths" -Default @()))
+        }))
+
+    return [ordered]@{
+        RuntimeLogPath = $runtimeLogPath
+        RuntimeTailPath = $tailPath
+        RuntimeScreenshotsPath = $screenshotsPath
+        ScreenshotPaths = @((Get-OptionalPropertyValue -Object $runtimeEvidence -Name "ScreenshotPaths" -Default @()))
+    }
 }
 
 function Convert-LaunchStatusName
@@ -1617,28 +1929,18 @@ function Get-LatestActionFailureAssessment
 
 function Get-RecentRuntimeSignalFindings
 {
-    $runtimeLogDir = Join-Path $script:BotRoot "BlazorServer\bin\Release\net10.0"
-    $runtimeLogPath = Get-ArtifactByPattern -DirectoryPath $runtimeLogDir -Pattern "out*.log"
-    if ([string]::IsNullOrWhiteSpace($runtimeLogPath))
-    {
-        return @()
-    }
-
-    try
-    {
-        $tailLines = @(Get-Content -LiteralPath $runtimeLogPath -Tail 400 -ErrorAction Stop)
-    }
-    catch
-    {
-        return @()
-    }
-
-    if ($tailLines.Count -eq 0)
+    $runtimeEvidence = Get-RecentRuntimeEvidence
+    $runtimeLogPath = [string](Get-OptionalPropertyValue -Object $runtimeEvidence -Name "RuntimeLogPath" -Default "")
+    $tailLines = @((Get-OptionalPropertyValue -Object $runtimeEvidence -Name "TailLines" -Default @()))
+    if ([string]::IsNullOrWhiteSpace($runtimeLogPath) -or $tailLines.Count -eq 0)
     {
         return @()
     }
 
     $tailText = ($tailLines -join [Environment]::NewLine)
+    $sharedEvidencePaths = @(
+        $runtimeLogPath
+    ) + @((Get-OptionalPropertyValue -Object $runtimeEvidence -Name "ScreenshotPaths" -Default @()) | Select-Object -First 3)
     $findings = @()
 
     if ($tailText -match "(?i)Loot Failed, target not found!")
@@ -1654,7 +1956,7 @@ function Get-RecentRuntimeSignalFindings
             -TestBlockingImpact 3 `
             -UserImpact 4 `
             -EstimatedFixCost 2 `
-            -EvidencePaths @($runtimeLogPath)
+            -EvidencePaths $sharedEvidencePaths
     }
 
     if ($tailText -match "(?i)Loot Failed open:")
@@ -1678,7 +1980,7 @@ function Get-RecentRuntimeSignalFindings
             -TestBlockingImpact 3 `
             -UserImpact 4 `
             -EstimatedFixCost 2 `
-            -EvidencePaths @($runtimeLogPath)
+            -EvidencePaths $sharedEvidencePaths
     }
 
     if ($tailText -match "(?i)\[CombatGoal\s+\]\s+Lost target!")
@@ -1694,7 +1996,40 @@ function Get-RecentRuntimeSignalFindings
             -TestBlockingImpact 4 `
             -UserImpact 3 `
             -EstimatedFixCost 2 `
-            -EvidencePaths @($runtimeLogPath)
+            -EvidencePaths $sharedEvidencePaths
+    }
+
+    if ($tailText -match "(?i)Loot deadlock recovered")
+    {
+        $findings += New-Finding `
+            -Title "Loot deadlock recovery still occurred in the live runtime" `
+            -Category "combat/loot" `
+            -Subsystem "loot" `
+            -BlockerType "LootDeadlockRecovered" `
+            -Summary "Recent runtime logs show the bot recovered from a loot deadlock, so combat/loot still needs bounded verification before reopening broader live gates." `
+            -Severity 3 `
+            -Reproducibility 2 `
+            -TestBlockingImpact 3 `
+            -UserImpact 3 `
+            -EstimatedFixCost 2 `
+            -EvidencePaths $sharedEvidencePaths
+    }
+
+    if ($tailText -match "(?i)No valid backtrack position found in breadcrumb trail" -and
+        $tailText -match "(?i)Sell \[C\]")
+    {
+        $findings += New-Finding `
+            -Title "Service routing collapsed into a zero-waypoint breadcrumb loop" `
+            -Category "service/routing" `
+            -Subsystem "service" `
+            -BlockerType "ServicePathDeadlock" `
+            -Summary "Recent runtime logs show a sell/service path entering repeated breadcrumb backtrack failures instead of aborting cleanly." `
+            -Severity 4 `
+            -Reproducibility 3 `
+            -TestBlockingImpact 4 `
+            -UserImpact 4 `
+            -EstimatedFixCost 2 `
+            -EvidencePaths $sharedEvidencePaths
     }
 
     return @($findings)
@@ -1746,12 +2081,20 @@ function Get-LiveStateAssessment
     $profileLoadFailureReason = [string](Get-OptionalPropertyValue -Object $launchPayload -Name "profileLoadFailureReason" -Default "")
     $actionBarIssueCount = [int](Get-OptionalPropertyValue -Object $launchPayload -Name "actionBarIssueCount" -Default 0)
     $actionBarBypassActive = [bool](Get-OptionalPropertyValue -Object $launchPayload -Name "actionBarBypassActive" -Default $false)
+    $keyBindingsBypassActive = [bool](Get-OptionalPropertyValue -Object $launchPayload -Name "keyBindingsBypassActive" -Default $false)
+    $allowStartWithWarningsActive = [bool](Get-OptionalPropertyValue -Object $launchPayload -Name "allowStartWithWarningsActive" -Default $false)
+    $emergencyBypassAllActive = [bool](Get-OptionalPropertyValue -Object $launchPayload -Name "emergencyBypassAllActive" -Default $false)
+    $anyBypassActive = [bool](Get-OptionalPropertyValue -Object $launchPayload -Name "anyBypassActive" -Default $false)
+    if (-not $anyBypassActive)
+    {
+        $anyBypassActive = $actionBarBypassActive -or $keyBindingsBypassActive -or $allowStartWithWarningsActive -or $emergencyBypassAllActive
+    }
     $snapshotDead = [bool](Get-OptionalPropertyValue -Object $snapshot -Name "dead" -Default $false)
     $snapshotSwimming = [bool](Get-OptionalPropertyValue -Object $snapshot -Name "swimming" -Default $false)
     $chatInputVisible = [bool](Get-OptionalPropertyValue -Object $snapshot -Name "chatInputVisible" -Default $false)
     $inCombat = [bool](Get-OptionalPropertyValue -Object $snapshot -Name "inCombat" -Default $false)
     $latestFailureKind = [string](Get-OptionalPropertyValue -Object $latestActionFailure -Name "FailureKind" -Default "")
-    $useLatestStartupFailure = ($null -eq $launchPayload -or -not $isLaunchReady)
+    $useLatestStartupFailure = ($null -eq $launchPayload)
 
     $invalidReason = $null
     if (-not [bool](Get-OptionalPropertyValue -Object $healthResult -Name "Success" -Default $false))
@@ -1774,6 +2117,10 @@ function Get-LiveStateAssessment
     elseif ($actionBarIssueCount -gt 0 -and -not $actionBarBypassActive)
     {
         $invalidReason = "action-bar drift"
+    }
+    elseif ($anyBypassActive)
+    {
+        $invalidReason = "launch readiness bypass active"
     }
     elseif (-not $isLaunchReady)
     {
@@ -1826,6 +2173,10 @@ function Get-LiveStateAssessment
         ProfileLoadFailureReason = $profileLoadFailureReason
         ActionBarIssueCount = $actionBarIssueCount
         ActionBarBypassActive = $actionBarBypassActive
+        KeyBindingsBypassActive = $keyBindingsBypassActive
+        AllowStartWithWarningsActive = $allowStartWithWarningsActive
+        EmergencyBypassAllActive = $emergencyBypassAllActive
+        AnyBypassActive = $anyBypassActive
         BotActive = $botActive
         AgentAvailable = $agentAvailable
         CurrentGoal = $currentGoal
@@ -1841,9 +2192,22 @@ function Invoke-SyntheticBaseline
 {
     param([Parameter(Mandatory = $true)][string]$CycleDir)
 
+    $coreFilter = $null
+    $frontendFilter = $null
+    $syntheticGateMode = "Full"
+    if ($script:IsPrepLane)
+    {
+        $syntheticGateMode = "PrepFocused"
+        $coreFilter = "FullyQualifiedName~NpcNameTargetingTests|FullyQualifiedName~CorpseConsumedGoalTests|FullyQualifiedName~CombatPullCastingRuntimeTests|FullyQualifiedName~LaunchReadinessSnapshotTests"
+        $frontendFilter = "FullyQualifiedName~AutonomyControllerTests|FullyQualifiedName~LaunchControllerTests|FullyQualifiedName~BotApiControllerStatusTests|FullyQualifiedName~BotApiControllerProfileLoadTests|FullyQualifiedName~SessionControllerTests"
+    }
+
     $result = [ordered]@{
         Stage = "SyntheticBaseline"
         TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Mode = $syntheticGateMode
+        CoreFilter = $coreFilter
+        FrontendFilter = $frontendFilter
         Build = $null
         CoreTests = $null
         FrontendTests = $null
@@ -1854,7 +2218,7 @@ function Invoke-SyntheticBaseline
     $buildDir = Join-Path $CycleDir "synthetic-build"
     [void](Ensure-Directory -Path $buildDir)
     $result["Build"] = Invoke-ManagedProcess -FilePath "dotnet" `
-        -ArgumentList @("build", ".\MasterOfPuppets.sln", "-c", "Release", "--nologo", "-v", "quiet") `
+        -ArgumentList @("build", ".\MasterOfPuppets.sln", "-c", "Release", "--nologo", "-v", "quiet", "-p:UseSharedCompilation=false") `
         -WorkingDirectory $script:BotRoot `
         -CycleDir $buildDir `
         -Label "dotnet-build"
@@ -1866,8 +2230,20 @@ function Invoke-SyntheticBaseline
 
     $coreDir = Join-Path $CycleDir "synthetic-coretests"
     [void](Ensure-Directory -Path $coreDir)
+    $coreArguments = [System.Collections.Generic.List[string]]::new()
+    foreach ($argument in @("test", ".\CoreUnitTests\CoreUnitTests.csproj", "-c", "Release", "--nologo", "-v", "quiet", "-p:UseSharedCompilation=false"))
+    {
+        $coreArguments.Add($argument)
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($coreFilter))
+    {
+        $coreArguments.Add("--filter")
+        $coreArguments.Add($coreFilter)
+    }
+
     $result["CoreTests"] = Invoke-ManagedProcess -FilePath "dotnet" `
-        -ArgumentList @("test", ".\CoreUnitTests\CoreUnitTests.csproj", "-c", "Release", "--nologo", "-v", "quiet") `
+        -ArgumentList $coreArguments.ToArray() `
         -WorkingDirectory $script:BotRoot `
         -CycleDir $coreDir `
         -Label "dotnet-test-core"
@@ -1879,8 +2255,20 @@ function Invoke-SyntheticBaseline
 
     $frontendDir = Join-Path $CycleDir "synthetic-frontendtests"
     [void](Ensure-Directory -Path $frontendDir)
+    $frontendArguments = [System.Collections.Generic.List[string]]::new()
+    foreach ($argument in @("test", ".\FrontendUnitTests\FrontendUnitTests.csproj", "-c", "Release", "--nologo", "-v", "quiet", "-p:UseSharedCompilation=false"))
+    {
+        $frontendArguments.Add($argument)
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($frontendFilter))
+    {
+        $frontendArguments.Add("--filter")
+        $frontendArguments.Add($frontendFilter)
+    }
+
     $result["FrontendTests"] = Invoke-ManagedProcess -FilePath "dotnet" `
-        -ArgumentList @("test", ".\FrontendUnitTests\FrontendUnitTests.csproj", "-c", "Release", "--nologo", "-v", "quiet") `
+        -ArgumentList $frontendArguments.ToArray() `
         -WorkingDirectory $script:BotRoot `
         -CycleDir $frontendDir `
         -Label "dotnet-test-frontend"
@@ -1924,6 +2312,11 @@ function Invoke-AgentControlAction
         "-EvidenceIntervalSeconds", [string]$EvidenceIntervalSeconds,
         "-ShortValidationSeconds", [string]$ShortValidationSeconds
     )
+
+    if ($StrictReadiness)
+    {
+        $arguments += "-StrictReadiness"
+    }
 
     $timeoutSeconds = $MaxAgentControlRuntimeSeconds
     if ($ActionName -eq "LiveSession")
@@ -2154,6 +2547,8 @@ function Get-FindingsForCycle
             "doctor readiness timeout" { "startup/readiness" }
             "action-bar drift" { "readiness/action-bar" }
             "wrong profile loaded" { "readiness/profile" }
+            "launch readiness bypass active" { "readiness/launch-overrides" }
+            "operator live window not armed" { "operator/live-window" }
             "route-follow not restored" { "navigation/reroute" }
             "navigation launch check blocking" { "infra/startup" }
             default { "invalid live state" }
@@ -2164,6 +2559,8 @@ function Get-FindingsForCycle
             "startup/readiness" { "live-readiness" }
             "readiness/action-bar" { "action-bar" }
             "readiness/profile" { "profile" }
+            "readiness/launch-overrides" { "launch-overrides" }
+            "operator/live-window" { "live-gate" }
             "navigation/reroute" { "navigation" }
             "infra/startup" { "live-readiness" }
             default { "live-state" }
@@ -2174,6 +2571,8 @@ function Get-FindingsForCycle
             "doctor readiness timeout" { "DoctorReadinessTimeout" }
             "action-bar drift" { "ActionBarShadowBoltSlot2Empty" }
             "wrong profile loaded" { "WrongProfileLoaded" }
+            "launch readiness bypass active" { "LaunchReadinessBypassActive" }
+            "operator live window not armed" { "OperatorLiveWindowNotArmed" }
             default { $invalidReason }
         }
         $evidence = @($CycleSummary["LiveAssessmentPath"])
@@ -2228,6 +2627,8 @@ function Get-FindingsForCycle
         }
 
         $focusContaminated = [bool](Get-OptionalPropertyValue -Object $summary -Name "FocusContaminated" -Default $false)
+        $preflightFailureKind = [string](Get-OptionalPropertyValue -Object $summary -Name "PreflightFailureKind" -Default "")
+        $serviceIncidentKind = [string](Get-OptionalPropertyValue -Object $summary -Name "ServiceIncidentKind" -Default "")
         $category = switch ($gateName)
         {
             "ValidateCombat" { "combat/rotation" }
@@ -2236,7 +2637,18 @@ function Get-FindingsForCycle
             "LiveSession" { "navigation/reroute" }
             default { "telemetry/evidence gaps" }
         }
-        if ([bool](Get-OptionalPropertyValue -Object $summary -Name "LiveStateContaminated" -Default $false))
+        $blockerType = $gateName
+        if ($gateName -eq "ValidateCombat" -and -not [string]::IsNullOrWhiteSpace($preflightFailureKind))
+        {
+            $blockerType = $preflightFailureKind
+            $category = "invalid live state"
+        }
+        elseif ($gateName -eq "ValidateCombat" -and -not [string]::IsNullOrWhiteSpace($serviceIncidentKind))
+        {
+            $blockerType = $serviceIncidentKind
+            $category = "service/routing"
+        }
+        elseif ([bool](Get-OptionalPropertyValue -Object $summary -Name "LiveStateContaminated" -Default $false))
         {
             $category = "invalid live state"
         }
@@ -2248,8 +2660,8 @@ function Get-FindingsForCycle
         $findings += New-Finding `
             -Title ("{0} is not passing acceptance" -f $gateName) `
             -Category $category `
-            -Subsystem $(if ($category -eq "combat/rotation") { "combat" } elseif ($category -eq "invalid live state") { "live-state" } elseif ($category -eq "input/focus") { "focus" } else { "navigation" }) `
-            -BlockerType $gateName `
+            -Subsystem $(if ($category -eq "combat/rotation") { "combat" } elseif ($category -eq "invalid live state") { "live-state" } elseif ($category -eq "input/focus") { "focus" } elseif ($category -eq "service/routing") { "service" } else { "navigation" }) `
+            -BlockerType $blockerType `
             -Summary ("{0} reported one or more acceptance failures." -f $gateName) `
             -Severity 4 `
             -Reproducibility 4 `
@@ -2278,7 +2690,9 @@ function Get-FindingsForCycle
             -EvidencePaths @($CycleSummary["CycleDir"])
     }
 
-    return @($findings | Sort-Object @{ Expression = { [int]$_.Score } ; Descending = $true })
+    return @($findings | Sort-Object `
+            @{ Expression = { Get-BlockerPrecedenceRank -Item $_ } ; Descending = $false }, `
+            @{ Expression = { [int]$_.Score } ; Descending = $true })
 }
 
 function Get-HypothesesForFindings
@@ -2309,9 +2723,24 @@ function Get-HypothesesForFindings
                 "navigation launch check blocking" { "Launch readiness reports Navigation as non-OK and blocking, so promotion must wait for a healthy launch-navigation state." }
                 "bot inactive after bootstrap" { "The live stack came up, but the bot never became active after bootstrap. Startup recovery needs to be revalidated before gate promotion." }
                 "health unavailable" { "A service or listener crash is preventing health checks from succeeding. Restarting the live stack should restore the contract." }
+                "ProfileLoadDisposedTimer" { "Profile loading is faulting against a disposed timer, so live startup must stay inside the bounded startup recovery ladder before any downstream validation resumes." }
+                "OperatorLiveWindowNotArmed" { "The supervisor is correctly holding live work behind the operator gate, so the next action is to arm a guarded live window rather than widening automation." }
+                "DoctorReadinessTimeout" { "Doctor is timing out during readiness repair, so the next cycle should remain inside startup remediation rather than promoting into combat or navigation gates." }
+                "ActionBarShadowBoltSlot2Empty" { "The warlock action bar does not meet the readiness contract, so only a bounded action-bar repair or explicit bypassed evidence run is valid." }
+                "WrongProfileLoaded" { "The active class profile does not match the requested warlock profile, so all live evidence is invalid until the profile contract is restored." }
+                "LaunchReadinessBypassActive" { "Launch readiness is only green because overrides are active, so the next cycle must clear bypass contamination before any live evidence is trusted." }
+                "ValidationBagContamination" { "Combat validation was contaminated before it started because inventory state violated the clean-combat preflight contract." }
+                "ValidationReadinessContamination" { "Combat validation was contaminated before it started because startup/readiness was not clean enough to trust the result." }
+                "ValidationProfileContamination" { "Combat validation was contaminated before it started because the wrong profile was active." }
                 "launch readiness incomplete" { "One or more launch prerequisites are unresolved. Running Doctor or collecting readiness evidence should identify the missing subsystem." }
                 "profile drift" { "The loaded live profile does not match the requested profile, so bootstrap evidence is not trustworthy until the profile contract is restored." }
                 "route-follow not restored" { "The live bot is not settling into FollowRoute, likely because a transient goal or recovery path is still active." }
+                "CombatReacquireNoise" { "Kill-to-loot transitions are still producing lost-target combat noise, so combat and loot should stay coupled until the short live repro stabilizes." }
+                "LootTargetNotFound" { "Corpse targeting is still dropping some kill windows, so the next live verification should stay inside short loot repro samples." }
+                "LootOpenFailure" { "The bot is finding a corpse but not converting that interaction into an actual loot open consistently." }
+                "LootCursorMismatch" { "Corpse cursor selection is still unreliable in some windows, so the next pass should focus on click-to-open reliability rather than broader route behavior." }
+                "LootDeadlockRecovered" { "Loot deadlock recovery occurred in runtime, so the system is recovering but not yet stable enough for broader gate promotion." }
+                "ServicePathDeadlock" { "Service routing entered a repeated zero-waypoint breadcrumb loop, so vendor/service handling must be isolated from combat validation." }
                 "ValidateReroute" { "Reroute acceptance is failing because synthetic hazards are not intersecting the route strongly enough or reroute counters are not advancing." }
                 "ValidateCombat" { "Combat acceptance is failing due to pull/reacquire regressions, incomplete combat evidence, or focus/input contamination." }
                 "ValidateNoProgress" { "The no-progress scenario is not generating an explicit trigger-and-recover sequence in the current route segment." }
@@ -2367,6 +2796,60 @@ function Get-ProposalsForFindings
 
         switch ($finding.BlockerType)
         {
+            "ProfileLoadDisposedTimer"
+            {
+                $proposal["Title"] = "Retry guarded startup once, then recycle the live stack if the disposed-timer fault repeats"
+                $proposal["RecommendedChangeType"] = "Operational"
+                $proposal["Executor"] = [ordered]@{ Kind = "AgentControl"; Action = "StartAndValidate" }
+            }
+            "OperatorLiveWindowNotArmed"
+            {
+                $proposal["Title"] = "Keep live work paused until an operator explicitly arms the guarded live window"
+                $proposal["RecommendedChangeType"] = "Operational"
+                $proposal["Executor"] = [ordered]@{ Kind = "AutonomyControl"; Action = "EnableLiveWindow" }
+            }
+            "LaunchReadinessBypassActive"
+            {
+                $proposal["Title"] = "Clear launch override contamination and rerun one clean guarded startup"
+                $proposal["RecommendedChangeType"] = "Operational"
+                $proposal["Executor"] = [ordered]@{ Kind = "AgentControl"; Action = "StartAndValidate" }
+            }
+            "ValidationBagContamination"
+            {
+                $proposal["Title"] = "Fail fast on bag contamination and clear inventory state before the next combat gate"
+                $proposal["RecommendedChangeType"] = "Operational"
+                $proposal["Executor"] = [ordered]@{ Kind = "AgentControl"; Action = "Status" }
+            }
+            "ValidationReadinessContamination"
+            {
+                $proposal["Title"] = "Restore a clean launch/readiness state before any combat validation rerun"
+                $proposal["RecommendedChangeType"] = "Operational"
+                $proposal["Executor"] = [ordered]@{ Kind = "AgentControl"; Action = "Doctor" }
+            }
+            "ValidationProfileContamination"
+            {
+                $proposal["Title"] = "Reload the requested warlock profile before allowing combat validation to proceed"
+                $proposal["RecommendedChangeType"] = "Operational"
+                $proposal["Executor"] = [ordered]@{ Kind = "AgentControl"; Action = "StartAndValidate" }
+            }
+            "DoctorReadinessTimeout"
+            {
+                $proposal["Title"] = "Keep startup recovery inside doctor and restart until readiness becomes trustworthy again"
+                $proposal["RecommendedChangeType"] = "Operational"
+                $proposal["Executor"] = [ordered]@{ Kind = "AgentControl"; Action = "Doctor" }
+            }
+            "ActionBarShadowBoltSlot2Empty"
+            {
+                $proposal["Title"] = "Repair the action bar or run one bounded bypassed startup sample if it is the only blocker"
+                $proposal["RecommendedChangeType"] = "Operational"
+                $proposal["Executor"] = [ordered]@{ Kind = "AgentControl"; Action = "Doctor" }
+            }
+            "WrongProfileLoaded"
+            {
+                $proposal["Title"] = "Reload the requested warlock profile before accepting any further live evidence"
+                $proposal["RecommendedChangeType"] = "Operational"
+                $proposal["Executor"] = [ordered]@{ Kind = "AgentControl"; Action = "StartAndValidate" }
+            }
             "health unavailable"
             {
                 $proposal["Title"] = "Restart the live stack and re-check health"
@@ -2386,10 +2869,40 @@ function Get-ProposalsForFindings
                 $proposal["RecommendedChangeType"] = "Operational"
                 $proposal["Executor"] = [ordered]@{ Kind = "AgentControl"; Action = "StartAndValidate" }
             }
+            "CombatReacquireNoise"
+            {
+                $proposal["Title"] = "Keep the next live cycle inside a short combat/loot repro window before reopening ValidateCombat"
+                $proposal["RecommendedChangeType"] = "Code"
+            }
+            "LootTargetNotFound"
+            {
+                $proposal["Title"] = "Tighten corpse selection inside the short combat/loot repro window before broader validation"
+                $proposal["RecommendedChangeType"] = "Code"
+            }
+            "LootOpenFailure"
+            {
+                $proposal["Title"] = "Improve corpse click-to-open reliability before promoting back into full combat validation"
+                $proposal["RecommendedChangeType"] = "Code"
+            }
+            "LootCursorMismatch"
+            {
+                $proposal["Title"] = "Stabilize cursor-based corpse interaction before reopening broader guarded live gates"
+                $proposal["RecommendedChangeType"] = "Code"
+            }
+            "ServicePathDeadlock"
+            {
+                $proposal["Title"] = "Isolate sell/service routing deadlocks outside combat validation and abort zero-waypoint loops cleanly"
+                $proposal["RecommendedChangeType"] = "Code"
+            }
+            "LootDeadlockRecovered"
+            {
+                $proposal["Title"] = "Keep loot deadlock fixes bounded to combat/loot seams and reverify with a short stacked-corpse sample"
+                $proposal["RecommendedChangeType"] = "Code"
+            }
             default
             {
                 $proposal["Title"] = "Collect targeted evidence and prepare a narrow remediation pass"
-                $proposal["RecommendedChangeType"] = $(if ($finding.Category -eq "invalid live state") { "Operational" } elseif ($finding.Category -eq "combat/rotation") { "Code" } else { "Investigation" })
+                $proposal["RecommendedChangeType"] = $(if ($finding.Category -eq "invalid live state") { "Operational" } elseif ($finding.Category -in @("combat/rotation", "combat/loot")) { "Code" } else { "Investigation" })
             }
         }
 
@@ -2410,7 +2923,12 @@ function Get-ProposalsForFindings
             }
         }
 
-        if ($proposal["RecommendedChangeType"] -eq "Operational" -and $attempts -lt $retryBudget)
+        $executorKind = [string](Get-OptionalPropertyValue -Object $proposal["Executor"] -Name "Kind" -Default "")
+        if ($proposal["RecommendedChangeType"] -eq "Operational" -and $executorKind -eq "AutonomyControl")
+        {
+            $proposal["AutoApplyEligible"] = $false
+        }
+        elseif ($proposal["RecommendedChangeType"] -eq "Operational" -and $attempts -lt $retryBudget)
         {
             $proposal["AutoApplyEligible"] = $true
         }
@@ -2530,13 +3048,24 @@ function Get-NextStepsQueue
     )
 
     $queue = @()
-    foreach ($finding in ($Findings | Sort-Object @{ Expression = { [int]$_.Score } ; Descending = $true }))
+    foreach ($finding in ($Findings | Sort-Object `
+                @{ Expression = { Get-BlockerPrecedenceRank -Item $_ } ; Descending = $false }, `
+                @{ Expression = { [int]$_.Score } ; Descending = $true }))
     {
         $hypothesis = @($Hypotheses | Where-Object { $_.FindingId -eq $finding.Id })[0]
         $proposal = @($Proposals | Where-Object { $_.FindingId -eq $finding.Id })[0]
 
         $testAction = switch ($finding.BlockerType)
         {
+            "ProfileLoadDisposedTimer" { "StatusThenStartAndValidate" }
+            "OperatorLiveWindowNotArmed" { "ArmGuardedLiveWindow" }
+            "LaunchReadinessBypassActive" { "ClearLaunchOverridesThenStartAndValidate" }
+            "DoctorReadinessTimeout" { "DoctorThenStartAndValidate" }
+            "ActionBarShadowBoltSlot2Empty" { "StatusThenActionBarRepairOrBoundedBypass" }
+            "WrongProfileLoaded" { "StatusThenVerifyWarlockProfile" }
+            "ValidationBagContamination" { "ClearBagContaminationThenShortCombatLootRepro" }
+            "ValidationReadinessContamination" { "DoctorThenStartAndValidate" }
+            "ValidationProfileContamination" { "StatusThenVerifyWarlockProfile" }
             "bootstrap failed" { "InspectBootstrapThenStartAndValidate" }
             "navigation listener unavailable" { "DoctorThenStartAndValidate" }
             "navigation launch check blocking" { "InspectLaunchNavigationCheckThenStartAndValidate" }
@@ -2544,6 +3073,12 @@ function Get-NextStepsQueue
             "health unavailable" { "RestartThenHealthProbe" }
             "launch readiness incomplete" { "DoctorThenStartAndValidate" }
             "profile drift" { "StartAndValidateThenVerifyProfile" }
+            "CombatReacquireNoise" { "ShortCombatLootRepro" }
+            "LootTargetNotFound" { "ShortCombatLootRepro" }
+            "LootOpenFailure" { "ShortCombatLootRepro" }
+            "LootCursorMismatch" { "ShortCombatLootRepro" }
+            "LootDeadlockRecovered" { "StackedCorpseShortRepro" }
+            "ServicePathDeadlock" { "DedicatedSellServiceRepro" }
             "ValidateReroute" { "ValidateReroute" }
             "ValidateCombat" { "ValidateCombat" }
             "ValidateNoProgress" { "ValidateNoProgress" }
@@ -2554,6 +3089,15 @@ function Get-NextStepsQueue
 
         $expectedSignal = switch ($finding.BlockerType)
         {
+            "ProfileLoadDisposedTimer" { "The requested warlock profile loads without the disposed-timer fault and the startup artifact records matching requested/applied profiles." }
+            "OperatorLiveWindowNotArmed" { "Live work remains paused until the operator explicitly arms the guarded live window for the next bounded cycle." }
+            "LaunchReadinessBypassActive" { "Launch status is green with zero active overrides or bypasses before any combat or navigation gate begins." }
+            "DoctorReadinessTimeout" { "Doctor restores readiness in time and the next guarded startup exits with a green launch/readiness contract." }
+            "ActionBarShadowBoltSlot2Empty" { "Either slot 2 is repaired for Shadow Bolt or a single bounded bypass is recorded as contaminated evidence without widening scope." }
+            "WrongProfileLoaded" { "The applied profile matches BloodElf_Warlock_1-70_TBC.json before any combat or navigation validation begins." }
+            "ValidationBagContamination" { "Combat validation refuses to start until bags are not full and totalFreeSlotsGeneral is at least 15." }
+            "ValidationReadinessContamination" { "Combat validation refuses to start until launch readiness is green with zero bypasses." }
+            "ValidationProfileContamination" { "Combat validation refuses to start until the applied profile matches the requested warlock profile." }
             "bootstrap failed" { "StartAndValidate exits 0 and leaves the live stack active with a usable bot session." }
             "navigation listener unavailable" { "Port 47110 is listening again before any targeted live gate begins." }
             "navigation launch check blocking" { "Navigation launch check returns Ok (or non-blocking) and targeted gate promotion resumes." }
@@ -2561,6 +3105,12 @@ function Get-NextStepsQueue
             "health unavailable" { "Health returns success from both /api/health and /api/health/startup." }
             "launch readiness incomplete" { "Launch readiness returns green and StartAndValidate exits 0." }
             "profile drift" { "The loaded profile matches the supervisor-requested profile before any live gate begins." }
+            "CombatReacquireNoise" { "Kill-to-loot windows no longer generate uncontrolled lost-target bursts during the short combat/loot sample." }
+            "LootTargetNotFound" { "Most kill windows end in successful corpse resolution, and failures recover back to route/combat without stranding loot state." }
+            "LootOpenFailure" { "Corpse click-to-open attempts complete reliably enough that a short combat/loot sample shows majority loot success." }
+            "LootCursorMismatch" { "Cursor-based corpse interaction stays bounded and recovers cleanly when a click path misses." }
+            "LootDeadlockRecovered" { "Stacked-corpse windows no longer require deadlock recovery and the bot returns to route/combat on bounded failure." }
+            "ServicePathDeadlock" { "Vendor/service routing aborts the zero-waypoint breadcrumb loop and leaves the bot in a safe blocked state with evidence." }
             "ValidateReroute" { "Trigger/apply/drop close with zero detour-only collapse." }
             "ValidateCombat" { "Kills >= 30 with complete spell coverage and clean combat runtime counters." }
             "ValidateNoProgress" { "Explicit ShortNoProgress or TimeoutNoProgress trigger followed by recovery." }
@@ -2629,7 +3179,12 @@ function Get-StackStateSummary
         RequestedProfile = $null
         AppliedProfile = $null
         ProfileLoadFailureKind = $null
+        ProfileLoadFailureReason = $null
         ActionBarIssueCount = $null
+        ActionBarBypassActive = $null
+        KeyBindingsBypassActive = $null
+        AllowStartWithWarningsActive = $null
+        AnyBypassActive = $null
         RuntimeMode = $null
         BotActive = $null
         CurrentGoal = $null
@@ -2648,7 +3203,12 @@ function Get-StackStateSummary
         $summary["RequestedProfile"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "RequestedProfile" -Default $null
         $summary["AppliedProfile"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "AppliedProfile" -Default $null
         $summary["ProfileLoadFailureKind"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "ProfileLoadFailureKind" -Default $null
+        $summary["ProfileLoadFailureReason"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "ProfileLoadFailureReason" -Default $null
         $summary["ActionBarIssueCount"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "ActionBarIssueCount" -Default $null
+        $summary["ActionBarBypassActive"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "ActionBarBypassActive" -Default $null
+        $summary["KeyBindingsBypassActive"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "KeyBindingsBypassActive" -Default $null
+        $summary["AllowStartWithWarningsActive"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "AllowStartWithWarningsActive" -Default $null
+        $summary["AnyBypassActive"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "AnyBypassActive" -Default $null
         $summary["InvalidReason"] = Get-OptionalPropertyValue -Object $LiveAssessment -Name "InvalidReason" -Default $null
     }
 
@@ -2672,6 +3232,8 @@ function Write-LatestArtifacts
         Budget = $State["Budget"]
         PromotionState = $State["PromotionState"]
         KillSwitchState = $State["KillSwitchState"]
+        LiveWindowState = $State["LiveWindowState"]
+        StrictReadiness = [bool]$StrictReadiness
         GitWorkspace = $CycleSummary["GitWorkspace"]
         WorkspaceFingerprint = $State["WorkspaceFingerprint"]
         WorkspaceDirty = $State["WorkspaceDirty"]
@@ -2679,6 +3241,7 @@ function Write-LatestArtifacts
         SameReasonRetryCount = $State["SameReasonRetryCount"]
         LiveDemotionReason = $State["LiveDemotionReason"]
         StackState = Get-StackStateSummary -LiveAssessment $CycleSummary["LiveAssessment"]
+        RuntimeEvidence = $CycleSummary["RuntimeEvidence"]
         TopFindings = @($Findings | Select-Object -First 3)
         TopIncidents = @($Incidents | Select-Object -First 5)
         RecentRuns = @($State["RecentRuns"])
@@ -2686,7 +3249,9 @@ function Write-LatestArtifacts
             $CycleSummary["CycleDir"],
             $CycleSummary["ValidationResultsPath"],
             $CycleSummary["FindingsPath"],
-            $CycleSummary["NextStepsPath"]
+            $CycleSummary["NextStepsPath"],
+            $CycleSummary["RuntimeLogTailPath"],
+            $CycleSummary["RuntimeScreenshotsPath"]
         ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
         NextStepsPath = $script:NextStepsLatestPath
         NextStepsMarkdownPath = $script:NextStepsLatestMarkdownPath
@@ -2718,6 +3283,8 @@ function Invoke-OneCycle
     param([Parameter(Mandatory = $true)][System.Collections.IDictionary]$State)
 
     Sync-KillSwitchState -State $State
+    Sync-LiveWindowState -State $State
+    $liveWindowWasArmedAtCycleStart = [bool](Get-OptionalPropertyValue -Object $State["LiveWindowState"] -Name "Enabled" -Default $false)
 
     $cycleId = Get-CycleId
     $cycleDir = Get-CycleDir -CycleId $cycleId
@@ -2731,6 +3298,7 @@ function Invoke-OneCycle
         PrimarySurface = $PrimarySurface
         Profile = $Profile
         NavProfile = $NavProfile
+        StrictReadiness = [bool]$StrictReadiness
         DryRun = [bool]$DryRun
         EnableMutations = [bool]$EnableMutations
         PriorityGateOrder = Get-GateOrder
@@ -2833,6 +3401,10 @@ function Invoke-OneCycle
                 {
                     "kill switch enabled"
                 }
+                elseif (-not [bool](Get-OptionalPropertyValue -Object $State["LiveWindowState"] -Name "Enabled" -Default $false))
+                {
+                    "operator live window not armed"
+                }
                 else
                 {
                     "guarded live demotion active"
@@ -2867,6 +3439,10 @@ function Invoke-OneCycle
         NavigationBlockingReason = $(if ($null -ne $liveAssessment) { Get-OptionalPropertyValue -Object $liveAssessment -Name "NavigationBlockingReason" -Default $null } else { $null })
         ValidationResultsPath = Join-Path $cycleDir "validation-results.json"
     }
+    $runtimeEvidence = Write-RuntimeEvidenceArtifacts -CycleDir $cycleDir
+    $cycleSummary["RuntimeEvidence"] = $runtimeEvidence
+    $cycleSummary["RuntimeLogTailPath"] = $(if ($null -ne $runtimeEvidence) { Get-OptionalPropertyValue -Object $runtimeEvidence -Name "RuntimeTailPath" -Default $null } else { $null })
+    $cycleSummary["RuntimeScreenshotsPath"] = $(if ($null -ne $runtimeEvidence) { Get-OptionalPropertyValue -Object $runtimeEvidence -Name "RuntimeScreenshotsPath" -Default $null } else { $null })
 
     $findings = Get-FindingsForCycle -CycleSummary $cycleSummary -State $State
     $incidents = @(Get-IncidentsForCycle -State $State -Findings $findings -CycleId $cycleId -CycleDir $cycleDir)
@@ -2924,6 +3500,7 @@ function Invoke-OneCycle
             Bootstrap = $bootstrapResult
             LiveAssessment = $liveAssessment
             GateResults = $gateResults
+            RuntimeEvidence = $runtimeEvidence
             Incidents = $incidents
         }))
     [void](Write-JsonFile -Path $nextStepsPath -Object $nextSteps)
@@ -2935,6 +3512,18 @@ function Invoke-OneCycle
     $cycleSummary["AppliedChangesPath"] = $appliedChangesPath
     $cycleSummary["ValidationResultsPath"] = $validationResultsPath
     $cycleSummary["NextStepsPath"] = $nextStepsPath
+
+    if ($liveWindowWasArmedAtCycleStart)
+    {
+        Set-LiveWindowState -Enabled $false -Reason "Supervisor closed the bounded live window after cycle completion." -Source "AutonomousBotSupervisor"
+        Sync-LiveWindowState -State $State
+        $cycleSummary["LiveWindowAutoDisarmed"] = $true
+    }
+    else
+    {
+        $cycleSummary["LiveWindowAutoDisarmed"] = $false
+    }
+
     $cycleSummary["CurrentPhase"] = "Learn"
     $cycleSummary["CompletedUtc"] = (Get-Date).ToUniversalTime().ToString("o")
 
@@ -2969,7 +3558,9 @@ function Show-Status
         Write-Host ("Supervisor: {0}" -f $script:SupervisorId)
         Write-Host ("Current phase: {0}" -f (Get-OptionalPropertyValue -Object (Get-SupervisorState) -Name "CurrentPhase" -Default "Idle"))
         Write-Host ("Stack state: WoW={0}, Web5000={1}, Nav47110={2}, Goal={3}" -f $stackState.WowRunning, $stackState.WebPortListening, $stackState.NavigationPortListening, $stackState.CurrentGoal)
-        Write-Host ("Promotion: {0}" -f (Get-OptionalPropertyValue -Object (Get-OptionalPropertyValue -Object (Get-SupervisorState) -Name "PromotionState" -Default $null) -Name "EffectiveSurface" -Default $PrimarySurface))
+        Write-Host ("Promotion: {0}, LiveWindow={1}" -f `
+                (Get-OptionalPropertyValue -Object (Get-OptionalPropertyValue -Object (Get-SupervisorState) -Name "PromotionState" -Default $null) -Name "EffectiveSurface" -Default $PrimarySurface), `
+                (Get-OptionalPropertyValue -Object (Get-OptionalPropertyValue -Object (Get-SupervisorState) -Name "LiveWindowState" -Default $null) -Name "Enabled" -Default $false))
         Write-Host "Top findings:"
         Write-Host "  - No supervisor cycle has completed yet."
         Write-Host "Latest evidence paths:"
@@ -2989,9 +3580,11 @@ function Show-Status
             $latest.StackState.BotActive, `
             $latest.StackState.CurrentGoal, `
             $latest.StackState.InvalidReason)
-    Write-Host ("Promotion: {0}, KillSwitch={1}" -f `
+    Write-Host ("Promotion: {0}, KillSwitch={1}, LiveWindow={2}, Workspace={3}" -f `
             (Get-OptionalPropertyValue -Object $latest.PromotionState -Name "EffectiveSurface" -Default $PrimarySurface), `
-            (Get-OptionalPropertyValue -Object $latest.KillSwitchState -Name "Enabled" -Default $false))
+            (Get-OptionalPropertyValue -Object $latest.KillSwitchState -Name "Enabled" -Default $false), `
+            (Get-OptionalPropertyValue -Object $latest.LiveWindowState -Name "Enabled" -Default $false), `
+            (Get-OptionalPropertyValue -Object $latest -Name "WorkspaceFingerprint" -Default ""))
     Write-Host ("Last cycle: {0}" -f $latest.LastCycleId)
     Write-Host "Top findings:"
     foreach ($finding in @($latest.TopFindings))

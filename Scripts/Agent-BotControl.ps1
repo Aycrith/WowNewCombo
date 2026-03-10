@@ -10,6 +10,7 @@
 .EXAMPLES
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action StartAndValidate -Profile BloodElf_Warlock_1-70_TBC.json
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action StartAndValidate -Profile BloodElf_Warlock_1-70_TBC.json -BypassActionBar
+  pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action StartAndValidate -Profile BloodElf_Warlock_1-70_TBC.json -StrictReadiness
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action Status
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action Stop
   pwsh -NoProfile -ExecutionPolicy Bypass -File .\Scripts\Agent-BotControl.ps1 -Action Api -ApiMethod GET -ApiPath /api/launch/status
@@ -51,6 +52,7 @@ param(
     [switch]$AllowStartWithWarnings,
     [switch]$BypassKeyBindings,
     [switch]$BypassActionBar,
+    [switch]$StrictReadiness,
     [switch]$SkipCharacterGate,
     [switch]$StartMonitor,
     [switch]$StopServices,
@@ -326,6 +328,7 @@ function Write-SessionManifest
     $manifest.AppliedNavProfile = $(if ([string]::IsNullOrWhiteSpace("$script:FeatureFlagProfileApplied")) { "current" } else { $script:FeatureFlagProfileApplied })
     $manifest.RuntimeFlagsFilePath = Get-FeatureFlagsFilePath
     $manifest.ResolvedEffectiveFlags = Get-FeatureFlagEffectiveSubset
+    $manifest.StrictReadiness = [bool]$StrictReadiness
 
     if ($IncludeRuntimeState)
     {
@@ -368,6 +371,18 @@ function Write-ActionFailureArtifact
                     Source = $null
                 }
             })
+        $keyBindingsBypassInfo = $(if ($null -ne $launchPayload)
+            {
+                Get-LaunchKeyBindingsBypassOverrideInfo -Launch $launchPayload
+            }
+            else
+            {
+                [pscustomobject]@{
+                    Enabled = $false
+                    Reason = $null
+                    Source = $null
+                }
+            })
         $artifactName = "{0}-{1}-failure.json" -f $script:RunTag, (Get-SafeArtifactName -Name $ActionName.ToLowerInvariant())
         $line = $null
         try { $line = $ErrorRecord.InvocationInfo.ScriptLineNumber } catch { }
@@ -380,6 +395,7 @@ function Write-ActionFailureArtifact
             AppliedNavProfile = $(if ([string]::IsNullOrWhiteSpace("$script:FeatureFlagProfileApplied")) { "current" } else { $script:FeatureFlagProfileApplied })
             RuntimeFlagsFilePath = Get-FeatureFlagsFilePath
             ResolvedEffectiveFlags = Get-FeatureFlagEffectiveSubset
+            StrictReadiness = [bool]$StrictReadiness
             ErrorMessage = $ErrorRecord.Exception.Message
             ScriptLineNumber = $line
             ScriptStackTrace = $ErrorRecord.ScriptStackTrace
@@ -393,6 +409,15 @@ function Write-ActionFailureArtifact
             ActionBarIssueCount = $(if ($null -ne $launchPayload) { Get-OptionalPropertyValue -Object $launchPayload -Name "ActionBarIssueCount" } else { $null })
             ActionBarBypassActive = [bool]$actionBarBypassInfo.Enabled
             ActionBarBypassReason = $actionBarBypassInfo.Reason
+            KeyBindingsBypassActive = [bool]$keyBindingsBypassInfo.Enabled
+            KeyBindingsBypassReason = $keyBindingsBypassInfo.Reason
+            AllowStartWithWarningsActive = $(if ($null -ne $launchPayload) { [bool](Get-OptionalPropertyValue -Object $launchPayload -Name "AllowStartWithWarningsActive") } else { $false })
+            EmergencyBypassAllActive = $(if ($null -ne $launchPayload) { [bool](Get-OptionalPropertyValue -Object $launchPayload -Name "EmergencyBypassAllActive") } else { $false })
+            AnyBypassActive = $(if ($null -ne $launchPayload) { [bool](Get-OptionalPropertyValue -Object $launchPayload -Name "AnyBypassActive") } else { $false })
+            StartReadinessInitialSnapshot = $(if (Get-Variable -Name StartFlowInitialReadinessSnapshot -Scope Script -ErrorAction SilentlyContinue) { $script:StartFlowInitialReadinessSnapshot } else { $null })
+            StartReadinessFinalSnapshot = $(if (Get-Variable -Name StartFlowFinalReadinessSnapshot -Scope Script -ErrorAction SilentlyContinue) { $script:StartFlowFinalReadinessSnapshot } else { $null })
+            StartReadinessDecisionSource = $(if (Get-Variable -Name StartFlowReadinessDecisionSource -Scope Script -ErrorAction SilentlyContinue) { $script:StartFlowReadinessDecisionSource } else { $null })
+            CombatValidationPreflight = $(if (Get-Variable -Name CombatValidationPreflight -Scope Script -ErrorAction SilentlyContinue) { $script:CombatValidationPreflight } else { $null })
             BotStatus = $botStatus
             SessionStats = $sessionStats
         }))
@@ -2592,12 +2617,29 @@ function Get-OptionalPropertyValue
 {
     param(
         [AllowNull()][object]$Object,
-        [Parameter(Mandatory = $true)][string]$Name
+        [Parameter(Mandatory = $true)][string]$Name,
+        [AllowNull()][object]$Default = $null
     )
 
     if ($null -eq $Object)
     {
-        return $null
+        return $Default
+    }
+
+    if ($Object -is [System.Collections.IDictionary])
+    {
+        try
+        {
+            if ($Object.Contains($Name))
+            {
+                return $Object[$Name]
+            }
+        }
+        catch
+        {
+        }
+
+        return $Default
     }
 
     try
@@ -2605,14 +2647,14 @@ function Get-OptionalPropertyValue
         $prop = $Object.PSObject.Properties[$Name]
         if ($null -eq $prop)
         {
-            return $null
+            return $Default
         }
 
         return $prop.Value
     }
     catch
     {
-        return $null
+        return $Default
     }
 }
 
@@ -2762,23 +2804,236 @@ function Get-LaunchKeyBindingsBypassOverrideInfo
     return [pscustomobject]$result
 }
 
+function Get-LaunchOverrideState
+{
+    param([AllowNull()][object]$Launch)
+
+    $actionBarBypassInfo = Get-LaunchActionBarBypassOverrideInfo -Launch $Launch
+    $keyBindingsBypassInfo = Get-LaunchKeyBindingsBypassOverrideInfo -Launch $Launch
+    $overrides = Get-OptionalPropertyValue -Object $Launch -Name "Overrides"
+
+    $allowWarningsActive = [bool](Get-OptionalPropertyValue -Object $Launch -Name "AllowStartWithWarningsActive")
+    if (-not $allowWarningsActive -and $null -ne $overrides)
+    {
+        $allowWarningsActive = [bool](Get-OptionalPropertyValue -Object $overrides -Name "AllowStartWithWarnings")
+    }
+
+    $emergencyBypassAllActive = [bool](Get-OptionalPropertyValue -Object $Launch -Name "EmergencyBypassAllActive")
+    if (-not $emergencyBypassAllActive -and $null -ne $overrides)
+    {
+        $emergencyBypassAllActive = [bool](Get-OptionalPropertyValue -Object $overrides -Name "EmergencyBypassAll")
+    }
+
+    $anyBypassActive = [bool](Get-OptionalPropertyValue -Object $Launch -Name "AnyBypassActive")
+    if (-not $anyBypassActive)
+    {
+        $anyBypassActive = $allowWarningsActive -or
+            $emergencyBypassAllActive -or
+            [bool]$actionBarBypassInfo.Enabled -or
+            [bool]$keyBindingsBypassInfo.Enabled
+    }
+
+    return [pscustomobject]@{
+        AllowStartWithWarningsActive = $allowWarningsActive
+        EmergencyBypassAllActive = $emergencyBypassAllActive
+        ActionBarBypassActive = [bool]$actionBarBypassInfo.Enabled
+        ActionBarBypassReason = $actionBarBypassInfo.Reason
+        KeyBindingsBypassActive = [bool]$keyBindingsBypassInfo.Enabled
+        KeyBindingsBypassReason = $keyBindingsBypassInfo.Reason
+        AnyBypassActive = $anyBypassActive
+    }
+}
+
+function Test-LaunchStrictReady
+{
+    param([AllowNull()][object]$Launch)
+
+    if ($null -eq $Launch)
+    {
+        return $false
+    }
+
+    $overrideState = Get-LaunchOverrideState -Launch $Launch
+    return [bool](Get-OptionalPropertyValue -Object $Launch -Name "IsLaunchReady") -and
+        [bool](Get-OptionalPropertyValue -Object $Launch -Name "CanStartBot") -and
+        -not [bool]$overrideState.AnyBypassActive
+}
+
+function Test-LaunchChatInputOnlyBlocker
+{
+    param([AllowNull()][object]$Launch)
+
+    if ($null -eq $Launch)
+    {
+        return $false
+    }
+
+    $checks = @(Get-OptionalPropertyValue -Object $Launch -Name "Checks")
+    if ($checks.Count -eq 0)
+    {
+        return $false
+    }
+
+    $blockingChecks = @($checks | Where-Object { [bool]$_.IsBlocking })
+    if ($blockingChecks.Count -eq 0)
+    {
+        return $false
+    }
+
+    foreach ($check in $blockingChecks)
+    {
+        $title = "$($check.Title)"
+        $message = "$($check.Message)"
+        if ($title -ne "Addon Handshake" -or $message -notlike "*Chat input is open in WoW*")
+        {
+            return $false
+        }
+    }
+
+    return $true
+}
+
+function Resolve-DoctorReadinessTimeoutDisposition
+{
+    param([AllowNull()][object]$DoctorDisposition)
+
+    if ($null -eq $DoctorDisposition -or "$($DoctorDisposition.Disposition)" -ne "Blocked" -or "$($DoctorDisposition.Reason)" -ne "ReadinessTimeout")
+    {
+        return $DoctorDisposition
+    }
+
+    Write-WarnLine "Doctor reported readiness timeout; rechecking current strict launch readiness before failing"
+
+    try
+    {
+        $launchResp = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+        if ($launchResp.Success -and $null -ne $launchResp.Result -and (Test-LaunchStrictReady -Launch $launchResp.Result))
+        {
+            Write-Ok "Strict launch readiness recovered after doctor timeout; continuing startup"
+            return [pscustomobject]@{
+                Disposition = "Ready"
+                Reason = "RecoveredAfterTimeout"
+                DtcRecovered = [bool](Get-OptionalPropertyValue -Object $DoctorDisposition -Name "DtcRecovered")
+                Launch = $launchResp.Result
+            }
+        }
+    }
+    catch
+    {
+        Write-WarnLine "Could not recheck readiness after doctor timeout: $($_.Exception.Message)"
+    }
+
+    return $DoctorDisposition
+}
+
+function Assert-StrictLaunchReadiness
+{
+    param(
+        [AllowNull()][object]$Launch = $null,
+        [string]$Context = "strict-readiness"
+    )
+
+    if (-not $StrictReadiness)
+    {
+        return
+    }
+
+    if ($null -eq $Launch)
+    {
+        $launchResp = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+        if (-not $launchResp.Success -or $null -eq $launchResp.Result)
+        {
+            throw "Strict readiness gate failed ($Context): /api/launch/status unavailable."
+        }
+
+        $Launch = $launchResp.Result
+    }
+
+    $reasons = @()
+    $overrideState = Get-LaunchOverrideState -Launch $Launch
+
+    if (-not [bool](Get-OptionalPropertyValue -Object $Launch -Name "IsLaunchReady"))
+    {
+        $blocking = @((Get-OptionalPropertyValue -Object $Launch -Name "Checks") | Where-Object { [bool]$_.IsBlocking } | ForEach-Object { "$($_.Title): $($_.Message)" })
+        if ($blocking.Count -gt 0)
+        {
+            $reasons += @($blocking)
+        }
+        else
+        {
+            $reasons += "Launch status is not green."
+        }
+    }
+
+    if (-not [bool](Get-OptionalPropertyValue -Object $Launch -Name "CanStartBot"))
+    {
+        $reasons += "CanStartBot is false."
+    }
+
+    if ([bool]$overrideState.AnyBypassActive)
+    {
+        $reasons += ("Launch override contamination is active (AllowWarnings={0}, Emergency={1}, ActionBarBypass={2}, KeyBindingsBypass={3})." -f
+            [bool]$overrideState.AllowStartWithWarningsActive,
+            [bool]$overrideState.EmergencyBypassAllActive,
+            [bool]$overrideState.ActionBarBypassActive,
+            [bool]$overrideState.KeyBindingsBypassActive)
+    }
+
+    $requestedProfile = [string](Get-OptionalPropertyValue -Object $Launch -Name "RequestedProfile")
+    $appliedProfile = [string](Get-OptionalPropertyValue -Object $Launch -Name "AppliedProfile")
+    if (-not [string]::IsNullOrWhiteSpace($requestedProfile) -and
+        -not [string]::IsNullOrWhiteSpace($appliedProfile) -and
+        $requestedProfile -ne $appliedProfile)
+    {
+        $reasons += ("Requested profile '{0}' does not match applied profile '{1}'." -f $requestedProfile, $appliedProfile)
+    }
+
+    $actionBarIssueCount = [int](Get-OptionalPropertyValue -Object $Launch -Name "ActionBarIssueCount")
+    if ($actionBarIssueCount -gt 0)
+    {
+        $reasons += ("ActionBarIssueCount must be zero but was {0}." -f $actionBarIssueCount)
+    }
+
+    if ($reasons.Count -gt 0)
+    {
+        throw ("Strict readiness gate failed ({0}): {1}" -f $Context, ([string]::Join(" | ", $reasons)))
+    }
+}
+
 function Set-LaunchOverrides
 {
     Write-Info "Applying launch overrides"
 
+    if ($StrictReadiness -and ($AllowStartWithWarnings -or $BypassActionBar -or $BypassKeyBindings))
+    {
+        throw "StrictReadiness forbids AllowStartWithWarnings, BypassActionBar, and BypassKeyBindings."
+    }
+
     $body = @{
-        AllowStartWithWarnings = [bool]$AllowStartWithWarnings
+        AllowStartWithWarnings = $(if ($StrictReadiness) { $false } else { [bool]$AllowStartWithWarnings })
         EmergencyBypassAll = $false
         Bypass = @{
             Route = $false
-            ActionBar = [bool]$BypassActionBar
-            KeyBindings = [bool]$BypassKeyBindings
+            ActionBar = $(if ($StrictReadiness) { $false } else { [bool]$BypassActionBar })
+            KeyBindings = $(if ($StrictReadiness) { $false } else { [bool]$BypassKeyBindings })
         }
         Reason = "agent-cli-startup"
         Source = "Agent-BotControl"
     }
 
     $null = Invoke-AgentApi -Method POST -Path "/api/launch/overrides" -Body $body
+    if ($StrictReadiness)
+    {
+        $launchResp = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+        if ($launchResp.Success -and $null -ne $launchResp.Result)
+        {
+            $overrideState = Get-LaunchOverrideState -Launch $launchResp.Result
+            if ([bool]$overrideState.AnyBypassActive)
+            {
+                throw "StrictReadiness could not clear launch overrides."
+            }
+        }
+    }
     Write-Ok "Launch overrides applied"
 }
 
@@ -2788,6 +3043,11 @@ function Set-ActionBarBypassOverride
         [Parameter(Mandatory = $true)][bool]$Enabled,
         [string]$Reason = "agent-cli-dynamic-actionbar"
     )
+
+    if ($StrictReadiness -and $Enabled)
+    {
+        throw "StrictReadiness forbids Action Bar bypass activation."
+    }
 
     $existingKeyBypass = [bool]$BypassKeyBindings
     try
@@ -2822,6 +3082,11 @@ function Set-KeyBindingsBypassOverride
         [Parameter(Mandatory = $true)][bool]$Enabled,
         [string]$Reason = "agent-cli-dynamic-keybindings"
     )
+
+    if ($StrictReadiness -and $Enabled)
+    {
+        throw "StrictReadiness forbids Key Bindings bypass activation."
+    }
 
     $existingActionBarBypass = [bool]$BypassActionBar
     try
@@ -2993,6 +3258,11 @@ function Try-CloseChatInputFromAutomation
 
 function Try-ResolveBenignActionBarBlocker
 {
+    if ($StrictReadiness)
+    {
+        return $false
+    }
+
     try
     {
         $diag = Invoke-AgentApi -Method GET -Path "/api/diagnostics/actionbar" -TimeoutSec 8
@@ -3047,6 +3317,11 @@ function Try-ResolveBenignActionBarBlocker
 
 function Try-ResolveStaleKeyBindingsBlocker
 {
+    if ($StrictReadiness)
+    {
+        return $false
+    }
+
     try
     {
         $diag = Invoke-AgentApi -Method GET -Path "/api/diagnostics/keybindings" -TimeoutSec 8
@@ -3166,7 +3441,11 @@ function Load-BotProfile
         throw "Profile load failed for '$Profile'"
     }
 
-    $appliedProfile = [string](Get-OptionalPropertyValue -Object $res -Name "AppliedProfile" -Default $res.FileName)
+    $appliedProfile = [string](Get-OptionalPropertyValue -Object $res -Name "AppliedProfile")
+    if ([string]::IsNullOrWhiteSpace($appliedProfile))
+    {
+        $appliedProfile = [string]$res.FileName
+    }
     if (-not [string]::IsNullOrWhiteSpace($appliedProfile) -and $appliedProfile -ne $Profile)
     {
         throw ("Profile load drift detected: requested '{0}' but applied '{1}'." -f $Profile, $appliedProfile)
@@ -3271,7 +3550,7 @@ function Invoke-ReadinessFixes
         Write-Info "Applied $placed targeted action bar placement fix(es)"
     }
 
-    if (-not (Test-ActionBarIssuesClear))
+    if (-not $StrictReadiness -and -not (Test-ActionBarIssuesClear))
     {
         [void](Try-ResolveBenignActionBarBlocker)
     }
@@ -3390,13 +3669,20 @@ function Wait-ForReadiness
         }
 
         $launch = Invoke-AgentApi -Method GET -Path "/api/launch/status" -TimeoutSec 8
-    if ($launch.CanStartBot)
-    {
-        [void](Clear-TransientKeyBindingsBypassIfHealthy -Launch $launch)
-        [void](Clear-TransientActionBarBypassIfHealthy -Launch $launch)
-        Write-Ok "Launch readiness satisfied"
-        return $launch
-    }
+        $launchReady = [bool]$launch.CanStartBot
+        if ($StrictReadiness)
+        {
+            $overrideState = Get-LaunchOverrideState -Launch $launch
+            $launchReady = [bool]$launch.IsLaunchReady -and [bool]$launch.CanStartBot -and -not [bool]$overrideState.AnyBypassActive
+        }
+
+        if ($launchReady)
+        {
+            [void](Clear-TransientKeyBindingsBypassIfHealthy -Launch $launch)
+            [void](Clear-TransientActionBarBypassIfHealthy -Launch $launch)
+            Write-Ok "Launch readiness satisfied"
+            return $launch
+        }
 
         $blocking = @($launch.Checks | Where-Object { $_.IsBlocking })
         $lastBlocking = @($blocking | ForEach-Object { "$($_.Title): $($_.Message)" })
@@ -3436,7 +3722,7 @@ function Wait-ForReadiness
             Write-WarnLine "Readiness not complete (attempt $attempt); reapplying startup fixes"
             Invoke-ReadinessFixes
 
-            if ($actionStatus -eq 4 -and -not $actionBarBypassApplied)
+            if (-not $StrictReadiness -and $actionStatus -eq 4 -and -not $actionBarBypassApplied)
             {
                 if (Try-ResolveBenignActionBarBlocker)
                 {
@@ -3444,7 +3730,7 @@ function Wait-ForReadiness
                 }
             }
 
-            if ($keyStatus -eq 4 -and -not $keyBindingsBypassApplied)
+            if (-not $StrictReadiness -and $keyStatus -eq 4 -and -not $keyBindingsBypassApplied)
             {
                 if (Try-ResolveStaleKeyBindingsBlocker)
                 {
@@ -3497,6 +3783,283 @@ function Get-CurrentSnapshot
     {
         return $null
     }
+}
+
+function New-StartReadinessSnapshot
+{
+    param([Parameter(Mandatory = $true)][string]$Stage)
+
+    $launchResponse = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+    $launch = Get-ApiSafeResultOrNull -Response $launchResponse
+    $botStatusResponse = Invoke-AgentApiSafe -Method GET -Path "/api/bot/status" -TimeoutSec 5
+    $botStatus = Get-ApiSafeResultOrNull -Response $botStatusResponse
+    $snapshot = Get-CurrentSnapshot
+    $overrideState = $(if ($null -ne $launch)
+        {
+            Get-LaunchOverrideState -Launch $launch
+        }
+        else
+        {
+            [pscustomobject]@{
+                AllowStartWithWarningsActive = $false
+                EmergencyBypassAllActive = $false
+                ActionBarBypassActive = $false
+                ActionBarBypassReason = $null
+                KeyBindingsBypassActive = $false
+                KeyBindingsBypassReason = $null
+                AnyBypassActive = $false
+            }
+        })
+
+    return [ordered]@{
+        Stage = $Stage
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        LaunchStatus = $launch
+        BotStatus = $botStatus
+        Snapshot = $snapshot
+        IsLaunchReady = $(if ($null -ne $launch) { [bool](Get-OptionalPropertyValue -Object $launch -Name "IsLaunchReady" -Default $false) } else { $false })
+        CanStartBot = $(if ($null -ne $launch) { [bool](Get-OptionalPropertyValue -Object $launch -Name "CanStartBot" -Default $false) } else { $false })
+        BotActive = $(if ($null -ne $botStatus) { [bool](Get-OptionalPropertyValue -Object $botStatus -Name "IsActive" -Default $false) } else { $false })
+        RequestedProfile = $(if ($null -ne $launch) { [string](Get-OptionalPropertyValue -Object $launch -Name "RequestedProfile" -Default "") } else { "" })
+        AppliedProfile = $(if ($null -ne $launch) { [string](Get-OptionalPropertyValue -Object $launch -Name "AppliedProfile" -Default "") } else { "" })
+        ActionBarIssueCount = $(if ($null -ne $launch) { [int](Get-OptionalPropertyValue -Object $launch -Name "ActionBarIssueCount" -Default 0) } else { 0 })
+        AnyBypassActive = [bool]$overrideState.AnyBypassActive
+        ChatInputVisible = $(if ($null -ne $snapshot) { [bool](Get-OptionalPropertyValue -Object $snapshot -Name "ChatInputVisible" -Default $false) } else { $false })
+    }
+}
+
+function Test-StartReadinessSnapshotPassed
+{
+    param([AllowNull()][object]$Snapshot)
+
+    if ($null -eq $Snapshot)
+    {
+        return $false
+    }
+
+    return [bool](Get-OptionalPropertyValue -Object $Snapshot -Name "IsLaunchReady" -Default $false) -and
+        [bool](Get-OptionalPropertyValue -Object $Snapshot -Name "CanStartBot" -Default $false) -and
+        [bool](Get-OptionalPropertyValue -Object $Snapshot -Name "BotActive" -Default $false) -and
+        -not [bool](Get-OptionalPropertyValue -Object $Snapshot -Name "AnyBypassActive" -Default $false)
+}
+
+function Get-StartReadinessFailureReason
+{
+    param([AllowNull()][object]$Snapshot)
+
+    if ($null -eq $Snapshot)
+    {
+        return "Final startup readiness snapshot was unavailable."
+    }
+
+    $launch = Get-OptionalPropertyValue -Object $Snapshot -Name "LaunchStatus" -Default $null
+    if ($null -eq $launch)
+    {
+        return "Final startup readiness snapshot did not include launch status."
+    }
+
+    $reasons = New-Object System.Collections.Generic.List[string]
+    if (-not [bool](Get-OptionalPropertyValue -Object $Snapshot -Name "BotActive" -Default $false))
+    {
+        [void]$reasons.Add("Bot is inactive in the final post-start snapshot.")
+    }
+
+    if ([bool](Get-OptionalPropertyValue -Object $Snapshot -Name "AnyBypassActive" -Default $false))
+    {
+        [void]$reasons.Add("Launch readiness still has active bypass contamination in the final post-start snapshot.")
+    }
+
+    if (-not [bool](Get-OptionalPropertyValue -Object $Snapshot -Name "IsLaunchReady" -Default $false))
+    {
+        $blocking = @((Get-OptionalPropertyValue -Object $launch -Name "Checks") |
+            Where-Object { [bool]$_.IsBlocking } |
+            ForEach-Object { "$($_.Title): $($_.Message)" })
+        if ($blocking.Count -gt 0)
+        {
+            foreach ($reason in $blocking)
+            {
+                [void]$reasons.Add($reason)
+            }
+        }
+        else
+        {
+            [void]$reasons.Add("Launch status is not green in the final post-start snapshot.")
+        }
+    }
+
+    if (-not [bool](Get-OptionalPropertyValue -Object $Snapshot -Name "CanStartBot" -Default $false))
+    {
+        [void]$reasons.Add("CanStartBot is false in the final post-start snapshot.")
+    }
+
+    if ($reasons.Count -eq 0)
+    {
+        return "Final startup readiness snapshot did not satisfy the strict readiness contract."
+    }
+
+    return [string]::Join(" | ", @($reasons))
+}
+
+function Get-CombatValidationPreflight
+{
+    $launchResponse = Invoke-AgentApiSafe -Method GET -Path "/api/launch/status" -TimeoutSec 8
+    $launch = Get-ApiSafeResultOrNull -Response $launchResponse
+    $bagsResponse = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/bags?take=50" -TimeoutSec 8
+    $bags = Get-ApiSafeResultOrNull -Response $bagsResponse
+    $overrideState = $(if ($null -ne $launch)
+        {
+            Get-LaunchOverrideState -Launch $launch
+        }
+        else
+        {
+            [pscustomobject]@{
+                AllowStartWithWarningsActive = $false
+                EmergencyBypassAllActive = $false
+                ActionBarBypassActive = $false
+                ActionBarBypassReason = $null
+                KeyBindingsBypassActive = $false
+                KeyBindingsBypassReason = $null
+                AnyBypassActive = $false
+            }
+        })
+
+    $reasons = New-Object System.Collections.Generic.List[string]
+    $failureKind = $null
+    if ($null -eq $launch)
+    {
+        [void]$reasons.Add("/api/launch/status was unavailable for combat preflight.")
+        $failureKind = "ValidationReadinessContamination"
+    }
+
+    $requestedProfile = $(if ($null -ne $launch) { [string](Get-OptionalPropertyValue -Object $launch -Name "RequestedProfile" -Default "") } else { "" })
+    $appliedProfile = $(if ($null -ne $launch) { [string](Get-OptionalPropertyValue -Object $launch -Name "AppliedProfile" -Default "") } else { "" })
+    $actionBarIssueCount = $(if ($null -ne $launch) { [int](Get-OptionalPropertyValue -Object $launch -Name "ActionBarIssueCount" -Default 0) } else { 0 })
+
+    if ($null -ne $launch -and -not [bool](Get-OptionalPropertyValue -Object $launch -Name "IsLaunchReady" -Default $false))
+    {
+        [void]$reasons.Add("Launch readiness is not green for combat validation.")
+        if ([string]::IsNullOrWhiteSpace($failureKind))
+        {
+            $failureKind = "ValidationReadinessContamination"
+        }
+    }
+
+    if ($null -ne $launch -and -not [bool](Get-OptionalPropertyValue -Object $launch -Name "CanStartBot" -Default $false))
+    {
+        [void]$reasons.Add("CanStartBot is false for combat validation.")
+        if ([string]::IsNullOrWhiteSpace($failureKind))
+        {
+            $failureKind = "ValidationReadinessContamination"
+        }
+    }
+
+    if ([bool]$overrideState.AnyBypassActive)
+    {
+        [void]$reasons.Add("Launch readiness bypasses are active for combat validation.")
+        if ([string]::IsNullOrWhiteSpace($failureKind))
+        {
+            $failureKind = "ValidationReadinessContamination"
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($requestedProfile) -and
+        -not [string]::IsNullOrWhiteSpace($appliedProfile) -and
+        $requestedProfile -ne $appliedProfile)
+    {
+        [void]$reasons.Add(("Requested profile '{0}' does not match applied profile '{1}'." -f $requestedProfile, $appliedProfile))
+        if ([string]::IsNullOrWhiteSpace($failureKind))
+        {
+            $failureKind = "ValidationProfileContamination"
+        }
+    }
+
+    if ($actionBarIssueCount -gt 0)
+    {
+        [void]$reasons.Add(("ActionBarIssueCount must be zero before combat validation but was {0}." -f $actionBarIssueCount))
+        if ([string]::IsNullOrWhiteSpace($failureKind))
+        {
+            $failureKind = "ValidationReadinessContamination"
+        }
+    }
+
+    if ($null -eq $bags)
+    {
+        [void]$reasons.Add("/api/diagnostics/bags was unavailable for combat preflight.")
+        if ([string]::IsNullOrWhiteSpace($failureKind))
+        {
+            $failureKind = "ValidationBagContamination"
+        }
+    }
+    else
+    {
+        if ([bool](Get-OptionalPropertyValue -Object $bags -Name "BagsFull" -Default $false))
+        {
+            [void]$reasons.Add("bagsFull must be false before combat validation.")
+            $failureKind = "ValidationBagContamination"
+        }
+
+        $totalFreeSlotsGeneral = [int](Get-OptionalPropertyValue -Object $bags -Name "TotalFreeSlotsGeneral" -Default -1)
+        if ($totalFreeSlotsGeneral -lt 15)
+        {
+            [void]$reasons.Add(("totalFreeSlotsGeneral must be >= 15 before combat validation but was {0}." -f $totalFreeSlotsGeneral))
+            $failureKind = "ValidationBagContamination"
+        }
+    }
+
+    return [ordered]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Passed = ($reasons.Count -eq 0)
+        Disposition = $(if ($reasons.Count -eq 0) { "Proceed" } else { "Blocked" })
+        FailureKind = $failureKind
+        FailureReasons = @($reasons)
+        LaunchStatus = $launch
+        Bags = $bags
+        RequestedProfile = $requestedProfile
+        AppliedProfile = $appliedProfile
+        ProfileMatch = (-not [string]::IsNullOrWhiteSpace($requestedProfile) -and -not [string]::IsNullOrWhiteSpace($appliedProfile) -and $requestedProfile -eq $appliedProfile)
+        BagsFull = $(if ($null -ne $bags) { [bool](Get-OptionalPropertyValue -Object $bags -Name "BagsFull" -Default $false) } else { $null })
+        TotalFreeSlotsGeneral = $(if ($null -ne $bags) { [int](Get-OptionalPropertyValue -Object $bags -Name "TotalFreeSlotsGeneral" -Default -1) } else { $null })
+        ActionBarIssueCount = $actionBarIssueCount
+        AnyBypassActive = [bool]$overrideState.AnyBypassActive
+        IsLaunchReady = $(if ($null -ne $launch) { [bool](Get-OptionalPropertyValue -Object $launch -Name "IsLaunchReady" -Default $false) } else { $false })
+        CanStartBot = $(if ($null -ne $launch) { [bool](Get-OptionalPropertyValue -Object $launch -Name "CanStartBot" -Default $false) } else { $false })
+    }
+}
+
+function Get-CombatValidationServiceIncidentKind
+{
+    param(
+        [AllowNull()][object]$RuntimeResponse,
+        [AllowNull()][object]$BagsResponse
+    )
+
+    $runtime = Get-ApiSafeResultOrNull -Response $RuntimeResponse
+    $bags = Get-ApiSafeResultOrNull -Response $BagsResponse
+    if ($null -eq $runtime -or $null -eq $bags)
+    {
+        return $null
+    }
+
+    $goal = [string](Get-OptionalPropertyValue -Object $runtime -Name "CurrentGoal" -Default "")
+    $navigation = Get-OptionalPropertyValue -Object $runtime -Name "Navigation" -Default $null
+    $stuck = Get-OptionalPropertyValue -Object $runtime -Name "StuckDetector" -Default $null
+    $bagsFull = [bool](Get-OptionalPropertyValue -Object $bags -Name "BagsFull" -Default $false)
+    $generalSlots = [int](Get-OptionalPropertyValue -Object $bags -Name "TotalFreeSlotsGeneral" -Default -1)
+    $routeToNextWaypointCount = [int](Get-OptionalPropertyValue -Object $navigation -Name "RouteToNextWaypointCount" -Default -1)
+    $wayPointCount = [int](Get-OptionalPropertyValue -Object $navigation -Name "WayPointCount" -Default -1)
+    $isCurrentlyStuck = [bool](Get-OptionalPropertyValue -Object $stuck -Name "IsCurrentlyStuck" -Default $false)
+
+    if ($bagsFull -and
+        $generalSlots -le 0 -and
+        $goal.StartsWith("Sell", [System.StringComparison]::OrdinalIgnoreCase) -and
+        $routeToNextWaypointCount -eq 0 -and
+        $wayPointCount -eq 0 -and
+        $isCurrentlyStuck)
+    {
+        return "ServicePathDeadlock"
+    }
+
+    return $null
 }
 
 function Test-CharacterAlignmentSnapshot
@@ -3761,6 +4324,7 @@ function Invoke-SystemValidation
 {
     Write-Info "Running system validation suite"
     $checks = New-Object System.Collections.Generic.List[object]
+    $botStatus = $null
 
     try
     {
@@ -3775,24 +4339,42 @@ function Invoke-SystemValidation
 
     try
     {
-        $launch = Invoke-AgentApi -Method GET -Path "/api/launch/status" -TimeoutSec 8
-        $pass = [bool]$launch.CanStartBot
-        $blocking = @($launch.Checks | Where-Object { $_.IsBlocking } | ForEach-Object { "$($_.Title): $($_.Message)" })
-        [void]$checks.Add((New-ValidationCheckResult -Name "Launch readiness" -Passed $pass -Message ($blocking -join "; ") -Data $launch))
-    }
-    catch
-    {
-        [void]$checks.Add((New-ValidationCheckResult -Name "Launch readiness" -Passed $false -Message $_.Exception.Message))
-    }
-
-    try
-    {
         $botStatus = Invoke-AgentApi -Method GET -Path "/api/bot/status" -TimeoutSec 5
         [void]$checks.Add((New-ValidationCheckResult -Name "Bot status" -Passed ([bool]$botStatus.IsActive) -Message "IsActive=$($botStatus.IsActive), Goal=$($botStatus.CurrentGoal)" -Data $botStatus))
     }
     catch
     {
         [void]$checks.Add((New-ValidationCheckResult -Name "Bot status" -Passed $false -Message $_.Exception.Message))
+    }
+
+    try
+    {
+        $launch = Invoke-AgentApi -Method GET -Path "/api/launch/status" -TimeoutSec 8
+        if (($null -ne $botStatus) -and [bool]$botStatus.IsActive -and (Test-LaunchChatInputOnlyBlocker -Launch $launch))
+        {
+            Write-WarnLine "System validation detected chat-open launch blocker while bot is active; attempting automated close and recheck"
+            if (Try-CloseChatInputFromAutomation -Context "system validation" -Attempts 2)
+            {
+                Start-Sleep -Milliseconds 500
+                $launch = Invoke-AgentApi -Method GET -Path "/api/launch/status" -TimeoutSec 8
+            }
+        }
+
+        $pass = if ($StrictReadiness)
+        {
+            Test-LaunchStrictReady -Launch $launch
+        }
+        else
+        {
+            [bool]$launch.CanStartBot
+        }
+
+        $blocking = @($launch.Checks | Where-Object { $_.IsBlocking } | ForEach-Object { "$($_.Title): $($_.Message)" })
+        [void]$checks.Add((New-ValidationCheckResult -Name "Launch readiness" -Passed $pass -Message ($blocking -join "; ") -Data $launch))
+    }
+    catch
+    {
+        [void]$checks.Add((New-ValidationCheckResult -Name "Launch readiness" -Passed $false -Message $_.Exception.Message))
     }
 
     try
@@ -5094,10 +5676,42 @@ function Get-CombatAcceptanceSummary
     $summary["LostTargetReacquireAttemptCountWindow"] = 0
     $summary["LostTargetReacquireSuccessCountWindow"] = 0
     $summary["LostTargetReacquireSuccessRatio"] = $null
+    $summary["PreflightPassed"] = $false
+    $summary["PreflightDisposition"] = $null
+    $summary["PreflightFailureKind"] = $null
+    $summary["BagPreflightState"] = $null
+    $summary["LiveStateContaminated"] = $false
+    $summary["ServiceIncidentKind"] = $null
 
     if ($null -eq $Report)
     {
         Add-ActionFailureReason -Summary $summary -Reason "Controlled combat validation report was not generated."
+        $summary["Passed"] = $false
+        return $summary
+    }
+
+    $summary["PreflightPassed"] = [bool](Get-OptionalPropertyValue -Object $Report -Name "PreflightPassed" -Default $false)
+    $summary["PreflightDisposition"] = [string](Get-OptionalPropertyValue -Object $Report -Name "PreflightDisposition" -Default "")
+    $summary["PreflightFailureKind"] = [string](Get-OptionalPropertyValue -Object $Report -Name "PreflightFailureKind" -Default "")
+    $summary["BagPreflightState"] = Get-OptionalPropertyValue -Object $Report -Name "Preflight" -Default $null
+    $summary["ServiceIncidentKind"] = [string](Get-OptionalPropertyValue -Object $Report -Name "ServiceIncidentKind" -Default "")
+    $summary["LiveStateContaminated"] =
+        (-not [bool]$summary["PreflightPassed"]) -or
+        (([string]$summary["ServiceIncidentKind"]) -eq "ServicePathDeadlock")
+
+    if (-not [bool]$summary["PreflightPassed"])
+    {
+        $preflightFailureReasons = @((Get-OptionalPropertyValue -Object $summary["BagPreflightState"] -Name "FailureReasons" -Default @()))
+        $preflightMessage = if ($preflightFailureReasons.Count -gt 0)
+        {
+            [string]::Join(" | ", $preflightFailureReasons)
+        }
+        else
+        {
+            "Combat validation preflight failed."
+        }
+
+        Add-ActionFailureReason -Summary $summary -Reason $preflightMessage
         $summary["Passed"] = $false
         return $summary
     }
@@ -5158,6 +5772,11 @@ function Get-CombatAcceptanceSummary
                 ([double]$summary["LostTargetReacquireSuccessCountWindow"] / [double]$summary["LostTargetReacquireAttemptCountWindow"]),
                 4)
         }
+    }
+
+    if (([string]$summary["ServiceIncidentKind"]) -eq "ServicePathDeadlock")
+    {
+        Add-ActionFailureReason -Summary $summary -Reason "Combat validation became contaminated by a zero-waypoint Sell service deadlock."
     }
 
     $summary["SpellCoverageComplete"] =
@@ -6528,6 +7147,7 @@ function Invoke-ControlledCombatValidation
 {
     $report = $null
     $summary = $null
+    $script:CombatValidationPreflight = $null
     try
     {
         Ensure-SessionArtifactDir | Out-Null
@@ -6535,6 +7155,29 @@ function Invoke-ControlledCombatValidation
         Write-SessionManifest -Baseline $baseline
         Assert-ServiceReadinessGate -Context "combat-validation-start" -RequireApiHealth
         Assert-ProfileRouteReadyGate -Context "combat-validation-start"
+        $preflight = Get-CombatValidationPreflight
+        $script:CombatValidationPreflight = $preflight
+        [void](Write-ArtifactJson -Name ("{0}-combat-validation-preflight.json" -f $script:RunTag) -Object $preflight)
+        if (-not [bool]$preflight.Passed)
+        {
+            $report = [ordered]@{
+                TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+                Preflight = $preflight
+                PreflightPassed = $false
+                PreflightDisposition = "$($preflight.Disposition)"
+                PreflightFailureKind = "$($preflight.FailureKind)"
+                TargetKills = 30
+                KillsDelta = 0
+                Runtime = $null
+                ServiceIncidentKind = $null
+            }
+
+            [void](Write-ArtifactJson -Name ("{0}-combat-validation.json" -f $script:RunTag) -Object $report)
+            $summary = Get-CombatAcceptanceSummary -Report $report
+            Write-ActionSummaryArtifact -ActionName "ValidateCombat" -Summary $summary
+            throw ("Combat validation preflight blocked execution: {0}" -f ([string]::Join(" | ", @($preflight.FailureReasons))))
+        }
+
         Write-SessionManifest -Baseline $baseline -IncludeRuntimeState
 
         $targetKills = 30
@@ -6569,12 +7212,18 @@ function Invoke-ControlledCombatValidation
         $killsDelta = [int]$endStats.Kills - $startKills
         $logContent = Get-SessionLogContent
         $runtimeFinal = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/navigation/runtime" -TimeoutSec 8
+        $bagsFinal = Invoke-AgentApiSafe -Method GET -Path "/api/diagnostics/bags?take=50" -TimeoutSec 8
         $sampleTelemetry = Convert-CombatSamplesToTelemetry -Samples $samples.ToArray()
         $lowHealthSampleCount = Get-CombatHealthWindowCount -Samples $sampleTelemetry -Threshold 35
         $criticalHealthSampleCount = Get-CombatHealthWindowCount -Samples $sampleTelemetry -Threshold 20
+        $serviceIncidentKind = Get-CombatValidationServiceIncidentKind -RuntimeResponse $runtimeFinal -BagsResponse $bagsFinal
 
         $report = [ordered]@{
             TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Preflight = $preflight
+            PreflightPassed = $true
+            PreflightDisposition = "$($preflight.Disposition)"
+            PreflightFailureKind = $null
             StartKills = $startKills
             EndKills = [int]$endStats.Kills
             KillsDelta = $killsDelta
@@ -6606,6 +7255,8 @@ function Invoke-ControlledCombatValidation
             CriticalHealthSampleCount = $criticalHealthSampleCount
             FocusRestoreFailureCount = (Get-RegexMatchCount -Content $logContent -Pattern "Failed to restore WoW focus")
             Runtime = $runtimeFinal
+            Bags = $bagsFinal
+            ServiceIncidentKind = $serviceIncidentKind
             SampleCount = @($sampleTelemetry).Count
             Samples = @($sampleTelemetry)
         }
@@ -6731,6 +7382,9 @@ function Invoke-LiveSession
 
 function Invoke-StartFlow([switch]$WithValidation)
 {
+    $script:StartFlowInitialReadinessSnapshot = $null
+    $script:StartFlowFinalReadinessSnapshot = $null
+    $script:StartFlowReadinessDecisionSource = $null
     Stop-StaleServerProcesses
     Invoke-ReleaseBuild
     Start-NavigationServer
@@ -6743,30 +7397,58 @@ function Invoke-StartFlow([switch]$WithValidation)
     if ($AutoRepairReadiness)
     {
         $doctor = Invoke-Doctor -SkipEvidence -ReturnDispositionOnly
+        $doctor = Resolve-DoctorReadinessTimeoutDisposition -DoctorDisposition $doctor
         if ($doctor.Disposition -eq "Blocked")
         {
             throw "Doctor readiness repair failed: $($doctor.Reason)"
         }
+
+        Assert-StrictLaunchReadiness -Context "post-doctor"
     }
     else
     {
         Invoke-ReadinessFixes | Out-Null
-        $null = Wait-ForReadiness
+        $launchReady = Wait-ForReadiness
+        Assert-StrictLaunchReadiness -Launch $launchReady -Context "post-readiness"
     }
 
     Assert-ServiceReadinessGate -Context "pre-bot-start" -RequireApiHealth
     Start-Bot
+    $script:StartFlowInitialReadinessSnapshot = New-StartReadinessSnapshot -Stage "post-bot-start-initial"
+    Start-Sleep -Milliseconds 750
+    $script:StartFlowFinalReadinessSnapshot = New-StartReadinessSnapshot -Stage "post-bot-start-final"
+    $script:StartFlowReadinessDecisionSource = "FinalSnapshot"
+    $finalLaunchStatus = Get-OptionalPropertyValue -Object $script:StartFlowFinalReadinessSnapshot -Name "LaunchStatus" -Default $null
+    if (Test-StartReadinessSnapshotPassed -Snapshot $script:StartFlowFinalReadinessSnapshot)
+    {
+        Assert-StrictLaunchReadiness -Launch $finalLaunchStatus -Context "post-bot-start-final"
+    }
+    else
+    {
+        $failureReason = Get-StartReadinessFailureReason -Snapshot $script:StartFlowFinalReadinessSnapshot
+        throw ("Final startup readiness check failed: {0}" -f $failureReason)
+    }
+
     Assert-ProfileRouteReadyGate -Context "post-bot-start"
     Assert-CastingSnapshotReadyGate -Context "post-bot-start"
 
     if ($WithValidation)
     {
+        [void](Try-CloseChatInputFromAutomation -Context "post-start validation" -Attempts 2)
         $report = Invoke-SystemValidation
         if (-not $report.OverallPass)
         {
             throw "Validation reported failures. See report JSON in logs."
         }
     }
+
+    $startActionName = $(if ($WithValidation) { "StartAndValidate" } else { "Start" })
+    $startSummary = New-ActionSummary -ActionName $startActionName
+    $startSummary["Passed"] = $true
+    $startSummary["InitialReadinessSnapshot"] = $script:StartFlowInitialReadinessSnapshot
+    $startSummary["FinalReadinessSnapshot"] = $script:StartFlowFinalReadinessSnapshot
+    $startSummary["ReadinessDecisionSource"] = $script:StartFlowReadinessDecisionSource
+    Write-ActionSummaryArtifact -ActionName $startActionName -Summary $startSummary
 
     if ($StartMonitor)
     {

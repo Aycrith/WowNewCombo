@@ -353,6 +353,7 @@
         "Name": "Immolate",
         "Key": "6",
         "HasCastBar": true,
+        "AfterCastAuraExpected": true,
         "ResetOnNewTarget": true,
         "Requirements": [
           "TargetHealth% > DOT_MIN_HEALTH%",
