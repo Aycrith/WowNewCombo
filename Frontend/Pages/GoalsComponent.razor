@@ -24,7 +24,14 @@
                 <InitButton /> <ToggleButton Disable="@(botController.ClassConfig == null || botController.ClassConfig.GatheringMode)" />
             </div>
         </div>
-    </CardHeader>
+</CardHeader>
+
+    @if (ShowPlan || ShowGoals)
+    {
+        <CardBody>
+            <RouteGoalControl />
+        </CardBody>
+    }
 
     @if (ShowPlan && botController.GoapAgent != null && botController.GoapAgent.Plan.Count > 0)
     {
