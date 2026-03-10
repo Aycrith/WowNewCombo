@@ -11,7 +11,7 @@ namespace Frontend.Controllers;
 
 public sealed record AutonomyControlRequest(
     string Command,
-    string SupervisorId = "default",
+    string SupervisorId = AutonomyRuntimeService.DefaultSupervisorId,
     string? Reason = null,
     string? Source = null);
 
@@ -27,7 +27,7 @@ public sealed class AutonomyController : ControllerBase
     }
 
     [HttpGet("status")]
-    public IActionResult GetStatus([FromQuery] string supervisorId = "default")
+    public IActionResult GetStatus([FromQuery] string supervisorId = AutonomyRuntimeService.DefaultSupervisorId)
     {
         string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
         if (HttpContext != null)
@@ -49,7 +49,7 @@ public sealed class AutonomyController : ControllerBase
     }
 
     [HttpGet("incidents")]
-    public IActionResult GetIncidents([FromQuery] string supervisorId = "default")
+    public IActionResult GetIncidents([FromQuery] string supervisorId = AutonomyRuntimeService.DefaultSupervisorId)
     {
         string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
         if (HttpContext != null)
@@ -64,7 +64,7 @@ public sealed class AutonomyController : ControllerBase
     }
 
     [HttpGet("runs")]
-    public IActionResult GetRuns([FromQuery] string supervisorId = "default", [FromQuery] int limit = 10)
+    public IActionResult GetRuns([FromQuery] string supervisorId = AutonomyRuntimeService.DefaultSupervisorId, [FromQuery] int limit = 10)
     {
         string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
         if (HttpContext != null)
@@ -87,7 +87,7 @@ public sealed class AutonomyController : ControllerBase
             Response.Headers["X-Correlation-ID"] = correlationId;
         }
 
-        (bool pauseRequested, bool stopRequested, KillSwitchState killSwitchState) = autonomyRuntime.ApplyControl(
+        (bool pauseRequested, bool stopRequested, KillSwitchState killSwitchState, LiveWindowState liveWindowState) = autonomyRuntime.ApplyControl(
             request.SupervisorId,
             request.Command,
             request.Reason,
@@ -100,12 +100,13 @@ public sealed class AutonomyController : ControllerBase
             request.SupervisorId,
             PauseRequested = pauseRequested,
             StopRequested = stopRequested,
-            KillSwitchState = killSwitchState
+            KillSwitchState = killSwitchState,
+            LiveWindowState = liveWindowState
         });
     }
 
     [HttpGet("incidents/{incidentId}/artifacts")]
-    public IActionResult GetIncidentArtifacts(string incidentId, [FromQuery] string supervisorId = "default")
+    public IActionResult GetIncidentArtifacts(string incidentId, [FromQuery] string supervisorId = AutonomyRuntimeService.DefaultSupervisorId)
     {
         string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
         if (HttpContext != null)

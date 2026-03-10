@@ -26,6 +26,7 @@ public sealed partial class CastingHandler
 
     private const int MAX_WAIT_MELEE_RANGE = 10_000;
     private const int AmbiguousInstantRecheckMs = 220;
+    private const int ImmolateDuplicateSuppressMs = 3000;
     private const int RuntimeMetricsWindowMs = 10 * 60 * 1000;
 
     private readonly ILogger<CastingHandler> logger;
@@ -56,6 +57,8 @@ public sealed partial class CastingHandler
     private readonly Queue<long> uiFeedbackNotDetectedTicks = [];
     private readonly Queue<long> ambiguousCastResolvedTicks = [];
     private readonly Queue<long> interruptedRetrySuppressedTicks = [];
+    private long recentImmolateSuppressUntilTick;
+    private int recentImmolateTargetGuid;
 
     public bool SpellInQueue()
     {
@@ -908,10 +911,35 @@ public sealed partial class CastingHandler
     public bool Cast(KeyAction item, Func<bool> interrupt)
     {
         CancellationToken token = CancellationToken.None;
+        int castTargetGuid = playerReader.TargetGuid;
 
         if (item.PressDuration > InputDuration.DefaultPress ||
             item.HasCastBar)
             token = interruptWatchdog.Set(interrupt);
+
+        long nowTick = Environment.TickCount64;
+        if (ShouldSuppressRecentImmolateRetry(
+            item.Name,
+            item.AfterCastAuraExpected,
+            castTargetGuid,
+            recentImmolateTargetGuid,
+            nowTick,
+            recentImmolateSuppressUntilTick))
+        {
+            int delayMs = GetRemainingImmolateSuppressMs(nowTick, recentImmolateSuppressUntilTick);
+            item.SetClicked(delayMs);
+
+            if (Log && item.Log)
+            {
+                logger.LogInformation(
+                    "[{name,-17}] suppressing immediate same-target retry on target {targetGuid} for {delayMs}ms",
+                    item.Name,
+                    castTargetGuid,
+                    delayMs);
+            }
+
+            return false;
+        }
 
         if (!PreparedForCast(item, token))
             return false;
@@ -987,6 +1015,11 @@ public sealed partial class CastingHandler
         }
 
         CheckPostCastFlags(item, auraHash, token);
+        UpdateRecentImmolateSuppression(
+            item.Name,
+            item.AfterCastAuraExpected,
+            castTargetGuid,
+            (MissType)combatLog.TargetMissType.Value);
 
         item.ConsumeCharge();
 
@@ -1052,6 +1085,39 @@ public sealed partial class CastingHandler
         return castError == UI_ERROR.ERR_SPELL_FAILED_INTERRUPTED;
     }
 
+    internal static bool ShouldSuppressRecentImmolateRetry(
+        string actionName,
+        bool afterCastAuraExpected,
+        int currentTargetGuid,
+        int recentTargetGuid,
+        long nowTick,
+        long suppressUntilTick)
+    {
+        return afterCastAuraExpected &&
+            string.Equals(actionName, "Immolate", StringComparison.Ordinal) &&
+            currentTargetGuid != 0 &&
+            currentTargetGuid == recentTargetGuid &&
+            nowTick < suppressUntilTick;
+    }
+
+    internal static bool ShouldArmRecentImmolateSuppression(
+        string actionName,
+        bool afterCastAuraExpected,
+        int targetGuid,
+        MissType missType)
+    {
+        return afterCastAuraExpected &&
+            string.Equals(actionName, "Immolate", StringComparison.Ordinal) &&
+            targetGuid != 0 &&
+            missType is not MissType.MISS and not MissType.RESIST;
+    }
+
+    internal static int GetRemainingImmolateSuppressMs(long nowTick, long suppressUntilTick)
+    {
+        long remainingMs = Math.Max(suppressUntilTick - nowTick, 0);
+        return remainingMs > int.MaxValue ? int.MaxValue : (int)remainingMs;
+    }
+
     private void SuppressImmediateReattempt(KeyAction item)
     {
         if (item.BaseAction)
@@ -1065,6 +1131,36 @@ public sealed partial class CastingHandler
                 Math.Max(MIN_GCD - playerReader.SpellQueueTimeMs, playerReader.HalfSpellQueueTimeMs));
         delayMs = Math.Max(delayMs, playerReader.NetworkLatency);
         item.SetClicked(delayMs);
+    }
+
+    private void UpdateRecentImmolateSuppression(
+        string actionName,
+        bool afterCastAuraExpected,
+        int targetGuid,
+        MissType missType)
+    {
+        if (!string.Equals(actionName, "Immolate", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (ShouldArmRecentImmolateSuppression(
+            actionName,
+            afterCastAuraExpected,
+            targetGuid,
+            missType))
+        {
+            recentImmolateTargetGuid = targetGuid;
+            recentImmolateSuppressUntilTick = Environment.TickCount64 + ImmolateDuplicateSuppressMs;
+            return;
+        }
+
+        if (targetGuid == recentImmolateTargetGuid &&
+            missType is MissType.MISS or MissType.RESIST)
+        {
+            recentImmolateTargetGuid = 0;
+            recentImmolateSuppressUntilTick = 0;
+        }
     }
 
     private void RecordCurrentActionNotDetected()

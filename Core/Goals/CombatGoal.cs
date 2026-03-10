@@ -41,6 +41,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
     private readonly CastingHandler castingHandler;
     private readonly IMountHandler mountHandler;
     private readonly CombatLog combatLog;
+    private readonly GoapAgentState state;
     private readonly IRotationOptimizer rotationOptimizer;
     private readonly BehaviorTreeCombatEngine? behaviorTreeEngine;
     private readonly FeatureFlagsOptions featureFlags;
@@ -89,6 +90,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         Wait wait, PlayerReader playerReader, StopMoving stopMoving, AddonBits bits,
         ClassConfiguration classConfig,
         CastingHandler castingHandler, CombatLog combatLog,
+        GoapAgentState state,
         IMountHandler mountHandler,
         IRotationOptimizer rotationOptimizer,
         IOptions<FeatureFlagsOptions> featureFlagsOptions,
@@ -102,6 +104,7 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         this.playerReader = playerReader;
         this.bits = bits;
         this.combatLog = combatLog;
+        this.state = state;
 
         this.stopMoving = stopMoving;
         this.castingHandler = castingHandler;
@@ -582,6 +585,11 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         bool hasRecentCombatProgress = HasRecentCombatProgress(nowTick);
         bool deadTargetJustCleared = HasRecentDeadTargetClearSignal(nowTick, lastDeadTargetClearTick, DeadTargetClearRecentWindowMs);
         bool recentKillToLootHandoff = killToLootHandoffActive && HasRecentTimestampSignal(nowTick, lastKillToLootHandoffTick, RecentCombatProgressWindowMs);
+        bool hasPendingCorpseOrLootState = HasPendingCorpseOrLootStateSignal(
+            state.ShouldConsumeCorpse,
+            state.LootableCorpseCount,
+            state.ConsumableCorpseCount,
+            state.LastCombatKillCount);
         bool hasImmediateAlternateThreat = HasImmediateAlternateThreatSignal(
             hasLivePetTarget: ShouldAttemptPetTargetRecoveryAfterDeadTarget(bits.Pet(), playerReader.PetTarget(), bits.PetTarget_Alive()),
             damageTakenCount: combatLog.DamageTakenCount(),
@@ -591,10 +599,13 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
             hasRecentKillCredit,
             hasRecentCombatProgress || recentKillToLootHandoff,
             deadTargetJustCleared,
+            hasPendingCorpseOrLootState,
             HasValidCombatTarget(),
             hasImmediateAlternateThreat);
 
-        if (!suppress && killToLootHandoffActive && !hasRecentKillCredit && !hasRecentCombatProgress && !deadTargetJustCleared)
+        if (!suppress &&
+            killToLootHandoffActive &&
+            (!hasPendingCorpseOrLootState || (!hasRecentKillCredit && !hasRecentCombatProgress && !deadTargetJustCleared)))
         {
             ResetKillToLootHandoffState();
         }
@@ -642,15 +653,28 @@ public sealed class CombatGoal : GoapGoal, IGoapEventListener, IDisposable
         bool hasRecentKillCredit,
         bool hasRecentCombatProgress,
         bool deadTargetJustCleared,
+        bool hasPendingCorpseOrLootState,
         bool hasValidCombatTarget,
         bool hasImmediateAlternateThreat)
     {
-        if (hasValidCombatTarget || hasImmediateAlternateThreat)
+        if (hasValidCombatTarget || hasImmediateAlternateThreat || !hasPendingCorpseOrLootState)
         {
             return false;
         }
 
         return hasRecentKillCredit || hasRecentCombatProgress || deadTargetJustCleared;
+    }
+
+    internal static bool HasPendingCorpseOrLootStateSignal(
+        bool shouldConsumeCorpse,
+        int lootableCorpseCount,
+        int consumableCorpseCount,
+        int lastCombatKillCount)
+    {
+        return shouldConsumeCorpse ||
+            lootableCorpseCount > 0 ||
+            consumableCorpseCount > 0 ||
+            lastCombatKillCount > 0;
     }
 
     private void ResetLostTargetRecoveryState()

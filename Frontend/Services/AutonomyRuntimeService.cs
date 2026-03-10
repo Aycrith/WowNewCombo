@@ -13,6 +13,8 @@ namespace Frontend.Services;
 
 public sealed class AutonomyRuntimeService
 {
+    public const string DefaultSupervisorId = "autonomy-live-prep-warlock";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -33,7 +35,7 @@ public sealed class AutonomyRuntimeService
             env.ContentRootPath,
             "logs",
             "autonomous-supervisor",
-            string.IsNullOrWhiteSpace(supervisorId) ? "default" : supervisorId);
+            string.IsNullOrWhiteSpace(supervisorId) ? DefaultSupervisorId : supervisorId);
     }
 
     public string GetControlRoot(string supervisorId)
@@ -41,7 +43,7 @@ public sealed class AutonomyRuntimeService
         return Path.Combine(GetSupervisorRoot(supervisorId), "control");
     }
 
-    public AutonomyRunState GetRunState(string supervisorId = "default")
+    public AutonomyRunState GetRunState(string supervisorId = DefaultSupervisorId)
     {
         string supervisorRoot = GetSupervisorRoot(supervisorId);
         AutonomyRunState state = ReadJson<AutonomyRunState>(Path.Combine(supervisorRoot, "state.json")) ?? new AutonomyRunState();
@@ -53,17 +55,23 @@ public sealed class AutonomyRuntimeService
             state.KillSwitchState = persistedKillSwitch;
         }
 
+        LiveWindowState? persistedLiveWindow = ReadJson<LiveWindowState>(Path.Combine(GetControlRoot(supervisorId), "live-window.json"));
+        if (persistedLiveWindow != null)
+        {
+            state.LiveWindowState = persistedLiveWindow;
+        }
+
         return state;
     }
 
-    public IReadOnlyList<AutonomyIncident> GetIncidents(string supervisorId = "default")
+    public IReadOnlyList<AutonomyIncident> GetIncidents(string supervisorId = DefaultSupervisorId)
     {
         string supervisorRoot = GetSupervisorRoot(supervisorId);
         return ReadJson<List<AutonomyIncident>>(Path.Combine(supervisorRoot, "incidents-latest.json")) ??
             [];
     }
 
-    public IReadOnlyList<AutonomyRunSummary> GetRuns(string supervisorId = "default", int limit = 10)
+    public IReadOnlyList<AutonomyRunSummary> GetRuns(string supervisorId = DefaultSupervisorId, int limit = 10)
     {
         string supervisorRoot = GetSupervisorRoot(supervisorId);
         List<AutonomyRunSummary>? runs = ReadJson<List<AutonomyRunSummary>>(Path.Combine(supervisorRoot, "runs-latest.json"));
@@ -83,7 +91,7 @@ public sealed class AutonomyRuntimeService
         return incident?.Artifacts ?? [];
     }
 
-    public JsonElement? GetLatestStatus(string supervisorId = "default")
+    public JsonElement? GetLatestStatus(string supervisorId = DefaultSupervisorId)
     {
         string path = Path.Combine(GetSupervisorRoot(supervisorId), "status-latest.json");
         if (!File.Exists(path))
@@ -95,7 +103,7 @@ public sealed class AutonomyRuntimeService
         return document.RootElement.Clone();
     }
 
-    public (bool PauseRequested, bool StopRequested, KillSwitchState KillSwitchState) ApplyControl(
+    public (bool PauseRequested, bool StopRequested, KillSwitchState KillSwitchState, LiveWindowState LiveWindowState) ApplyControl(
         string supervisorId,
         string command,
         string? reason,
@@ -107,6 +115,7 @@ public sealed class AutonomyRuntimeService
         string pausePath = Path.Combine(controlRoot, "pause.flag");
         string stopPath = Path.Combine(controlRoot, "stop.flag");
         string killSwitchPath = Path.Combine(controlRoot, "kill-switch.json");
+        string liveWindowPath = Path.Combine(controlRoot, "live-window.json");
 
         string normalized = command.Trim().ToLowerInvariant();
         switch (normalized)
@@ -121,6 +130,11 @@ public sealed class AutonomyRuntimeService
 
             case "stop":
                 File.WriteAllText(stopPath, DateTimeOffset.UtcNow.ToString("O"));
+                break;
+
+            case "clearstop":
+            case "acknowledgestop":
+                DeleteIfExists(stopPath);
                 break;
 
             case "enablekillswitch":
@@ -143,6 +157,48 @@ public sealed class AutonomyRuntimeService
                 });
                 break;
 
+            case "enablelivewindow":
+            case "armlivewindow":
+                WriteJson(liveWindowPath, new LiveWindowState
+                {
+                    Enabled = true,
+                    Reason = reason ?? "Operator armed live window.",
+                    Source = source ?? "api",
+                    UpdatedUtc = DateTimeOffset.UtcNow
+                });
+                break;
+
+            case "disablelivewindow":
+            case "disarmlivewindow":
+                WriteJson(liveWindowPath, new LiveWindowState
+                {
+                    Enabled = false,
+                    Reason = reason ?? "Operator disarmed live window.",
+                    Source = source ?? "api",
+                    UpdatedUtc = DateTimeOffset.UtcNow
+                });
+                break;
+
+            case "resetprep":
+            case "resetpreplane":
+                DeleteIfExists(pausePath);
+                DeleteIfExists(stopPath);
+                WriteJson(killSwitchPath, new KillSwitchState
+                {
+                    Enabled = false,
+                    Reason = reason ?? "Prep lane reset.",
+                    Source = source ?? "api",
+                    UpdatedUtc = DateTimeOffset.UtcNow
+                });
+                WriteJson(liveWindowPath, new LiveWindowState
+                {
+                    Enabled = false,
+                    Reason = reason ?? "Prep lane reset.",
+                    Source = source ?? "api",
+                    UpdatedUtc = DateTimeOffset.UtcNow
+                });
+                break;
+
             default:
                 throw new InvalidOperationException($"Unsupported autonomy control command '{command}'.");
         }
@@ -154,10 +210,18 @@ public sealed class AutonomyRuntimeService
             Source = string.Empty
         };
 
+        LiveWindowState liveWindowState = ReadJson<LiveWindowState>(liveWindowPath) ?? new LiveWindowState
+        {
+            Enabled = false,
+            Reason = string.Empty,
+            Source = string.Empty
+        };
+
         return (
             PauseRequested: File.Exists(pausePath),
             StopRequested: File.Exists(stopPath),
-            KillSwitchState: killSwitchState);
+            KillSwitchState: killSwitchState,
+            LiveWindowState: liveWindowState);
     }
 
     private static T? ReadJson<T>(string path)

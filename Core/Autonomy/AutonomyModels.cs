@@ -111,6 +111,14 @@ public sealed class KillSwitchState
     public DateTimeOffset? UpdatedUtc { get; set; }
 }
 
+public sealed class LiveWindowState
+{
+    public bool Enabled { get; set; }
+    public string Reason { get; set; } = string.Empty;
+    public string Source { get; set; } = string.Empty;
+    public DateTimeOffset? UpdatedUtc { get; set; }
+}
+
 public sealed class AutonomyRunSummary
 {
     public string CycleId { get; set; } = string.Empty;
@@ -137,6 +145,7 @@ public sealed class AutonomyRunState
     public Dictionary<string, RetryLedgerEntry> RetryLedger { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public PromotionState PromotionState { get; set; } = new();
     public KillSwitchState KillSwitchState { get; set; } = new();
+    public LiveWindowState LiveWindowState { get; set; } = new();
     public string WorkspaceFingerprint { get; set; } = string.Empty;
     public bool? WorkspaceDirty { get; set; }
     public string StartupBlockerFingerprint { get; set; } = string.Empty;
