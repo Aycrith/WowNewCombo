@@ -1,3 +1,4 @@
+using Core;
 using Core.Database;
 using Core.GOAP;
 
@@ -45,6 +46,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     private const int KEYBOARD_ONLY_VENDOR_TURN_MS = 180;
     private const int KEYBOARD_ONLY_VENDOR_TARGET_WAIT_MS = 220;
     private const int MAX_TIME_TO_REACH_SERVICE_TARGET = 2000;
+    private const int SERVICE_DEADLOCK_ABORT_THRESHOLD = 2;
     // Keep broad enough to reach nearby town service NPCs from common grind loops,
     // but still reject obviously remote candidates before pathing.
     private const float MAX_AUTO_NPC_TRAVEL_DISTANCE = 750f;
@@ -57,6 +59,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     private readonly KeyAction key;
     private readonly Wait wait;
     private readonly Navigation navigation;
+    private readonly StuckDetector stuckDetector;
     private readonly PlayerReader playerReader;
     private readonly AddonBits bits;
     private readonly StopMoving stopMoving;
@@ -85,6 +88,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
     private static readonly TimeSpan NoPathRetryDelay = TimeSpan.FromSeconds(30);
     private DateTime noPathBackoffUntilUtc;
     private int farDestinationRetryCount;
+    private int zeroWaypointBreadcrumbDeadlockCount;
 
     #region IRouteProvider
 
@@ -114,7 +118,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
     public AdhocNPCGoal(KeyAction key, ILogger<AdhocNPCGoal> logger, ConfigurableInput input,
         Wait wait, PlayerReader playerReader, GossipReader gossipReader, AddonBits bits,
-        Navigation navigation, StopMoving stopMoving, PlayerDirection playerDirection, AreaDB areaDB,
+        Navigation navigation, StuckDetector stuckDetector, StopMoving stopMoving, PlayerDirection playerDirection, AreaDB areaDB,
         NpcNameTargeting npcNameTargeting, ClassConfiguration classConfig,
         BagReader bagReader, SessionStat sessionStat,
         IMountHandler mountHandler, ExecGameCommand exec, CancellationTokenSource cts)
@@ -139,6 +143,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         this.gossipReader = gossipReader;
 
         this.navigation = navigation;
+        this.stuckDetector = stuckDetector;
         navigation.OnDestinationReached += Navigation_OnDestinationReached;
         navigation.OnWayPointReached += Navigation_OnWayPointReached;
         navigation.OnNoPathFound += Navigation_OnNoPathFound;
@@ -245,6 +250,7 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
 
         pathState = PathState.ApproachPathStart;
         farDestinationRetryCount = 0;
+        zeroWaypointBreadcrumbDeadlockCount = 0;
 
         MountIfPossible();
     }
@@ -276,11 +282,28 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         if (bits.Drowning())
             input.PressJump();
 
+        if (ShouldAbortServiceAttemptForDeadlock())
+        {
+            AbortServiceAttemptForDeadlock();
+            wait.Update();
+            return;
+        }
+
         if (pathState != PathState.Finished)
             navigation.Update();
 
         wait.Update();
     }
+
+    internal static bool ShouldAbortForZeroWaypointServiceDeadlock(
+        UnstuckState currentState,
+        int routeToNextWaypointCount,
+        int wayPointCount,
+        int consecutiveDetections)
+        => currentState == UnstuckState.BreadcrumbBacktrack &&
+           routeToNextWaypointCount == 0 &&
+           wayPointCount == 0 &&
+           consecutiveDetections >= SERVICE_DEADLOCK_ABORT_THRESHOLD;
 
 
     private void SetClosestWaypoint()
@@ -835,6 +858,53 @@ public sealed partial class AdhocNPCGoal : GoapGoal, IGoapEventListener, IRouteP
         FaceNpcCandidateForKeyboardOnlyAcquire();
         wait.Update();
         return true;
+    }
+
+    private bool ShouldAbortServiceAttemptForDeadlock()
+    {
+        if (pathState == PathState.Finished || token.IsCancellationRequested)
+        {
+            zeroWaypointBreadcrumbDeadlockCount = 0;
+            return false;
+        }
+
+        NavigationRuntimeSnapshot navigationSnapshot = navigation.GetRuntimeSnapshot();
+        StuckDetectorRuntimeSnapshot stuckSnapshot = stuckDetector.GetRuntimeSnapshot();
+        bool deadlockDetected = ShouldAbortForZeroWaypointServiceDeadlock(
+            stuckSnapshot.CurrentState,
+            navigationSnapshot.RouteToNextWaypointCount,
+            navigationSnapshot.WayPointCount,
+            zeroWaypointBreadcrumbDeadlockCount + 1);
+
+        if (stuckSnapshot.CurrentState == UnstuckState.BreadcrumbBacktrack &&
+            navigationSnapshot.RouteToNextWaypointCount == 0 &&
+            navigationSnapshot.WayPointCount == 0)
+        {
+            zeroWaypointBreadcrumbDeadlockCount++;
+        }
+        else
+        {
+            zeroWaypointBreadcrumbDeadlockCount = 0;
+        }
+
+        return deadlockDetected;
+    }
+
+    private void AbortServiceAttemptForDeadlock()
+    {
+        logger.LogWarning(
+            "Aborting service attempt after repeated zero-waypoint breadcrumb deadlock. Service={Service} CurrentGoal={Goal}",
+            requestedServiceKind.ToStringF(),
+            key.Name);
+
+        SendGoapEvent(ScreenCaptureEvent.Default);
+        noPathBackoffUntilUtc = DateTime.UtcNow.Add(NoPathRetryDelay);
+        zeroWaypointBreadcrumbDeadlockCount = 0;
+        navigation.StopMovement();
+        navigation.Stop();
+        stopMoving.Stop();
+        input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+        pathState = PathState.Finished;
     }
 
     private bool MoveToTargetAndReached()

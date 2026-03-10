@@ -25,6 +25,8 @@ public sealed class TargetPetTargetGoal : GoapGoal
         this.execGameCommand = execGameCommand;
 
         AddPrecondition(GoapKey.targetisalive, false);
+        AddPrecondition(GoapKey.producedcorpse, false);
+        AddPrecondition(GoapKey.shouldloot, false);
 
         if (input.KeyboardOnly)
         {

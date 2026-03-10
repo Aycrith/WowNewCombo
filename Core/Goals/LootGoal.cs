@@ -18,10 +18,29 @@ namespace Core.Goals;
 
 public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 {
+    internal enum KeyboardLootTargetIssue
+    {
+        None,
+        PetTarget,
+        AliveTarget
+    }
+
+    internal enum PetRefusedLootOutcome
+    {
+        None,
+        Looted,
+        CorpseNotFound,
+        InteractFailed
+    }
+
     public override float Cost => 4.6f;
 
     private const int MAX_TIME_TO_REACH_MELEE = GoalTimeouts.MaxTimeToReachMeleeMs;
     private const int MAX_TIME_TO_WAIT_NPC_NAME = 750;
+    private const int PET_BLOCKED_CORPSE_WAIT_MS = 1200;
+    private const int PET_BLOCKED_CORPSE_POLL_MS = 100;
+    private const int DIRECT_CORPSE_APPROACH_TIMEOUT_MS = 1200;
+    private const int LOOT_INTERACTION_CONFIRM_TIMEOUT_MS = 400;
 
     private readonly ILogger<LootGoal> logger;
     private readonly ConfigurableInput input;
@@ -43,9 +62,16 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
     private readonly CancellationToken token;
 
     private readonly List<CorpseEvent> corpseLocations = [];
+    private readonly HashSet<CorpseEvent> skippedCorpseCandidatesThisWindow = [];
 
+    private CorpseEvent? activeCorpseCandidate;
+    private CorpseEvent? primaryCorpseCandidate;
     private bool canGather;
     private int targetId;
+    private bool petTargetRefusedThisWindow;
+    private int refusedLootTargetGuid;
+    private bool corpseInteractionObservedThisWindow;
+    private bool directCorpseCandidateProbeAttemptedThisWindow;
 
     public LootGoal(ILogger<LootGoal> logger,
         ConfigurableInput input, Wait wait,
@@ -104,6 +130,13 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         }
 
         CheckInventoryFull();
+        petTargetRefusedThisWindow = false;
+        refusedLootTargetGuid = 0;
+        corpseInteractionObservedThisWindow = false;
+        directCorpseCandidateProbeAttemptedThisWindow = false;
+        skippedCorpseCandidatesThisWindow.Clear();
+        activeCorpseCandidate = GetClosestCorpse();
+        primaryCorpseCandidate = activeCorpseCandidate;
 
         if (TryLoot())
         {
@@ -146,6 +179,16 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             return true;
         }
 
+        if (TryWaitForPetToClearCorpse())
+        {
+            return true;
+        }
+
+        if (TryLootByDirectTrackedCorpseRecovery())
+        {
+            return true;
+        }
+
         if (TryLootByCursorFallback())
         {
             return true;
@@ -156,6 +199,21 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private void HandleSuccessfulLoot()
     {
+        if (bits.Target() && playerReader.IsInMeleeRange() &&
+            (!bits.SoftInteract() || EligibleCorpseSoftTargetExists()))
+        {
+            input.PressInteract();
+            wait.Update();
+        }
+
+        if (petTargetRefusedThisWindow)
+        {
+            logger.LogInformation("Loot pet refusal outcome: {Outcome}", ClassifyPetRefusedLootOutcome(
+                looted: true,
+                corpseInteractionObserved: corpseInteractionObservedThisWindow,
+                directCorpseCandidateProbeAttempted: directCorpseCandidateProbeAttemptedThisWindow));
+        }
+
         int maxTimeLootWindowOpenMs =
             Math.Max(playerReader.DoubleNetworkLatency, Loot.LOOTFRAME_OPEN_TIME_MS);
 
@@ -202,7 +260,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         state.GatherableCorpseCount++;
 
-        CorpseEvent? ce = GetClosestCorpse();
+        CorpseEvent? ce = GetOrSelectActiveCorpseCandidate();
         if (ce == null)
             return;
 
@@ -211,6 +269,19 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
     private void HandleFailedLoot()
     {
+        if (primaryCorpseCandidate != null)
+        {
+            activeCorpseCandidate = primaryCorpseCandidate;
+        }
+
+        if (petTargetRefusedThisWindow)
+        {
+            logger.LogWarning("Loot pet refusal outcome: {Outcome}", ClassifyPetRefusedLootOutcome(
+                looted: false,
+                corpseInteractionObserved: corpseInteractionObservedThisWindow,
+                directCorpseCandidateProbeAttempted: directCorpseCandidateProbeAttemptedThisWindow));
+        }
+
         SendGoapEvent(ScreenCaptureEvent.Default);
         Log("Loot Failed, target not found!");
     }
@@ -220,6 +291,17 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         SendGoapEvent(new RemoveClosestPoi(CorpseEvent.NAME));
         state.LootableCorpseCount = Math.Max(0, state.LootableCorpseCount - 1);
 
+        if (activeCorpseCandidate != null && corpseLocations.Remove(activeCorpseCandidate))
+        {
+            activeCorpseCandidate = null;
+            primaryCorpseCandidate = null;
+            skippedCorpseCandidatesThisWindow.Clear();
+            return;
+        }
+
+        activeCorpseCandidate = null;
+        primaryCorpseCandidate = null;
+        skippedCorpseCandidatesThisWindow.Clear();
         if (corpseLocations.Count > 0)
         {
             corpseLocations.Remove(GetClosestCorpse()!);
@@ -271,6 +353,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
                 return false;
             }
 
+            corpseInteractionObservedThisWindow = true;
             Log("Nearest Corpse mouseover interaction sent...");
             float targetElapsedMs = WaitForLootInteraction();
             if (targetElapsedMs < 0 && !bits.Target() && !LootWindowOpen())
@@ -300,8 +383,26 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             LogFoundNpcNameCount(logger, npcNameTargeting.NpcCount, targetElapsedMs);
 
             CheckForCanGather();
+            if (TryOpenLootOnCurrentCorpseTarget())
+            {
+                return true;
+            }
 
-            return LootWindowOpen() || (bits.Target() && playerReader.MinRangeZero()) || MoveToTargetAndReached();
+            if (ShouldAttemptLootOpenAfterCorpseAcquire(
+                hasTarget: bits.Target(),
+                targetDead: bits.Target_Dead(),
+                lootWindowOpen: LootWindowOpen(),
+                inLootRange: playerReader.IsInMeleeRange() || playerReader.MinRangeZero()))
+            {
+                return false;
+            }
+
+            if (!MoveToTargetAndReached())
+            {
+                return false;
+            }
+
+            return TryOpenLootOnCurrentCorpseTarget();
         }
         finally
         {
@@ -318,6 +419,11 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         foreach (CorpseEvent corpse in corpseLocations)
         {
+            if (skippedCorpseCandidatesThisWindow.Contains(corpse))
+            {
+                continue;
+            }
+
             Vector3 worldPos = WorldMapAreaDB.ToWorld_FlipXY(corpse.MapLoc, playerReader.WorldMapArea);
 
             float distance = playerWorldLoc.WorldDistanceXYTo(worldPos);
@@ -331,8 +437,21 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         return closest;
     }
 
+    private CorpseEvent? GetOrSelectActiveCorpseCandidate()
+    {
+        if (activeCorpseCandidate != null &&
+            !skippedCorpseCandidatesThisWindow.Contains(activeCorpseCandidate) &&
+            corpseLocations.Contains(activeCorpseCandidate))
+        {
+            return activeCorpseCandidate;
+        }
+
+        activeCorpseCandidate = GetClosestCorpse();
+        return activeCorpseCandidate;
+    }
+
     private float WaitForLootInteraction()
-        => wait.Until(playerReader.DoubleNetworkLatency, () => bits.Target() || LootWindowOpen());
+        => wait.Until(GetLootInteractionTimeoutMs(playerReader.DoubleNetworkLatency), () => bits.Target() || LootWindowOpen());
 
     private void CheckForCanGather()
     {
@@ -374,7 +493,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         else if (corpseLocations.Count > 0)
         {
             Vector3 playerMap = playerReader.MapPos;
-            CorpseEvent e = GetClosestCorpse()!;
+            CorpseEvent e = GetOrSelectActiveCorpseCandidate()!;
             float heading = DirectionCalculator.CalculateMapHeading(playerMap, e.MapLoc);
             playerDirection.SetDirection(heading);
             wait.Fixed(playerReader.DoubleNetworkLatency);
@@ -388,12 +507,18 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             }
         }
 
+        if (ShouldSkipKeyboardRetryAfterPetRefusal(petTargetRefusedThisWindow))
+        {
+            Log($"Skipping keyboard retry after pet target refusal for guid {refusedLootTargetGuid}; preferring corpse completion only for this loot window.");
+            return false;
+        }
+
         return LootKeyboard();
     }
 
     private bool LootKeyboard()
     {
-        CorpseEvent? e = GetClosestCorpse();
+        CorpseEvent? e = GetOrSelectActiveCorpseCandidate();
         if (e != null)
         {
             float targetDirection = DirectionCalculator.CalculateMapHeading(playerReader.MapPos, e.MapLoc);
@@ -403,20 +528,29 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             wait.Update();
         }
 
-        if (bits.SoftInteract_Enabled() &&
-            (!bits.SoftInteract() || EligibleCorpseSoftTargetExists()))
-        {
-            input.PressInteract();
-            wait.Update();
+        bool targetClearedThisWindow = false;
 
+        if (TrySoftInteractCorpse())
+        {
             if (state.RecentlyLooted.Contains(playerReader.TargetGuid))
             {
                 logger.LogError("Keyboard target already looted 1");
                 input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+                targetClearedThisWindow = true;
+            }
+            else
+            {
+                return true;
             }
         }
+        else if (bits.Target() && state.RecentlyLooted.Contains(playerReader.TargetGuid))
+        {
+            logger.LogError("Keyboard target already looted 1");
+            input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+            targetClearedThisWindow = true;
+        }
 
-        if (!bits.Target())
+        if (!bits.Target() && ShouldRetryLastTargetAfterTargetClear(targetClearedThisWindow))
         {
             input.PressLastTargetAndWait(wait, bits.Target);
 
@@ -424,6 +558,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             {
                 logger.LogError("Keyboard target already looted 2");
                 input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+                targetClearedThisWindow = true;
             }
         }
 
@@ -434,6 +569,7 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
             if (state.RecentlyLooted.Contains(targetGuid))
             {
                 input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+                targetClearedThisWindow = true;
 
                 LogWarning($"Keyboard target already looted! {targetGuid}");
             }
@@ -445,11 +581,44 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
 
         if (!bits.Target())
         {
+            if (ShouldAttemptTrackedCorpseCandidateAfterTargetClear(
+                targetClearedThisWindow,
+                GetOrSelectActiveCorpseCandidate() != null) &&
+                TryInteractWithActiveCorpseCandidateInRange())
+            {
+                return true;
+            }
+
             LogWarning($"Keyboard No target found!");
             return false;
         }
 
-        if (!bits.Target_Dead())
+        KeyboardLootTargetIssue targetIssue = ClassifyKeyboardLootTarget(
+            hasTarget: bits.Target(),
+            targetDead: bits.Target_Dead(),
+            targetGuid: playerReader.TargetGuid,
+            petGuid: playerReader.PetGuid);
+
+        if (targetIssue == KeyboardLootTargetIssue.PetTarget)
+        {
+            petTargetRefusedThisWindow = true;
+            refusedLootTargetGuid = playerReader.TargetGuid;
+            LogWarning($"Keyboard refusing pet target during loot! {playerReader.TargetGuid}");
+            input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+            targetClearedThisWindow = true;
+
+            if (ShouldAttemptTrackedCorpseCandidateAfterTargetClear(
+                targetClearedThisWindow,
+                GetOrSelectActiveCorpseCandidate() != null) &&
+                TryInteractWithActiveCorpseCandidateInRange())
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        if (targetIssue == KeyboardLootTargetIssue.AliveTarget)
         {
             LogWarning("Keyboard Don't attack alive target!");
 
@@ -463,6 +632,116 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         return (bits.Target() && playerReader.MinRangeZero()) || MoveToTargetAndReached();
     }
 
+    internal static KeyboardLootTargetIssue ClassifyKeyboardLootTarget(
+        bool hasTarget,
+        bool targetDead,
+        int targetGuid,
+        int petGuid)
+    {
+        if (!hasTarget)
+        {
+            return KeyboardLootTargetIssue.None;
+        }
+
+        if (petGuid != 0 && targetGuid == petGuid)
+        {
+            return KeyboardLootTargetIssue.PetTarget;
+        }
+
+        return targetDead
+            ? KeyboardLootTargetIssue.None
+            : KeyboardLootTargetIssue.AliveTarget;
+    }
+
+    internal static bool ShouldRetryLastTargetAfterTargetClear(bool targetClearedThisWindow)
+        => !targetClearedThisWindow;
+
+    internal static bool ShouldAttemptTrackedCorpseCandidateAfterTargetClear(
+        bool targetClearedThisWindow,
+        bool hasTrackedCorpseCandidate)
+        => targetClearedThisWindow && hasTrackedCorpseCandidate;
+
+    internal static bool ShouldTryDirectTrackedCorpseRecovery(
+        bool petTargetRefusedThisWindow,
+        bool hasTrackedCorpseCandidate)
+        => petTargetRefusedThisWindow && hasTrackedCorpseCandidate;
+
+    internal static bool ShouldTrySecondaryTrackedCorpseCandidate(
+        bool primaryCandidateFailed,
+        bool hasSecondaryCandidate,
+        int unresolvedTrackedCorpseCount)
+        => primaryCandidateFailed &&
+        hasSecondaryCandidate &&
+        unresolvedTrackedCorpseCount > 1;
+
+    internal static int GetLootInteractionTimeoutMs(int doubleNetworkLatencyMs)
+        => Math.Max(doubleNetworkLatencyMs, LOOT_INTERACTION_CONFIRM_TIMEOUT_MS);
+
+    internal static bool ShouldContinuePassivePetClearWait(
+        bool lootWindowOpen,
+        bool hasEligibleCorpseTarget,
+        bool corpseNameVisible,
+        bool petStillBlocking)
+        => !lootWindowOpen &&
+        !hasEligibleCorpseTarget &&
+        !corpseNameVisible &&
+        petStillBlocking;
+
+    internal static bool ShouldRetryDirectCorpseProbe(
+        int attemptsUsed,
+        int maxAttempts,
+        bool corpseCandidateStillInRange,
+        bool lootWindowOpen)
+        => !lootWindowOpen &&
+        corpseCandidateStillInRange &&
+        attemptsUsed < maxAttempts;
+
+    internal static bool ShouldProbeTrackedCorpseBeforeCursorFallback(bool petTargetRefusedThisWindow)
+        => !petTargetRefusedThisWindow;
+
+    internal static bool ShouldSkipKeyboardRetryAfterPetRefusal(bool petTargetRefusedThisWindow) => petTargetRefusedThisWindow;
+
+    internal static bool ShouldWaitForPetToClearCorpse(
+        bool petTargetRefusedThisWindow,
+        int refusedLootTargetGuid,
+        int petGuid,
+        int corpseLocationCount)
+        => petTargetRefusedThisWindow &&
+        petGuid != 0 &&
+        refusedLootTargetGuid == petGuid &&
+        corpseLocationCount > 0;
+
+    internal static bool ShouldFaceClosestCorpseBeforeCursorFallback(bool petTargetRefusedThisWindow, int corpseLocationCount)
+        => petTargetRefusedThisWindow && corpseLocationCount > 0;
+
+    internal static bool ShouldAttemptLootOpenAfterCorpseAcquire(
+        bool hasTarget,
+        bool targetDead,
+        bool lootWindowOpen,
+        bool inLootRange)
+        => hasTarget &&
+        targetDead &&
+        !lootWindowOpen &&
+        inLootRange;
+
+    internal static PetRefusedLootOutcome ClassifyPetRefusedLootOutcome(
+        bool looted,
+        bool corpseInteractionObserved,
+        bool directCorpseCandidateProbeAttempted)
+    {
+        if (!looted && !corpseInteractionObserved && !directCorpseCandidateProbeAttempted)
+        {
+            return PetRefusedLootOutcome.CorpseNotFound;
+        }
+
+        if (!looted)
+        {
+            return PetRefusedLootOutcome.InteractFailed;
+        }
+
+        return PetRefusedLootOutcome.Looted;
+    }
+
     private bool TryLootByCursorFallback()
     {
         if (corpseLocations.Count == 0)
@@ -473,20 +752,319 @@ public sealed partial class LootGoal : GoapGoal, IGoapEventListener
         stopMoving.Stop();
         wait.Update();
 
-        if (FoundByCursor())
+        if (ShouldFaceClosestCorpseBeforeCursorFallback(petTargetRefusedThisWindow, corpseLocations.Count))
+        {
+            FaceClosestTrackedCorpse();
+        }
+
+        if (ShouldProbeTrackedCorpseBeforeCursorFallback(petTargetRefusedThisWindow) &&
+            TryInteractWithActiveCorpseCandidateInRange())
         {
             return true;
         }
 
+        FaceClosestTrackedCorpse();
+        Log("Look at active corpse candidate and do bounded cursor fallback...");
+        return FoundByCursor();
+    }
+
+    private bool TryLootByDirectTrackedCorpseRecovery()
+    {
+        if (!ShouldTryDirectTrackedCorpseRecovery(
+            petTargetRefusedThisWindow,
+            GetOrSelectActiveCorpseCandidate() != null))
+        {
+            return false;
+        }
+
+        if (TryResolveActiveCorpseCandidate(allowApproach: true, directInteractAttempts: 2))
+        {
+            return true;
+        }
+
+        bool advanced = TryAdvanceToSecondaryCorpseCandidate();
+        if (!ShouldTrySecondaryTrackedCorpseCandidate(
+            primaryCandidateFailed: true,
+            hasSecondaryCandidate: advanced,
+            unresolvedTrackedCorpseCount: Math.Max(state.LootableCorpseCount, corpseLocations.Count)))
+        {
+            return false;
+        }
+
+        Log("Primary corpse candidate failed after pet block; trying one secondary tracked corpse candidate.");
+        if (TryResolveActiveCorpseCandidate(allowApproach: true, directInteractAttempts: 2))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryWaitForPetToClearCorpse()
+    {
+        if (!ShouldWaitForPetToClearCorpse(
+            petTargetRefusedThisWindow,
+            refusedLootTargetGuid,
+            playerReader.PetGuid,
+            corpseLocations.Count))
+        {
+            return false;
+        }
+
+        logger.LogInformation(
+            "Pet blocked corpse for loot; waiting up to {waitMs}ms before bounded corpse fallback.",
+            PET_BLOCKED_CORPSE_WAIT_MS);
+        stopMoving.Stop();
+        wait.Update();
+        FaceClosestTrackedCorpse();
+
+        long deadlineTick = Environment.TickCount64 + PET_BLOCKED_CORPSE_WAIT_MS;
+        while (!token.IsCancellationRequested && Environment.TickCount64 < deadlineTick)
+        {
+            bool lootWindowOpen = LootWindowOpen();
+            if (lootWindowOpen)
+            {
+                return true;
+            }
+
+            bool hasEligibleCorpseTarget = HasEligibleCurrentCorpseTargetForLoot();
+            bool corpseNameVisible = CorpseNameVisible();
+            bool petStillBlocking = !bits.Target() || playerReader.TargetGuid == refusedLootTargetGuid;
+            if (!ShouldContinuePassivePetClearWait(
+                lootWindowOpen,
+                hasEligibleCorpseTarget,
+                corpseNameVisible,
+                petStillBlocking))
+            {
+                return false;
+            }
+
+            wait.Update(PET_BLOCKED_CORPSE_POLL_MS);
+        }
+
+        logger.LogInformation(
+            "Pet blocked corpse wait expired after {waitMs}ms for pet guid {petGuid}.",
+            PET_BLOCKED_CORPSE_WAIT_MS,
+            refusedLootTargetGuid);
+        return false;
+    }
+
+    private bool TryAdvanceToSecondaryCorpseCandidate()
+    {
+        if (activeCorpseCandidate == null)
+        {
+            return false;
+        }
+
+        skippedCorpseCandidatesThisWindow.Add(activeCorpseCandidate);
+        activeCorpseCandidate = GetClosestCorpse();
+        return activeCorpseCandidate != null;
+    }
+
+    private void FaceClosestTrackedCorpse()
+    {
+        CorpseEvent? corpse = GetOrSelectActiveCorpseCandidate();
+        if (corpse == null)
+        {
+            return;
+        }
+
         Vector3 playerMap = playerReader.MapPos;
-        CorpseEvent corpse = GetClosestCorpse()!;
         float heading = DirectionCalculator.CalculateMapHeading(playerMap, corpse.MapLoc);
         playerDirection.SetDirection(heading);
         wait.Fixed(playerReader.DoubleNetworkLatency);
         wait.Update();
+    }
 
-        Log("Look at possible closest corpse and try cursor fallback once again...");
-        return FoundByCursor();
+    private bool TrySoftInteractCorpse()
+    {
+        if (!bits.SoftInteract_Enabled() ||
+            (bits.SoftInteract() && !EligibleCorpseSoftTargetExists()))
+        {
+            return false;
+        }
+
+        input.PressInteract();
+        wait.Update();
+
+        if (state.RecentlyLooted.Contains(playerReader.TargetGuid))
+        {
+            return true;
+        }
+
+        corpseInteractionObservedThisWindow = bits.Target() || LootWindowOpen();
+        CheckForCanGather();
+
+        return LootWindowOpen() || (bits.Target() && playerReader.MinRangeZero()) || MoveToTargetAndReached();
+    }
+
+    private bool HasEligibleCurrentCorpseTargetForLoot()
+    {
+        return bits.Target() &&
+            bits.Target_Dead() &&
+            playerReader.TargetGuid != 0 &&
+            playerReader.TargetGuid != refusedLootTargetGuid &&
+            !state.RecentlyLooted.Contains(playerReader.TargetGuid);
+    }
+
+    private bool CorpseNameVisible()
+    {
+        npcNameTargeting.ChangeNpcType(NpcNames.Corpse);
+
+        try
+        {
+            npcNameTargeting.WaitForUpdate(token);
+            return npcNameTargeting.FoundAny();
+        }
+        finally
+        {
+            npcNameTargeting.ChangeNpcType(NpcNames.None);
+        }
+    }
+
+    private bool TryInteractWithActiveCorpseCandidateInRange()
+        => TryInteractWithActiveCorpseCandidateInRange(maxAttempts: 1);
+
+    private bool TryInteractWithActiveCorpseCandidateInRange(int maxAttempts)
+    {
+        CorpseEvent? corpse = GetOrSelectActiveCorpseCandidate();
+        if (corpse == null || maxAttempts <= 0)
+        {
+            return false;
+        }
+
+        if (!IsTrackedCorpseCandidateInInteractRange(GetTrackedCorpseCandidateDistance(corpse)))
+        {
+            return false;
+        }
+
+        int attemptsUsed = 0;
+        while (attemptsUsed < maxAttempts)
+        {
+            attemptsUsed++;
+
+            FaceClosestTrackedCorpse();
+            Log("Tracked corpse candidate in interact range; pressing interact before cursor fallback.");
+            directCorpseCandidateProbeAttemptedThisWindow = true;
+            input.PressInteract();
+            wait.Update();
+
+            corpseInteractionObservedThisWindow = bits.Target() || LootWindowOpen();
+            if (TryOpenLootOnCurrentCorpseTarget())
+            {
+                return true;
+            }
+
+            bool corpseCandidateStillInRange = corpseLocations.Contains(corpse) &&
+                IsTrackedCorpseCandidateInInteractRange(GetTrackedCorpseCandidateDistance(corpse));
+
+            if (!ShouldRetryDirectCorpseProbe(
+                attemptsUsed,
+                maxAttempts,
+                corpseCandidateStillInRange,
+                LootWindowOpen()))
+            {
+                break;
+            }
+
+            Log("Tracked corpse candidate direct probe did not open loot; refacing and retrying once.");
+            wait.Fixed(Math.Max(playerReader.NetworkLatency, 50));
+        }
+
+        return false;
+    }
+
+    private bool TryResolveActiveCorpseCandidate(bool allowApproach, int directInteractAttempts)
+    {
+        FaceClosestTrackedCorpse();
+        if (TryInteractWithActiveCorpseCandidateInRange(directInteractAttempts))
+        {
+            return true;
+        }
+
+        if (!allowApproach || !TryApproachActiveCorpseCandidate())
+        {
+            return false;
+        }
+
+        return TryInteractWithActiveCorpseCandidateInRange(directInteractAttempts);
+    }
+
+    private float GetTrackedCorpseCandidateDistance(CorpseEvent corpse)
+    {
+        Vector3 worldPos = WorldMapAreaDB.ToWorld_FlipXY(corpse.MapLoc, playerReader.WorldMapArea);
+        return playerReader.WorldPos.WorldDistanceXYTo(worldPos);
+    }
+
+    internal static bool IsTrackedCorpseCandidateInInteractRange(float corpseDistanceYards)
+        => corpseDistanceYards <= 5f;
+
+    private bool TryApproachActiveCorpseCandidate()
+    {
+        CorpseEvent? corpse = GetOrSelectActiveCorpseCandidate();
+        if (corpse == null)
+        {
+            return false;
+        }
+
+        float initialDistance = GetTrackedCorpseCandidateDistance(corpse);
+        if (IsTrackedCorpseCandidateInInteractRange(initialDistance))
+        {
+            return true;
+        }
+
+        FaceClosestTrackedCorpse();
+        Log("Active corpse candidate out of interact range; doing one bounded forward probe.");
+        input.StartForward(true);
+
+        try
+        {
+            long deadlineTick = Environment.TickCount64 + DIRECT_CORPSE_APPROACH_TIMEOUT_MS;
+            while (!token.IsCancellationRequested && Environment.TickCount64 < deadlineTick)
+            {
+                if (LootWindowOpen())
+                {
+                    return true;
+                }
+
+                if (bits.Target() && bits.Target_Dead() && playerReader.MinRangeZero())
+                {
+                    return true;
+                }
+
+                if (IsTrackedCorpseCandidateInInteractRange(GetTrackedCorpseCandidateDistance(corpse)))
+                {
+                    return true;
+                }
+
+                wait.Update(PET_BLOCKED_CORPSE_POLL_MS);
+            }
+
+            return false;
+        }
+        finally
+        {
+            stopMoving.Stop();
+            wait.Update();
+        }
+    }
+
+    private bool TryOpenLootOnCurrentCorpseTarget()
+    {
+        if (!ShouldAttemptLootOpenAfterCorpseAcquire(
+            hasTarget: bits.Target(),
+            targetDead: bits.Target_Dead(),
+            lootWindowOpen: LootWindowOpen(),
+            inLootRange: playerReader.IsInMeleeRange() || playerReader.MinRangeZero()))
+        {
+            return LootWindowOpen();
+        }
+
+        Log("Corpse targeted in loot range without loot window; pressing interact to complete loot.");
+        input.PressInteract();
+        wait.Update();
+
+        return WaitForLootInteraction() >= 0 && LootWindowOpen();
     }
 
     private bool EligibleCorpseSoftTargetExists() =>
