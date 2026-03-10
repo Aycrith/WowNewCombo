@@ -1,0 +1,425 @@
+@inject IBotController botController
+@inject IBotRouteControlService routeControl
+
+@implements IDisposable
+
+<style>
+    .route-goal-control {
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        border-radius: 14px;
+        padding: 1rem;
+        background:
+            linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98));
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    }
+
+    .route-goal-control__eyebrow {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+
+    .route-goal-control__title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .route-goal-control__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.35rem;
+        color: #475569;
+        font-size: 0.9rem;
+    }
+
+    .route-goal-control__summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .route-goal-control__summary-card {
+        border-radius: 12px;
+        padding: 0.8rem 0.9rem;
+        background: rgba(148, 163, 184, 0.1);
+    }
+
+    .route-goal-control__summary-label {
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #64748b;
+        margin-bottom: 0.25rem;
+    }
+
+    .route-goal-control__summary-value {
+        color: #0f172a;
+        font-weight: 600;
+        word-break: break-word;
+    }
+
+    .route-goal-control__requirements {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.75rem;
+    }
+</style>
+
+<div class="route-goal-control">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <div class="route-goal-control__eyebrow">Route Goal Control</div>
+            <div class="route-goal-control__title">@CurrentGoalTitle</div>
+            <div class="route-goal-control__meta">
+                <span class="badge @(CurrentState?.BotActive == true ? "bg-success" : "bg-secondary")">
+                    @(CurrentState?.BotActive == true ? "Running" : "Stopped")
+                </span>
+                <span>Profile: @(CurrentState?.ProfileName ?? "No profile loaded")</span>
+                @if (!string.IsNullOrWhiteSpace(CurrentState?.ActiveRouteFileName))
+                {
+                    <span>Active Route: @CurrentState!.ActiveRouteFileName</span>
+                }
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-danger"
+                    @onclick="StopBot"
+                    disabled="@(!CanStopBot)">
+                Stop Bot
+            </button>
+            <button class="btn btn-outline-secondary"
+                    @onclick="UseProfileDefault"
+                    disabled="@(!CanClearRoute)">
+                Use Profile Default
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(FeedbackMessage))
+    {
+        <div class="alert @(FeedbackIsError ? "alert-warning" : "alert-success") mt-3 mb-0" role="alert">
+            @FeedbackMessage
+        </div>
+    }
+
+    @if (CurrentState == null)
+    {
+        <div class="text-muted mt-3">Loading route control state...</div>
+    }
+    else if (!CurrentState.RouteControlAvailable)
+    {
+        <div class="alert alert-warning mt-3 mb-0" role="alert">
+            Load a profile with configured route paths before switching route goals from the dashboard.
+        </div>
+    }
+    else
+    {
+        <div class="route-goal-control__summary">
+            <div class="route-goal-control__summary-card">
+                <span class="route-goal-control__summary-label">Selected Slot</span>
+                <div class="route-goal-control__summary-value">
+                    @if (SelectedSlot != null)
+                    {
+                        <span>#@SelectedSlot.Index</span>
+                    }
+                    else
+                    {
+                        <span>Unavailable</span>
+                    }
+                </div>
+            </div>
+            <div class="route-goal-control__summary-card">
+                <span class="route-goal-control__summary-label">Default Route</span>
+                <div class="route-goal-control__summary-value">@(SelectedSlot?.DefaultPathFileName ?? "Unavailable")</div>
+            </div>
+            <div class="route-goal-control__summary-card">
+                <span class="route-goal-control__summary-label">Override</span>
+                <div class="route-goal-control__summary-value">@(SelectedSlot?.OverridePathFileName ?? "Profile default")</div>
+            </div>
+            <div class="route-goal-control__summary-card">
+                <span class="route-goal-control__summary-label">Looping Mode</span>
+                <div class="route-goal-control__summary-value">
+                    @(SelectedSlot?.PathThereAndBack == true ? "There and back" : "Loop")
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <label class="form-label fw-semibold">Route Slot</label>
+                <select class="form-select" value="@SelectedSlotIndex" @onchange="OnSelectedSlotChanged" disabled="@IsBusy">
+                    @foreach (BotRouteSlotState slot in CurrentState.RouteSlots)
+                    {
+                        <option value="@slot.Index">
+                            @(slot.IsActiveRoute ? "Active" : "Slot") #@slot.Index - @slot.EffectivePathFileName
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-lg-8">
+                <label class="form-label fw-semibold">Route File</label>
+                <select class="form-select" value="@SelectedRouteFileName" @onchange="OnSelectedRouteChanged" disabled="@IsBusy">
+                    @foreach (string file in CurrentState.AvailablePathFiles)
+                    {
+                        <option value="@file">@file</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        @if (SelectedSlot is not null)
+        {
+            <div class="route-goal-control__requirements">
+                <span class="badge @(SelectedSlot.IsActiveRoute ? "bg-primary" : "bg-secondary")">
+                    @(SelectedSlot.IsActiveRoute ? "Current Route Slot" : "Available Slot")
+                </span>
+                <span class="badge @(SelectedSlot.RequirementsMet ? "bg-success" : "bg-warning text-dark")">
+                    @(SelectedSlot.RequirementsMet ? "Requirements Met" : "Requirements Pending")
+                </span>
+                <span class="badge @(SelectedSlot.CanRun ? "bg-success" : "bg-secondary")">
+                    @(SelectedSlot.CanRun ? "Can Run Now" : "Not Active Now")
+                </span>
+                @if (SelectedSlot.ExpectedUiMapId > 0)
+                {
+                    <span class="badge bg-light text-dark">
+                        Zone: @(string.IsNullOrWhiteSpace(SelectedSlot.ExpectedAreaName)
+                            ? $"UIMapId {SelectedSlot.ExpectedUiMapId}"
+                            : $"{SelectedSlot.ExpectedAreaName} ({SelectedSlot.ExpectedUiMapId})")
+                    </span>
+                }
+                @foreach (string requirement in SelectedSlot.Requirements)
+                {
+                    <span class="badge bg-light text-dark">@requirement</span>
+                }
+            </div>
+        }
+
+        <div class="d-flex gap-2 flex-wrap mt-3">
+            <button class="btn btn-primary"
+                    @onclick="ApplyRoute"
+                    disabled="@(!CanApplyRoute)">
+                Apply Route
+            </button>
+            <button class="btn btn-success"
+                    @onclick="ApplyRouteAndResume"
+                    disabled="@(!CanApplyRoute)">
+                Apply and Resume
+            </button>
+        </div>
+
+        <div class="small text-muted mt-3">
+            Route switching rebuilds the live route session safely. When the bot is already running, the switch flow stops it first before applying the new route selection.
+        </div>
+    }
+</div>
+
+@code {
+    private BotRouteControlState? CurrentState { get; set; }
+
+    private int SelectedSlotIndex { get; set; }
+
+    private string SelectedRouteFileName { get; set; } = string.Empty;
+
+    private bool IsBusy { get; set; }
+
+    private string FeedbackMessage { get; set; } = string.Empty;
+
+    private bool FeedbackIsError { get; set; }
+
+    private System.Threading.Timer? refreshTimer;
+
+    private string CurrentGoalTitle =>
+        string.IsNullOrWhiteSpace(CurrentState?.CurrentGoal)
+            ? "No active goal selected"
+            : CurrentState!.CurrentGoal!;
+
+    private BotRouteSlotState? SelectedSlot =>
+        CurrentState?.RouteSlots.FirstOrDefault(slot => slot.Index == SelectedSlotIndex);
+
+    private bool CanStopBot => !IsBusy && botController.IsBotActive;
+
+    private bool CanClearRoute =>
+        !IsBusy &&
+        SelectedSlot is not null &&
+        !string.IsNullOrWhiteSpace(SelectedSlot.OverridePathFileName);
+
+    private bool CanApplyRoute =>
+        !IsBusy &&
+        CurrentState is { RouteControlAvailable: true } &&
+        SelectedSlot is not null &&
+        !string.IsNullOrWhiteSpace(SelectedRouteFileName);
+
+    protected override void OnInitialized()
+    {
+        LoadState();
+        botController.ProfileLoaded += OnControllerStateChanged;
+        botController.StatusChanged += OnControllerStateChanged;
+
+        refreshTimer = new System.Threading.Timer(
+            static async state =>
+            {
+                RouteGoalControl control = (RouteGoalControl)state!;
+                await control.InvokeAsync(control.RefreshStateAsync);
+            },
+            this,
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(1));
+    }
+
+    public void Dispose()
+    {
+        botController.ProfileLoaded -= OnControllerStateChanged;
+        botController.StatusChanged -= OnControllerStateChanged;
+        refreshTimer?.Dispose();
+    }
+
+    private void OnControllerStateChanged()
+    {
+        _ = InvokeAsync(RefreshStateAsync);
+    }
+
+    private Task RefreshStateAsync()
+    {
+        if (!IsBusy)
+        {
+            LoadState();
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void LoadState()
+    {
+        CurrentState = routeControl.GetState();
+        EnsureSelection();
+    }
+
+    private void EnsureSelection()
+    {
+        if (CurrentState == null || CurrentState.RouteSlots.Count == 0)
+        {
+            SelectedSlotIndex = 0;
+            SelectedRouteFileName = string.Empty;
+            return;
+        }
+
+        if (!CurrentState.RouteSlots.Any(slot => slot.Index == SelectedSlotIndex))
+        {
+            SelectedSlotIndex = CurrentState.ActiveRouteIndex ?? CurrentState.RouteSlots[0].Index;
+        }
+
+        BotRouteSlotState? selectedSlot = SelectedSlot;
+        if (selectedSlot == null)
+        {
+            SelectedSlotIndex = CurrentState.RouteSlots[0].Index;
+            selectedSlot = SelectedSlot;
+        }
+
+        if (selectedSlot == null)
+        {
+            SelectedRouteFileName = string.Empty;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(SelectedRouteFileName) ||
+            !CurrentState.AvailablePathFiles.Any(file => string.Equals(file, SelectedRouteFileName, StringComparison.OrdinalIgnoreCase)))
+        {
+            SelectedRouteFileName = selectedSlot.EffectivePathFileName;
+        }
+    }
+
+    private void OnSelectedSlotChanged(ChangeEventArgs args)
+    {
+        if (args.Value is string rawValue &&
+            int.TryParse(rawValue, out int slotIndex))
+        {
+            SelectedSlotIndex = slotIndex;
+            BotRouteSlotState? selectedSlot = SelectedSlot;
+            SelectedRouteFileName = selectedSlot?.EffectivePathFileName ?? string.Empty;
+        }
+    }
+
+    private void OnSelectedRouteChanged(ChangeEventArgs args)
+    {
+        SelectedRouteFileName = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task StopBot()
+    {
+        if (!CanStopBot)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            botController.ToggleBotStatus("DashboardRouteControlStop");
+            LoadState();
+            FeedbackIsError = false;
+            FeedbackMessage = "Bot stopped. Route goal selection is ready.";
+        }
+        finally
+        {
+            IsBusy = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private Task UseProfileDefault()
+    {
+        return ApplyCommandAsync(clearOverride: true, resumeAfterSwitch: false);
+    }
+
+    private Task ApplyRoute()
+    {
+        return ApplyCommandAsync(clearOverride: false, resumeAfterSwitch: false);
+    }
+
+    private Task ApplyRouteAndResume()
+    {
+        return ApplyCommandAsync(clearOverride: false, resumeAfterSwitch: true);
+    }
+
+    private async Task ApplyCommandAsync(bool clearOverride, bool resumeAfterSwitch)
+    {
+        if (CurrentState == null || SelectedSlot == null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        FeedbackMessage = string.Empty;
+
+        try
+        {
+            BotRouteCommandRequest command = new(
+                TargetIndex: SelectedSlot.Index,
+                FileName: clearOverride ? null : SelectedRouteFileName,
+                ClearOverride: clearOverride,
+                StopBotFirst: CurrentState.BotActive,
+                ResumeBotAfterSwitch: resumeAfterSwitch);
+
+            BotRouteCommandResult result = routeControl.Apply(command);
+            CurrentState = result.State;
+            EnsureSelection();
+            FeedbackIsError = !result.Success || !string.IsNullOrWhiteSpace(result.ResumeBlockedReason);
+            FeedbackMessage = result.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}
