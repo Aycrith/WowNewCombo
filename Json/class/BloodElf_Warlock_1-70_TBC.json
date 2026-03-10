@@ -75,7 +75,7 @@
       "PathReduceSteps": true,
       "Requirements": [
         "Level >= 15",
-        "Level < 21"
+        "Level < 22"
       ]
     },
     {
@@ -83,7 +83,7 @@
       "PathThereAndBack": true,
       "PathReduceSteps": true,
       "Requirements": [
-        "Level >= 18",
+        "Level >= 22",
         "Level < 23"
       ]
     },
@@ -92,7 +92,7 @@
       "PathThereAndBack": true,
       "PathReduceSteps": true,
       "Requirements": [
-        "Level >= 20",
+        "Level >= 22",
         "Level < 27"
       ]
     },

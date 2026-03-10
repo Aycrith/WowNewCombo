@@ -4105,12 +4105,71 @@ function Test-CharacterAlignmentSnapshot
     }
 }
 
+function Test-CharacterAlignmentDeferredInWorldCandidate
+{
+    param(
+        [AllowNull()][System.Collections.IEnumerable]$Samples
+    )
+
+    if ($null -eq $Samples)
+    {
+        return $false
+    }
+
+    $materializedSamples = @($Samples)
+    if ($materializedSamples.Count -eq 0)
+    {
+        return $false
+    }
+
+    foreach ($sample in $materializedSamples)
+    {
+        if (-not [bool](Get-OptionalPropertyValue -Object $sample -Name "SnapshotAvailable" -Default $false))
+        {
+            return $false
+        }
+
+        if ([bool](Get-OptionalPropertyValue -Object $sample -Name "IsHardFail" -Default $false))
+        {
+            return $false
+        }
+
+        if ([bool](Get-OptionalPropertyValue -Object $sample -Name "Dead" -Default $false) -or
+            [bool](Get-OptionalPropertyValue -Object $sample -Name "Swimming" -Default $false) -or
+            [bool](Get-OptionalPropertyValue -Object $sample -Name "ChatInputVisible" -Default $false))
+        {
+            return $false
+        }
+
+        $uiMapId = [int](Get-OptionalPropertyValue -Object $sample -Name "UIMapId" -Default -1)
+        $mapX = [double](Get-OptionalPropertyValue -Object $sample -Name "MapX" -Default -1)
+        $mapY = [double](Get-OptionalPropertyValue -Object $sample -Name "MapY" -Default -1)
+        $issues = @((Get-OptionalPropertyValue -Object $sample -Name "Issues" -Default @()))
+
+        if ($uiMapId -ne 0 -or $mapX -ne 0 -or $mapY -ne 0)
+        {
+            return $false
+        }
+
+        if ($issues.Count -ne 1 -or $issues[0] -notlike "Character map position appears out-of-bounds*")
+        {
+            return $false
+        }
+    }
+
+    return $true
+}
+
 function Assert-CharacterAlignment
 {
+    param(
+        [switch]$AllowDeferredInWorldState
+    )
+
     if ($SkipCharacterGate)
     {
         Write-WarnLine "Character alignment gate skipped by flag"
-        return
+        return $true
     }
 
     Write-Info "Checking active character alignment"
@@ -4212,6 +4271,25 @@ function Assert-CharacterAlignment
         throw $failureMessage
     }
 
+    if ([bool]$AllowDeferredInWorldState -and (Test-CharacterAlignmentDeferredInWorldCandidate -Samples $samples))
+    {
+        [void](Write-ArtifactJson -Name ("{0}-character-alignment.json" -f $script:RunTag) -Object ([ordered]@{
+            TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+            Passed = $false
+            Deferred = $true
+            FailureMode = "DeferredToReadiness"
+            RequiredStableValidSamples = $requiredStableValidSamples
+            StableValidSamplesObserved = $stableValidSamples
+            AttemptCount = $samples.Count
+            TransientRecoveryObserved = $false
+            Samples = @($samples.ToArray())
+            Message = "Character snapshot remained at UIMapId=0, MapX=0, MapY=0; deferring alignment until launch readiness completes."
+        }))
+
+        Write-WarnLine "Character alignment remained at UIMapId=0 / Map=(0,0); deferring the gate until after launch readiness."
+        return $false
+    }
+
     [void](Write-ArtifactJson -Name ("{0}-character-alignment.json" -f $script:RunTag) -Object ([ordered]@{
         TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
         Passed = $true
@@ -4236,6 +4314,7 @@ function Assert-CharacterAlignment
     }
 
     Write-Ok "Character alignment checks passed (MapX=$([math]::Round($finalSnapshot.MapX, 2)), MapY=$([math]::Round($finalSnapshot.MapY, 2)), UIMapId=$($finalSnapshot.UIMapId), Attempts=$($samples.Count))"
+    return $true
 }
 
 function Start-Bot
@@ -7392,7 +7471,7 @@ function Invoke-StartFlow([switch]$WithValidation)
     Assert-ServiceReadinessGate -Context "post-service-start" -RequireApiHealth
     Set-LaunchOverrides
     Load-BotProfile
-    Assert-CharacterAlignment
+    $alignmentReady = Assert-CharacterAlignment -AllowDeferredInWorldState
 
     if ($AutoRepairReadiness)
     {
@@ -7410,6 +7489,11 @@ function Invoke-StartFlow([switch]$WithValidation)
         Invoke-ReadinessFixes | Out-Null
         $launchReady = Wait-ForReadiness
         Assert-StrictLaunchReadiness -Launch $launchReady -Context "post-readiness"
+    }
+
+    if (-not [bool]$alignmentReady)
+    {
+        Assert-CharacterAlignment
     }
 
     Assert-ServiceReadinessGate -Context "pre-bot-start" -RequireApiHealth
