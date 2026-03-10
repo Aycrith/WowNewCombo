@@ -1,4 +1,5 @@
 using Core.GoalsComponent;
+using Core.Goals;
 using FluentAssertions;
 using System;
 using System.Numerics;
@@ -254,5 +255,108 @@ public class FollowRouteGoalRefillTests
         int effectiveMin = Math.Max(anchorMin, forcedMinForward);
 
         effectiveMin.Should().Be(150);
+    }
+
+    [Fact]
+    public void ShouldRecoverEmptyNavigationRoute_WhenOutOfCombatAndNoWaypoint_ReturnsTrue()
+    {
+        bool shouldRecover = FollowRouteGoal.ShouldRecoverEmptyNavigationRoute(
+            inCombat: false,
+            hasWaypoint: false,
+            utcNow: new DateTime(2026, 3, 10, 1, 0, 5, DateTimeKind.Utc),
+            lastRecoveryUtc: DateTime.MinValue);
+
+        shouldRecover.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldRecoverEmptyNavigationRoute_WhenCooldownActive_ReturnsFalse()
+    {
+        DateTime now = new DateTime(2026, 3, 10, 1, 0, 5, DateTimeKind.Utc);
+
+        bool shouldRecover = FollowRouteGoal.ShouldRecoverEmptyNavigationRoute(
+            inCombat: false,
+            hasWaypoint: false,
+            utcNow: now,
+            lastRecoveryUtc: now.AddSeconds(-1));
+
+        shouldRecover.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldRecoverEmptyNavigationRoute_WhenWaypointExists_ReturnsFalse()
+    {
+        bool shouldRecover = FollowRouteGoal.ShouldRecoverEmptyNavigationRoute(
+            inCombat: false,
+            hasWaypoint: true,
+            utcNow: new DateTime(2026, 3, 10, 1, 0, 5, DateTimeKind.Utc),
+            lastRecoveryUtc: DateTime.MinValue);
+
+        shouldRecover.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldSuspendTargetSearchForNavigationRecovery_WhenWaypointsExistButRouteIsEmpty_ReturnsTrue()
+    {
+        bool shouldSuspend = FollowRouteGoal.ShouldSuspendTargetSearchForNavigationRecovery(
+            hasWaypoint: true,
+            hasRouteToWaypoint: false);
+
+        shouldSuspend.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldSuspendTargetSearchForNavigationRecovery_WhenRouteToWaypointExists_ReturnsFalse()
+    {
+        bool shouldSuspend = FollowRouteGoal.ShouldSuspendTargetSearchForNavigationRecovery(
+            hasWaypoint: true,
+            hasRouteToWaypoint: true);
+
+        shouldSuspend.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldRecoverStaleTargetHandoff_WhenTargetPersistsWithoutRouteProgress_ReturnsTrue()
+    {
+        bool shouldRecover = FollowRouteGoal.ShouldRecoverStaleTargetHandoff(
+            inCombat: false,
+            hasTarget: true,
+            sideActivityCancelled: true,
+            hasWaypoint: false,
+            hasRouteToWaypoint: false,
+            utcNow: new DateTime(2026, 3, 10, 1, 0, 5, DateTimeKind.Utc),
+            lastTargetFoundUtc: new DateTime(2026, 3, 10, 1, 0, 2, DateTimeKind.Utc));
+
+        shouldRecover.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldRecoverStaleTargetHandoff_WhenRouteIsStillActive_ReturnsFalse()
+    {
+        bool shouldRecover = FollowRouteGoal.ShouldRecoverStaleTargetHandoff(
+            inCombat: false,
+            hasTarget: true,
+            sideActivityCancelled: true,
+            hasWaypoint: true,
+            hasRouteToWaypoint: true,
+            utcNow: new DateTime(2026, 3, 10, 1, 0, 5, DateTimeKind.Utc),
+            lastTargetFoundUtc: new DateTime(2026, 3, 10, 1, 0, 2, DateTimeKind.Utc));
+
+        shouldRecover.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldRecoverStaleTargetHandoff_WhenDelayHasNotElapsed_ReturnsFalse()
+    {
+        bool shouldRecover = FollowRouteGoal.ShouldRecoverStaleTargetHandoff(
+            inCombat: false,
+            hasTarget: true,
+            sideActivityCancelled: true,
+            hasWaypoint: false,
+            hasRouteToWaypoint: false,
+            utcNow: new DateTime(2026, 3, 10, 1, 0, 5, DateTimeKind.Utc),
+            lastTargetFoundUtc: new DateTime(2026, 3, 10, 1, 0, 4, DateTimeKind.Utc));
+
+        shouldRecover.Should().BeFalse();
     }
 }

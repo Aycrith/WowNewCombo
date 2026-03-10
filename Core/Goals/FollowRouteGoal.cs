@@ -39,6 +39,8 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private const float RefillTurnaroundDistanceTolerance = 0.75f;
     private const float RefillSameSegmentProgressTolerance = 10f;
     private static readonly TimeSpan RefillSameSegmentLoopWindow = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan EmptyNavigationRecoveryCooldown = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan StaleTargetHandoffRecoveryDelay = TimeSpan.FromSeconds(2);
 
     private readonly ILogger<FollowRouteGoal> logger;
     private readonly ConfigurableInput input;
@@ -97,6 +99,14 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     private int refillForcedMinSegmentReversed = -1;
     private DateTime lastBrokenGearTargetScanWarning = DateTime.MinValue;
     private DateTime lastLowHealthTargetScanWarning = DateTime.MinValue;
+    private DateTime lastEmptyNavigationRecoveryUtc = DateTime.MinValue;
+    private DateTime lastTargetFoundUtc = DateTime.MinValue;
+    private int staleTargetHandoffRecoveryCount;
+    private int emptyNavigationRecoveryCount;
+    private string? lastRouteRecoveryReason;
+    private DateTime? lastRouteRecoveryUtc;
+    private int? lastRouteRecoveryRouteToNextWaypointCount;
+    private int? lastRouteRecoveryWayPointCount;
 
     #region IRouteProvider
 
@@ -117,6 +127,17 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
     public Vector3 NextMapPoint()
     {
         return navigation.NextMapPoint();
+    }
+
+    public FollowRouteRecoverySnapshot GetRecoverySnapshot()
+    {
+        return new FollowRouteRecoverySnapshot(
+            StaleTargetHandoffRecoveryCount: staleTargetHandoffRecoveryCount,
+            EmptyNavigationRecoveryCount: emptyNavigationRecoveryCount,
+            LastRecoveryReason: lastRouteRecoveryReason,
+            LastRecoveryUtc: lastRouteRecoveryUtc,
+            LastRecoveryRouteToNextWaypointCount: lastRouteRecoveryRouteToNextWaypointCount,
+            LastRecoveryWayPointCount: lastRouteRecoveryWayPointCount);
     }
 
     #endregion
@@ -220,6 +241,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         sideActivityManualReset.Reset();
         targetFinder.Reset();
         ResetRefillProgressAnchor();
+        lastTargetFoundUtc = DateTime.MinValue;
     }
 
     private void Resume()
@@ -231,6 +253,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             sideActivityCts = new();
         }
         sideActivityManualReset.Set();
+        lastTargetFoundUtc = DateTime.MinValue;
 
         if (!navigation.HasWaypoint() || refillByOther)
         {
@@ -326,11 +349,70 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
 
         if (bits.Combat() && classConfig.Mode != Mode.AttendedGather) { return; }
 
-        if (!sideActivityCts.IsCancellationRequested)
+        bool navigationUpdateHandled = false;
+        if (ShouldRecoverStaleTargetHandoff(
+            inCombat: bits.Combat(),
+            hasTarget: bits.Target(),
+            sideActivityCancelled: sideActivityCts.IsCancellationRequested,
+            hasWaypoint: navigation.HasWaypoint(),
+            hasRouteToWaypoint: navigation.HasNext(),
+            utcNow: DateTime.UtcNow,
+            lastTargetFoundUtc: lastTargetFoundUtc))
+        {
+            LogWarning("Stale target handoff detected while still in FollowRouteGoal; clearing target and restoring route follow.");
+            bool cleared = input.ForceAggressiveClearTarget(wait, bits, execGameCommand);
+            lastTargetFoundUtc = DateTime.MinValue;
+
+            if (!cleared && bits.Target())
+            {
+                SendGoapEvent(ScreenCaptureEvent.Default);
+                LogWarning("Unable to clear stale target during route recovery.");
+            }
+            else
+            {
+                sideActivityCts = new();
+                sideActivityManualReset.Set();
+
+                if (!navigation.HasWaypoint())
+                {
+                    RefillWaypoints(false);
+                }
+                else if (!navigation.HasNext())
+                {
+                    navigation.Update(CancellationToken.None);
+                    navigationUpdateHandled = true;
+                }
+            }
+
+            NavigationRuntimeSnapshot recoverySnapshot = navigation.GetRuntimeSnapshot();
+            RecordRouteRecovery(
+                !cleared && bits.Target()
+                    ? "StaleTargetHandoffClearFailed"
+                    : "StaleTargetHandoff",
+                recoverySnapshot);
+            LogWarning($"FollowRouteGoal stale-target recovery result: routeToNextWaypointCount={recoverySnapshot.RouteToNextWaypointCount}, wayPointCount={recoverySnapshot.WayPointCount}");
+        }
+
+        if (ShouldRecoverEmptyNavigationRoute(
+            inCombat: bits.Combat(),
+            hasWaypoint: navigation.HasWaypoint(),
+            utcNow: DateTime.UtcNow,
+            lastRecoveryUtc: lastEmptyNavigationRecoveryUtc))
+        {
+            LogWarning("FollowRouteGoal has no active waypoints while still selected; forcing route refill recovery.");
+            lastEmptyNavigationRecoveryUtc = DateTime.UtcNow;
+            navigation.Update(CancellationToken.None);
+            NavigationRuntimeSnapshot recoverySnapshot = navigation.GetRuntimeSnapshot();
+            RecordRouteRecovery("EmptyNavigationRoute", recoverySnapshot);
+            LogWarning($"FollowRouteGoal empty-route recovery result: routeToNextWaypointCount={recoverySnapshot.RouteToNextWaypointCount}, wayPointCount={recoverySnapshot.WayPointCount}");
+            navigationUpdateHandled = true;
+        }
+
+        if (!navigationUpdateHandled && !sideActivityCts.IsCancellationRequested)
         {
             navigation.Update(sideActivityCts.Token);
         }
-        else
+        else if (!navigationUpdateHandled)
         {
             if (!bits.Target())
             {
@@ -343,6 +425,70 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
         RandomJump();
 
         wait.Update();
+    }
+
+    internal static bool ShouldRecoverEmptyNavigationRoute(
+        bool inCombat,
+        bool hasWaypoint,
+        DateTime utcNow,
+        DateTime lastRecoveryUtc)
+    {
+        if (inCombat || hasWaypoint)
+        {
+            return false;
+        }
+
+        return lastRecoveryUtc == DateTime.MinValue ||
+            (utcNow - lastRecoveryUtc) >= EmptyNavigationRecoveryCooldown;
+    }
+
+    internal static bool ShouldSuspendTargetSearchForNavigationRecovery(
+        bool hasWaypoint,
+        bool hasRouteToWaypoint)
+    {
+        return hasWaypoint && !hasRouteToWaypoint;
+    }
+
+    internal static bool ShouldRecoverStaleTargetHandoff(
+        bool inCombat,
+        bool hasTarget,
+        bool sideActivityCancelled,
+        bool hasWaypoint,
+        bool hasRouteToWaypoint,
+        DateTime utcNow,
+        DateTime lastTargetFoundUtc)
+    {
+        if (inCombat ||
+            !hasTarget ||
+            !sideActivityCancelled ||
+            lastTargetFoundUtc == DateTime.MinValue)
+        {
+            return false;
+        }
+
+        if (hasWaypoint && hasRouteToWaypoint)
+        {
+            return false;
+        }
+
+        return (utcNow - lastTargetFoundUtc) >= StaleTargetHandoffRecoveryDelay;
+    }
+
+    private void RecordRouteRecovery(string reason, NavigationRuntimeSnapshot snapshot)
+    {
+        if (reason.StartsWith("StaleTargetHandoff", StringComparison.Ordinal))
+        {
+            staleTargetHandoffRecoveryCount++;
+        }
+        else if (reason.StartsWith("EmptyNavigationRoute", StringComparison.Ordinal))
+        {
+            emptyNavigationRecoveryCount++;
+        }
+
+        lastRouteRecoveryReason = reason;
+        lastRouteRecoveryUtc = DateTime.UtcNow;
+        lastRouteRecoveryRouteToNextWaypointCount = snapshot.RouteToNextWaypointCount;
+        lastRouteRecoveryWayPointCount = snapshot.WayPointCount;
     }
 
     private async Task Thread_LookingForTargetAsync()
@@ -366,6 +512,9 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
             }
 
             if (pathSettings.CanRunSideActivity() &&
+                !ShouldSuspendTargetSearchForNavigationRecovery(
+                    hasWaypoint: navigation.HasWaypoint(),
+                    hasRouteToWaypoint: navigation.HasNext()) &&
                 targetFinder.Search(NpcNameToFind, bits.Target_NotDead, sideActivityCts.Token))
             {
                 if (bits.Target() && targetBlacklist.Is())
@@ -380,6 +529,7 @@ public sealed class FollowRouteGoal : GoapGoal, IGoapEventListener, IRouteProvid
                 if (bits.Target())
                 {
                     Log("Found target!");
+                    lastTargetFoundUtc = DateTime.UtcNow;
                     sideActivityCts.Cancel();
                     sideActivityManualReset.Reset();
                 }

@@ -70,6 +70,14 @@ public sealed record NavigationRuntimeSnapshot(
     string? LastRerouteDropReason,
     float? LastRerouteAnchorDistance);
 
+public sealed record FollowRouteRecoverySnapshot(
+    int StaleTargetHandoffRecoveryCount,
+    int EmptyNavigationRecoveryCount,
+    string? LastRecoveryReason,
+    DateTime? LastRecoveryUtc,
+    int? LastRecoveryRouteToNextWaypointCount,
+    int? LastRecoveryWayPointCount);
+
 public sealed record NavigationRerouteRuntimeSnapshot(
     int RerouteTriggerCount,
     int RerouteApplyCount,
