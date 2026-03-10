@@ -89,9 +89,13 @@ public sealed class LaunchController : ControllerBase
         ProfileLoadTelemetrySnapshot profileLoad = profileLoadTelemetry.GetSnapshot();
         LaunchOverrideSnapshot overrideSnapshot = snapshot.Overrides;
         LaunchSubsystemBypass? actionBarBypass = null;
+        LaunchSubsystemBypass? keyBindingsBypass = null;
         bool actionBarBypassActive = overrideSnapshot.EmergencyBypassAll ||
             (overrideSnapshot.Bypasses.TryGetValue(LaunchSubsystem.ActionBar, out actionBarBypass) &&
              actionBarBypass is { Enabled: true });
+        bool keyBindingsBypassActive = overrideSnapshot.EmergencyBypassAll ||
+            (overrideSnapshot.Bypasses.TryGetValue(LaunchSubsystem.KeyBindings, out keyBindingsBypass) &&
+             keyBindingsBypass is { Enabled: true });
         int actionBarIssueCount = snapshot.Checks.Count(check =>
             check.Subsystem == LaunchSubsystem.ActionBar &&
             check.Status is LaunchStatus.Warning or LaunchStatus.Error);
@@ -108,7 +112,12 @@ public sealed class LaunchController : ControllerBase
             ProfileLoadUpdatedUtc = profileLoad.UpdatedUtc,
             ActionBarIssueCount = actionBarIssueCount,
             ActionBarBypassActive = actionBarBypassActive,
-            ActionBarBypassReason = actionBarBypass?.Reason
+            ActionBarBypassReason = actionBarBypass?.Reason,
+            KeyBindingsBypassActive = keyBindingsBypassActive,
+            KeyBindingsBypassReason = keyBindingsBypass?.Reason,
+            AllowStartWithWarningsActive = overrideSnapshot.AllowStartWithWarnings,
+            EmergencyBypassAllActive = overrideSnapshot.EmergencyBypassAll,
+            AnyBypassActive = overrideSnapshot.AllowStartWithWarnings || overrideSnapshot.EmergencyBypassAll || actionBarBypassActive || keyBindingsBypassActive
         };
 
         sw.Stop();

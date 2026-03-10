@@ -124,6 +124,8 @@ public sealed class InputWindowsNative : IInput, IDisposable
             securityOptions.HybridModifiers);
     }
 
+    public bool TrySetForegroundWindow() => EnsureForegroundFocus();
+
     private int DelayTime(int milliseconds)
     {
         if (humanization?.Enabled == true)
@@ -265,16 +267,14 @@ public sealed class InputWindowsNative : IInput, IDisposable
         if (!securityOptions.FocusGuard)
             return true;
 
+        if (process.MainWindowHandle == nint.Zero)
+            return false;
+
         nint foreground = GetForegroundWindow();
         if (foreground == process.MainWindowHandle)
             return true;
 
-        // Attempt to bring WoW to foreground
-        SetForegroundWindow(process.MainWindowHandle);
-        token.WaitHandle.WaitOne(securityOptions.FocusGuardSettleMs);
-
-        // Verify it actually took
-        bool success = GetForegroundWindow() == process.MainWindowHandle;
+        bool success = TryRestoreForegroundWindow(foreground);
 
         if (!success)
         {
@@ -283,6 +283,57 @@ public sealed class InputWindowsNative : IInput, IDisposable
         }
 
         return success;
+    }
+
+    private bool TryRestoreForegroundWindow(nint foregroundWindow)
+    {
+        uint currentThreadId = GetCurrentThreadId();
+        uint foregroundThreadId = foregroundWindow != nint.Zero
+            ? GetWindowThreadProcessId(foregroundWindow, out _)
+            : 0;
+        uint wowThreadId = GetWindowThreadProcessId(process.MainWindowHandle, out _);
+
+        bool attachedToForeground = false;
+        bool attachedToWow = false;
+
+        try
+        {
+            if (foregroundThreadId != 0 && foregroundThreadId != currentThreadId)
+            {
+                attachedToForeground = AttachThreadInput(currentThreadId, foregroundThreadId, true);
+            }
+
+            if (wowThreadId != 0 && wowThreadId != currentThreadId && wowThreadId != foregroundThreadId)
+            {
+                attachedToWow = AttachThreadInput(currentThreadId, wowThreadId, true);
+            }
+
+            SetForegroundWindow(process.MainWindowHandle);
+            BringWindowToTop(process.MainWindowHandle);
+            SetActiveWindow(process.MainWindowHandle);
+
+            token.WaitHandle.WaitOne(securityOptions.FocusGuardSettleMs);
+            if (GetForegroundWindow() == process.MainWindowHandle)
+            {
+                return true;
+            }
+
+            SetForegroundWindow(process.MainWindowHandle);
+            token.WaitHandle.WaitOne(securityOptions.FocusGuardSettleMs);
+            return GetForegroundWindow() == process.MainWindowHandle;
+        }
+        finally
+        {
+            if (attachedToWow)
+            {
+                AttachThreadInput(currentThreadId, wowThreadId, false);
+            }
+
+            if (attachedToForeground)
+            {
+                AttachThreadInput(currentThreadId, foregroundThreadId, false);
+            }
+        }
     }
 
     /// <summary>

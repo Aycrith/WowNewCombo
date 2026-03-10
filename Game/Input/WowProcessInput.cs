@@ -160,7 +160,7 @@ public sealed partial class WowProcessInput : IMouseInput, IDisposable
 
     public void SetForegroundWindow()
     {
-        NativeMethods.SetForegroundWindow(process.MainWindowHandle);
+        nativeInput.TrySetForegroundWindow();
     }
 
     public int PressRandom(ConsoleKey key, int milliseconds = InputDuration.DefaultPress, CancellationToken token = default)

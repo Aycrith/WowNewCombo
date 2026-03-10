@@ -65,4 +65,9 @@ public sealed record LaunchReadinessSnapshot(
     public int ActionBarIssueCount { get; init; }
     public bool ActionBarBypassActive { get; init; }
     public string? ActionBarBypassReason { get; init; }
+    public bool KeyBindingsBypassActive { get; init; }
+    public string? KeyBindingsBypassReason { get; init; }
+    public bool AllowStartWithWarningsActive { get; init; }
+    public bool EmergencyBypassAllActive { get; init; }
+    public bool AnyBypassActive { get; init; }
 }
