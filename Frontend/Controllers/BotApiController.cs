@@ -46,17 +46,20 @@ public class BotApiController : ControllerBase
     private readonly IBotController botController;
     private readonly IBotStartGuard botStartGuard;
     private readonly ProfileLoadTelemetryService profileLoadTelemetry;
+    private readonly IBotRouteControlService botRouteControl;
 
     public BotApiController(
         ILogger<BotApiController> logger,
         IBotController botController,
         IBotStartGuard botStartGuard,
-        ProfileLoadTelemetryService profileLoadTelemetry)
+        ProfileLoadTelemetryService profileLoadTelemetry,
+        IBotRouteControlService botRouteControl)
     {
         this.logger = logger;
         this.botController = botController;
         this.botStartGuard = botStartGuard;
         this.profileLoadTelemetry = profileLoadTelemetry;
+        this.botRouteControl = botRouteControl;
     }
 
     /// <summary>
@@ -252,6 +255,70 @@ public class BotApiController : ControllerBase
             logger.LogError(ex, "Toggle bot failed");
             sw.Stop();
             return StatusCode(500, new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// GET /api/bot/route/state
+    /// Returns the current route-goal control state, available route files, and configured route slots.
+    /// </summary>
+    [HttpGet("route/state")]
+    public ActionResult<BotRouteControlState> GetRouteState()
+    {
+        string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
+        if (HttpContext != null)
+        {
+            Response.Headers["X-Correlation-ID"] = correlationId;
+        }
+
+        try
+        {
+            return Ok(botRouteControl.GetState());
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Get route state failed");
+            return StatusCode(500, new { Error = ex.Message, CorrelationId = correlationId });
+        }
+    }
+
+    /// <summary>
+    /// POST /api/bot/route/apply
+    /// Safely stops the bot if requested, applies a route override or clears it, and optionally resumes the bot.
+    /// </summary>
+    [HttpPost("route/apply")]
+    public IActionResult ApplyRoute([FromBody] BotRouteCommandRequest request)
+    {
+        string correlationId = HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
+        if (HttpContext != null)
+        {
+            Response.Headers["X-Correlation-ID"] = correlationId;
+        }
+
+        if (request == null)
+        {
+            return BadRequest(new { Error = "Request body is required.", CorrelationId = correlationId });
+        }
+
+        if (!request.ClearOverride && string.IsNullOrWhiteSpace(request.FileName))
+        {
+            return BadRequest(new { Error = "FileName is required when ClearOverride is false.", CorrelationId = correlationId });
+        }
+
+        try
+        {
+            BotRouteCommandResult result = botRouteControl.Apply(request);
+            if (!result.Success)
+            {
+                return Conflict(result);
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Apply route failed");
+            return StatusCode(500, new { Error = ex.Message, CorrelationId = correlationId });
         }
     }
 

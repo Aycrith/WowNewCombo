@@ -66,6 +66,7 @@ public record NavigationRuntimeDiagnosticsResponse(
     bool BotActive,
     string CurrentGoal,
     NavigationRuntimeSnapshot? Navigation,
+    FollowRouteRecoverySnapshot? RouteRecovery,
     StuckDetectorRuntimeSnapshot? StuckDetector,
     Core.Navigation.NavSoakMetricsSnapshot? Soak,
     CombatRuntimeSnapshot? Combat,
@@ -335,6 +336,9 @@ public class DiagnosticsController : ControllerBase
             Core.GOAP.GoapAgent? goapAgent = botController.GoapAgent;
             CombatGoal? combatGoal = goapAgent?.AvailableGoals.OfType<CombatGoal>().FirstOrDefault();
             PullTargetGoal? pullGoal = goapAgent?.AvailableGoals.OfType<PullTargetGoal>().FirstOrDefault();
+            FollowRouteGoal? followRouteGoal =
+                goapAgent?.CurrentGoal as FollowRouteGoal ??
+                goapAgent?.AvailableGoals.OfType<FollowRouteGoal>().FirstOrDefault();
             CastingRuntimeSnapshot castingSnapshot = ResolveCastingSnapshot(
                 castingHandler?.GetRuntimeSnapshot(),
                 combatGoal?.GetCastingRuntimeSnapshot());
@@ -343,6 +347,7 @@ public class DiagnosticsController : ControllerBase
                 BotActive: botController.IsBotActive,
                 CurrentGoal: TryGetCurrentGoalLabel(),
                 Navigation: navigation.GetRuntimeSnapshot(),
+                RouteRecovery: followRouteGoal?.GetRecoverySnapshot(),
                 StuckDetector: stuckDetector.GetRuntimeSnapshot(),
                 Soak: navSoakMetricsService.GetSnapshot(),
                 Combat: combatGoal?.GetRuntimeSnapshot(),

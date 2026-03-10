@@ -39,6 +39,7 @@ internal sealed class FakeBotController : IBotController
     public double AvgNPCLatency { get; set; }
     public IEnumerable<string> ClassFileList { get; set; } = Array.Empty<string>();
     public IEnumerable<string> PathFileList { get; set; } = Array.Empty<string>();
+    public List<string> ToggleReasons { get; } = [];
 
     public event Action? ProfileLoaded;
     public event Action? StatusChanged;
@@ -76,7 +77,19 @@ internal sealed class FakeBotController : IBotController
 
     public void LoadPathProfile(Dictionary<int, string> pathFilenames)
     {
-        SelectedPathFilename = pathFilenames;
+        SelectedPathFilename = new Dictionary<int, string>(pathFilenames);
+
+        if (ClassConfig != null)
+        {
+            for (int i = 0; i < ClassConfig.Paths.Length; i++)
+            {
+                ClassConfig.Paths[i].OverridePathFilename =
+                    SelectedPathFilename.TryGetValue(i, out string? overridePath)
+                        ? overridePath
+                        : string.Empty;
+            }
+        }
+
         ProfileLoaded?.Invoke();
     }
 
@@ -107,6 +120,11 @@ internal sealed class FakeBotController : IBotController
 
     public void ToggleBotStatus(string? reason = null)
     {
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            ToggleReasons.Add(reason);
+        }
+
         IsBotActive = !IsBotActive;
         if (!IsBotActive && !string.IsNullOrWhiteSpace(reason))
         {

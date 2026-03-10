@@ -25,7 +25,11 @@ public sealed class BotApiControllerStatusTests
             NullLogger<BotApiController>.Instance,
             botController,
             new FakeBotStartGuard(),
-            new ProfileLoadTelemetryService());
+            new ProfileLoadTelemetryService(),
+            new BotRouteControlService(
+                NullLogger<BotRouteControlService>.Instance,
+                botController,
+                new FakeBotStartGuard()));
 
         IActionResult result = controller.GetStatus();
 
@@ -59,7 +63,11 @@ public sealed class BotApiControllerStatusTests
             NullLogger<BotApiController>.Instance,
             botController,
             new FakeBotStartGuard(),
-            new ProfileLoadTelemetryService());
+            new ProfileLoadTelemetryService(),
+            new BotRouteControlService(
+                NullLogger<BotRouteControlService>.Instance,
+                botController,
+                new FakeBotStartGuard()));
 
         IActionResult result = controller.GetStatus();
 
@@ -92,7 +100,11 @@ public sealed class BotApiControllerStatusTests
             NullLogger<BotApiController>.Instance,
             botController,
             new FakeBotStartGuard(),
-            new ProfileLoadTelemetryService());
+            new ProfileLoadTelemetryService(),
+            new BotRouteControlService(
+                NullLogger<BotRouteControlService>.Instance,
+                botController,
+                new FakeBotStartGuard()));
 
         IActionResult result = controller.GetStatus();
 

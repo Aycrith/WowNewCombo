@@ -94,7 +94,11 @@ public sealed class BotApiControllerProfileLoadTests
             NullLogger<BotApiController>.Instance,
             botController,
             new FakeBotStartGuard(),
-            telemetry);
+            telemetry,
+            new BotRouteControlService(
+                NullLogger<BotRouteControlService>.Instance,
+                botController,
+                new FakeBotStartGuard()));
 
         controller.ControllerContext = new ControllerContext
         {
